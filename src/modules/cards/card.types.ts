@@ -1,0 +1,6 @@
+export enum CardStatus {
+  UNASSIGNED = 'UNASSIGNED',
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  BLOCKED = 'BLOCKED',
+}

@@ -1,0 +1,6 @@
+export enum Currency {
+  XOF = 'XOF', // CFA Franc — Côte d'Ivoire, Sénégal, Mali...
+  GHS = 'GHS', // Ghanaian Cedi
+  NGN = 'NGN', // Nigerian Naira
+  XAF = 'XAF', // CFA Franc BEAC — Cameroun, Gabon...
+}
