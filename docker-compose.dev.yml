@@ -1,0 +1,16 @@
+services:
+  api:
+    build:
+      context: .
+      target: dev
+    command: ["npm", "run", "start:dev"]
+    container_name: grand_frere_api
+    env_file: .env.dev
+    environment:
+      CHOKIDAR_USEPOLLING: '1'
+    volumes:
+      - .:/app
+      - .env.dev:/app/.env
+      - /app/node_modules
+    ports:
+      - $PORT:$PORT

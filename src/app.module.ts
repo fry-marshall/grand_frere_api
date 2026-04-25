@@ -1,0 +1,29 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_FILTER } from '@nestjs/core';
+import { envValidationSchema } from './config/env.validation';
+import { databaseConfig } from './config/database.config';
+import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [`.env.${process.env.NODE_ENV ?? 'dev'}`, '.env'],
+      load: [databaseConfig],
+      validationSchema: envValidationSchema,
+    }),
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => config.get('database')!,
+    }),
+  ],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
+  ],
+})
+export class AppModule {}

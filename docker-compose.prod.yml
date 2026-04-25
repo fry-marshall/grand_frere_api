@@ -1,0 +1,12 @@
+services:
+  app:
+    image: ${IMAGE_NAME}
+    ports:
+      - "${PORT}:${PORT}"
+    env_file: .env.prod
+    environment:
+      NODE_ENV: prod
+      DATABASE_URL: ${DATABASE_URL}
+    command: >
+      sh -c "npm run migration:run:prod && node dist/main"
+    restart: unless-stopped

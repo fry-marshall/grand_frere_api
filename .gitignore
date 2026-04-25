@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+dist/
+
+# Environment files
+.env
+.env.dev
+.env.test
+.env.prod
+firebase-sdk.json
+*.pem
+*.key
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
