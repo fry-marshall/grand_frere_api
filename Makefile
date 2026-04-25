@@ -9,10 +9,10 @@ prod:
 	docker image prune -f
 
 test-e2e:
-	docker compose -f docker-compose.test.yml --env-file .env.test up --build --abort-on-container-exit
+	docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
 
 test-e2e-file:
-	docker compose -f docker-compose.test.yml --env-file .env.test run --rm app npx jest $(FILE) --config jest-e2e.json
+	docker compose -f docker-compose.test.yml run --rm app npx jest $(FILE) --config ./test/jest-e2e.json
 
 migration-generate:
 	@test -n "$(NAME)" || (echo "Usage: make migration-generate NAME=<MigrationName>" && exit 1)

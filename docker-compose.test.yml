@@ -3,7 +3,7 @@ services:
     build:
       context: .
       target: dev
-    command: npx jest --config jest-e2e.json --forceExit
+    command: npm run test:e2e -- --forceExit
     container_name: grand_frere_api_test
     env_file: .env.test
     volumes:

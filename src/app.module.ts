@@ -5,6 +5,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { envValidationSchema } from './config/env.validation';
 import { databaseConfig } from './config/database.config';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => config.get('database')!,
     }),
+    AuthModule,
   ],
   providers: [
     {
