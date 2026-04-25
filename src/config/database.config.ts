@@ -8,7 +8,8 @@ export const databaseConfig = registerAs(
     url: process.env.DATABASE_URL,
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
-    synchronize: process.env.NODE_ENV === 'dev',
-    ssl: process.env.NODE_ENV === 'prod' ? { rejectUnauthorized: true } : false,
+    synchronize: process.env.NODE_ENV === 'test',
+    ssl:
+      process.env.NODE_ENV === 'test' ? false : { rejectUnauthorized: false },
   }),
 );

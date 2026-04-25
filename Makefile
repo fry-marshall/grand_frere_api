@@ -15,6 +15,7 @@ test-e2e-file:
 	docker compose -f docker-compose.test.yml --env-file .env.test run --rm app npx jest $(FILE) --config jest-e2e.json
 
 migration-generate:
+	@test -n "$(NAME)" || (echo "Usage: make migration-generate NAME=<MigrationName>" && exit 1)
 	npm run migration:generate -- ./src/database/migrations/$(NAME)
 
 migration-run:
