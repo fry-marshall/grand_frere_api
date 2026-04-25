@@ -11,6 +11,7 @@ import { ScanCardDto } from './dto/scan-card.dto';
 import { ScanCardResponseDto } from './dto/scan-card-response.dto';
 import { SignupParentDto } from './dto/signup-parent.dto';
 import { SignupStudentDto } from './dto/signup-student.dto';
+import { SignupVendorDto } from './dto/signup-vendor.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { ErrorResponse } from '../../common/swagger/api-responses';
@@ -80,5 +81,24 @@ export class AuthController {
   })
   signupStudent(@Body() dto: SignupStudentDto) {
     return this.authService.signupStudent(dto);
+  }
+
+  @Post('signup/vendor')
+  @ApiOperation({ summary: 'Register a new vendor account for a school' })
+  @ApiSuccessResponse(AuthTokensResponseDto, 201)
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  @ApiNotFoundResponse({
+    description: ErrorMessages.SCHOOLS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: 'Phone already exists',
+    type: ErrorResponse,
+  })
+  signupVendor(@Body() dto: SignupVendorDto) {
+    return this.authService.signupVendor(dto);
   }
 }

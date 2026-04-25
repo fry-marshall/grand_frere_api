@@ -16,4 +16,7 @@ export const ErrorMessages = {
   CARDS: {
     NOT_FOUND: 'Card not found',
   },
+  SCHOOLS: {
+    NOT_FOUND: 'School not found',
+  },
 } as const;

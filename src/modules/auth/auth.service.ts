@@ -16,12 +16,16 @@ import { User } from '../users/entities/user.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { RefreshToken } from '../refresh-tokens/entities/refresh-token.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
+import { School } from '../schools/entities/school.entity';
+import { Vendor } from '../vendors/entities/vendor.entity';
+import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
 import { CardStatus } from '../cards/card.types';
 import { UserRole } from '../users/user.types';
 import { ScanCardDto } from './dto/scan-card.dto';
 import { ScanCardResponseDto } from './dto/scan-card-response.dto';
 import { SignupParentDto } from './dto/signup-parent.dto';
 import { SignupStudentDto } from './dto/signup-student.dto';
+import { SignupVendorDto } from './dto/signup-vendor.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -34,6 +38,7 @@ export class AuthService {
     @InjectRepository(StudentParent)
     private readonly studentParentRepo: Repository<StudentParent>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(School) private readonly schoolRepo: Repository<School>,
     private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -169,6 +174,60 @@ export class AuthService {
         status: CardStatus.ACTIVE,
         studentId: student.id,
       });
+
+      const accessToken = this.jwtService.sign({
+        sub: user.id,
+        role: user.role,
+      });
+
+      const rawRefreshToken = randomBytes(64).toString('hex');
+      const tokenHash = createHash('sha256')
+        .update(rawRefreshToken)
+        .digest('hex');
+
+      await manager.save(RefreshToken, {
+        userId: user.id,
+        tokenHash,
+        expiresAt: this.buildRefreshTokenExpiry(),
+      });
+
+      return { accessToken, refreshToken: rawRefreshToken };
+    });
+  }
+
+  async signupVendor(dto: SignupVendorDto): Promise<AuthTokensResponseDto> {
+    const school = await this.schoolRepo.findOne({
+      where: { id: dto.schoolId },
+    });
+    if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
+
+    const existingUser = await this.userRepo.findOne({
+      where: { phone: dto.phone },
+    });
+    if (existingUser)
+      throw new ConflictException(ErrorMessages.AUTH.PHONE_ALREADY_EXISTS);
+
+    return this.dataSource.transaction(async (manager) => {
+      const passwordHash = await bcrypt.hash(dto.password, 10);
+
+      const user = await manager.save(User, {
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        phone: dto.phone,
+        passwordHash,
+        role: UserRole.VENDOR,
+        schoolId: dto.schoolId,
+        isOnboarded: true,
+      });
+
+      const vendor = await manager.save(Vendor, {
+        userId: user.id,
+        schoolId: dto.schoolId,
+        shopName: dto.shopName,
+        waveNumber: dto.waveNumber,
+      });
+
+      await manager.save(VendorWallet, { vendorId: vendor.id });
 
       const accessToken = this.jwtService.sign({
         sub: user.id,

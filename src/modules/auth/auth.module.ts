@@ -11,6 +11,9 @@ import { User } from '../users/entities/user.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { RefreshToken } from '../refresh-tokens/entities/refresh-token.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
+import { School } from '../schools/entities/school.entity';
+import { Vendor } from '../vendors/entities/vendor.entity';
+import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
 
 @Module({
   imports: [
@@ -22,6 +25,9 @@ import { Wallet } from '../wallets/entities/wallet.entity';
       Parent,
       RefreshToken,
       Wallet,
+      School,
+      Vendor,
+      VendorWallet,
     ]),
     JwtModule.registerAsync({
       inject: [ConfigService],
