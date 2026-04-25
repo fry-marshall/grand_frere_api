@@ -3,6 +3,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -135,5 +136,17 @@ export class AuthController {
   })
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto);
+  }
+
+  @Post('signout')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Sign out and revoke the current refresh token' })
+  @ApiOkResponse({ description: 'Signed out successfully' })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  signout(@Body() dto: RefreshTokenDto) {
+    return this.authService.signout(dto);
   }
 }

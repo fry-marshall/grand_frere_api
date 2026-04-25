@@ -254,6 +254,23 @@ export class AuthService {
     });
   }
 
+  async signout(dto: RefreshTokenDto): Promise<void> {
+    const tokenHash = createHash('sha256')
+      .update(dto.refreshToken)
+      .digest('hex');
+
+    const stored = await this.refreshTokenRepo.findOne({
+      where: { tokenHash, isRevoked: false },
+    });
+
+    if (!stored) return;
+
+    await this.refreshTokenRepo.update(stored.id, {
+      isRevoked: true,
+      revokedAt: new Date(),
+    });
+  }
+
   async refresh(dto: RefreshTokenDto): Promise<AuthTokensResponseDto> {
     const tokenHash = createHash('sha256')
       .update(dto.refreshToken)
