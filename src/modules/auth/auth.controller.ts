@@ -1,6 +1,7 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
@@ -8,6 +9,9 @@ import {
 import { AuthService } from './auth.service';
 import { ScanCardDto } from './dto/scan-card.dto';
 import { ScanCardResponseDto } from './dto/scan-card-response.dto';
+import { SignupParentDto } from './dto/signup-parent.dto';
+import { SignupStudentDto } from './dto/signup-student.dto';
+import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { ErrorResponse } from '../../common/swagger/api-responses';
 import { ErrorMessages } from '../../common/swagger/error-messages';
@@ -33,5 +37,48 @@ export class AuthController {
   })
   scanCard(@Body() dto: ScanCardDto) {
     return this.authService.scanCard(dto);
+  }
+
+  @Post('signup/parent')
+  @ApiOperation({
+    summary: 'Register a new parent account and link to a student via card',
+  })
+  @ApiSuccessResponse(AuthTokensResponseDto, 201)
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  @ApiNotFoundResponse({
+    description: ErrorMessages.CARDS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description:
+      'Card not active / phone already exists / student already has 2 parents',
+    type: ErrorResponse,
+  })
+  signupParent(@Body() dto: SignupParentDto) {
+    return this.authService.signupParent(dto);
+  }
+
+  @Post('signup/student')
+  @ApiOperation({
+    summary: 'Register a new student account via an unassigned card',
+  })
+  @ApiSuccessResponse(AuthTokensResponseDto, 201)
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  @ApiNotFoundResponse({
+    description: ErrorMessages.CARDS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: 'Card not available / phone already exists',
+    type: ErrorResponse,
+  })
+  signupStudent(@Body() dto: SignupStudentDto) {
+    return this.authService.signupStudent(dto);
   }
 }
