@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -26,6 +27,7 @@ import { ScanCardResponseDto } from './dto/scan-card-response.dto';
 import { SignupParentDto } from './dto/signup-parent.dto';
 import { SignupStudentDto } from './dto/signup-student.dto';
 import { SignupVendorDto } from './dto/signup-vendor.dto';
+import { SigninDto } from './dto/signin.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -39,6 +41,8 @@ export class AuthService {
     private readonly studentParentRepo: Repository<StudentParent>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(School) private readonly schoolRepo: Repository<School>,
+    @InjectRepository(RefreshToken)
+    private readonly refreshTokenRepo: Repository<RefreshToken>,
     private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -247,6 +251,36 @@ export class AuthService {
 
       return { accessToken, refreshToken: rawRefreshToken };
     });
+  }
+
+  async signin(dto: SigninDto): Promise<AuthTokensResponseDto> {
+    const user = await this.userRepo.findOne({ where: { phone: dto.phone } });
+    if (!user) {
+      throw new UnauthorizedException(ErrorMessages.AUTH.INVALID_CREDENTIALS);
+    }
+
+    const passwordMatch = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!passwordMatch) {
+      throw new UnauthorizedException(ErrorMessages.AUTH.INVALID_CREDENTIALS);
+    }
+
+    const accessToken = this.jwtService.sign({
+      sub: user.id,
+      role: user.role,
+    });
+
+    const rawRefreshToken = randomBytes(64).toString('hex');
+    const tokenHash = createHash('sha256')
+      .update(rawRefreshToken)
+      .digest('hex');
+
+    await this.refreshTokenRepo.save({
+      userId: user.id,
+      tokenHash,
+      expiresAt: this.buildRefreshTokenExpiry(),
+    });
+
+    return { accessToken, refreshToken: rawRefreshToken };
   }
 
   private buildRefreshTokenExpiry(): Date {

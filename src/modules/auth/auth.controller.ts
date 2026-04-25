@@ -5,6 +5,7 @@ import {
   ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { ScanCardDto } from './dto/scan-card.dto';
@@ -12,6 +13,7 @@ import { ScanCardResponseDto } from './dto/scan-card-response.dto';
 import { SignupParentDto } from './dto/signup-parent.dto';
 import { SignupStudentDto } from './dto/signup-student.dto';
 import { SignupVendorDto } from './dto/signup-vendor.dto';
+import { SigninDto } from './dto/signin.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { ErrorResponse } from '../../common/swagger/api-responses';
@@ -100,5 +102,21 @@ export class AuthController {
   })
   signupVendor(@Body() dto: SignupVendorDto) {
     return this.authService.signupVendor(dto);
+  }
+
+  @Post('signin')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Sign in with phone and password' })
+  @ApiSuccessResponse(AuthTokensResponseDto)
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  @ApiUnauthorizedResponse({
+    description: ErrorMessages.AUTH.INVALID_CREDENTIALS,
+    type: ErrorResponse,
+  })
+  signin(@Body() dto: SigninDto) {
+    return this.authService.signin(dto);
   }
 }
