@@ -14,6 +14,7 @@ import { SignupParentDto } from './dto/signup-parent.dto';
 import { SignupStudentDto } from './dto/signup-student.dto';
 import { SignupVendorDto } from './dto/signup-vendor.dto';
 import { SigninDto } from './dto/signin.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { ErrorResponse } from '../../common/swagger/api-responses';
@@ -118,5 +119,21 @@ export class AuthController {
   })
   signin(@Body() dto: SigninDto) {
     return this.authService.signin(dto);
+  }
+
+  @Post('refresh')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Rotate refresh token and get a new token pair' })
+  @ApiSuccessResponse(AuthTokensResponseDto)
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  @ApiUnauthorizedResponse({
+    description: ErrorMessages.AUTH.INVALID_REFRESH_TOKEN,
+    type: ErrorResponse,
+  })
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refresh(dto);
   }
 }

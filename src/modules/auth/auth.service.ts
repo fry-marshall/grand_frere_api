@@ -28,6 +28,7 @@ import { SignupParentDto } from './dto/signup-parent.dto';
 import { SignupStudentDto } from './dto/signup-student.dto';
 import { SignupVendorDto } from './dto/signup-vendor.dto';
 import { SigninDto } from './dto/signin.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -251,6 +252,45 @@ export class AuthService {
 
       return { accessToken, refreshToken: rawRefreshToken };
     });
+  }
+
+  async refresh(dto: RefreshTokenDto): Promise<AuthTokensResponseDto> {
+    const tokenHash = createHash('sha256')
+      .update(dto.refreshToken)
+      .digest('hex');
+
+    const stored = await this.refreshTokenRepo.findOne({
+      where: { tokenHash },
+    });
+
+    if (!stored || stored.isRevoked || stored.expiresAt < new Date()) {
+      throw new UnauthorizedException(ErrorMessages.AUTH.INVALID_REFRESH_TOKEN);
+    }
+
+    const user = await this.userRepo.findOne({ where: { id: stored.userId } });
+
+    await this.refreshTokenRepo.update(stored.id, {
+      isRevoked: true,
+      revokedAt: new Date(),
+    });
+
+    const accessToken = this.jwtService.sign({
+      sub: user!.id,
+      role: user!.role,
+    });
+
+    const rawRefreshToken = randomBytes(64).toString('hex');
+    const newTokenHash = createHash('sha256')
+      .update(rawRefreshToken)
+      .digest('hex');
+
+    await this.refreshTokenRepo.save({
+      userId: user!.id,
+      tokenHash: newTokenHash,
+      expiresAt: this.buildRefreshTokenExpiry(),
+    });
+
+    return { accessToken, refreshToken: rawRefreshToken };
   }
 
   async signin(dto: SigninDto): Promise<AuthTokensResponseDto> {
