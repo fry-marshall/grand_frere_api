@@ -38,6 +38,9 @@ export class Card {
   @Column({ nullable: true })
   studentId: string;
 
+  @Column({ type: 'integer', default: 1000 })
+  dailyLimit: number;
+
   @Column({ nullable: true })
   imageUrl: string;
 

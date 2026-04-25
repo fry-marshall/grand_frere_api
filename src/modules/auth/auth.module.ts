@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
+import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { Card } from '../cards/entities/card.entity';
@@ -17,6 +19,7 @@ import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
 
 @Module({
   imports: [
+    PassportModule,
     TypeOrmModule.forFeature([
       Card,
       Student,
@@ -41,6 +44,6 @@ import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, JwtStrategy],
 })
 export class AuthModule {}
