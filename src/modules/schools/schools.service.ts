@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Transaction } from '../wallets/entities/transaction.entity';
+import { TransactionType } from '../wallets/wallet.types';
 import * as bcrypt from 'bcrypt';
 import { School } from './entities/school.entity';
 import { User } from '../users/entities/user.entity';
@@ -22,6 +24,8 @@ import { SchoolAdminResponseDto } from './dto/school-admin-response.dto';
 import { SchoolVendorResponseDto } from './dto/school-vendor-response.dto';
 import { SchoolStudentResponseDto } from './dto/school-student-response.dto';
 import { SchoolParentResponseDto } from './dto/school-parent-response.dto';
+import { SchoolTransactionResponseDto } from './dto/school-transaction-response.dto';
+import { SchoolTransactionsQueryDto } from './dto/school-transactions-query.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -35,6 +39,8 @@ export class SchoolsService {
     private readonly studentRepo: Repository<Student>,
     @InjectRepository(Parent)
     private readonly parentRepo: Repository<Parent>,
+    @InjectRepository(Transaction)
+    private readonly transactionRepo: Repository<Transaction>,
   ) {}
 
   async create(dto: CreateSchoolDto): Promise<SchoolResponseDto> {
@@ -258,6 +264,98 @@ export class SchoolsService {
         },
       })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async findTransactions(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+    query: SchoolTransactionsQueryDto,
+  ): Promise<{
+    transactions: { data: SchoolTransactionResponseDto[]; meta: object };
+    stats: object;
+  }> {
+    const school = await this.schoolRepo.findOne({ where: { id } });
+    if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (admin?.schoolId !== school.id) throw new ForbiddenException();
+    }
+
+    const { page, limit, from, to } = query;
+
+    const listQb = this.transactionRepo
+      .createQueryBuilder('t')
+      .innerJoinAndSelect('t.wallet', 'w')
+      .innerJoinAndSelect('w.student', 's')
+      .innerJoinAndSelect('s.user', 'u')
+      .where('s.schoolId = :schoolId', { schoolId: id });
+
+    const statsQb = this.transactionRepo
+      .createQueryBuilder('t')
+      .innerJoin('t.wallet', 'w')
+      .innerJoin('w.student', 's')
+      .where('s.schoolId = :schoolId', { schoolId: id });
+
+    if (from) {
+      listQb.andWhere('t.createdAt >= :from', { from });
+      statsQb.andWhere('t.createdAt >= :from', { from });
+    }
+    if (to) {
+      listQb.andWhere('t.createdAt <= :to', { to });
+      statsQb.andWhere('t.createdAt <= :to', { to });
+    }
+
+    const [transactions, total] = await listQb
+      .orderBy('t.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    const statsRaw = await statsQb
+      .select('COUNT(t.id)', 'totalTransactions')
+      .addSelect(
+        `SUM(CASE WHEN t.type = '${TransactionType.CREDIT}' THEN t.amount ELSE 0 END)`,
+        'totalCredits',
+      )
+      .addSelect(
+        `SUM(CASE WHEN t.type = '${TransactionType.DEBIT}' THEN t.amount ELSE 0 END)`,
+        'totalDebits',
+      )
+      .getRawOne();
+
+    return {
+      transactions: {
+        data: transactions.map((t) => ({
+          id: t.id,
+          type: t.type,
+          amount: t.amount,
+          currency: t.currency,
+          balanceBefore: t.balanceBefore,
+          balanceAfter: t.balanceAfter,
+          orderId: t.orderId,
+          paymentId: t.paymentId,
+          createdAt: t.createdAt,
+          student: {
+            id: t.wallet.student.id,
+            class: t.wallet.student.class,
+            user: {
+              id: t.wallet.student.user.id,
+              firstName: t.wallet.student.user.firstName,
+              lastName: t.wallet.student.user.lastName,
+            },
+          },
+        })),
+        meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      },
+      stats: {
+        totalTransactions: Number(statsRaw.totalTransactions),
+        totalCredits: Number(statsRaw.totalCredits) || 0,
+        totalDebits: Number(statsRaw.totalDebits) || 0,
+      },
     };
   }
 
