@@ -27,5 +27,8 @@ export const ErrorMessages = {
   },
   SCHOOLS: {
     NOT_FOUND: 'School not found',
+    SIGLE_ALREADY_EXISTS: 'School sigle already exists',
+    NOT_SUSPENDABLE: 'School can only be suspended when active',
+    NOT_ACTIVATABLE: 'School can only be activated when suspended',
   },
 } as const;
