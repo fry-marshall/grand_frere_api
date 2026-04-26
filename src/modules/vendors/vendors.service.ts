@@ -10,10 +10,12 @@ import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Vendor } from './entities/vendor.entity';
 import { Order } from '../orders/entities/order.entity';
+import { Withdrawal } from '../withdrawals/entities/withdrawal.entity';
 import { VendorStatus } from './vendor.types';
 import { UserRole } from '../users/user.types';
 import { VendorResponseDto } from './dto/vendor-response.dto';
 import { VendorOrderResponseDto } from './dto/vendor-order-response.dto';
+import { VendorWithdrawalResponseDto } from './dto/vendor-withdrawal-response.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -28,6 +30,8 @@ export class VendorsService {
     @InjectRepository(Vendor) private readonly vendorRepo: Repository<Vendor>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
+    @InjectRepository(Withdrawal)
+    private readonly withdrawalRepo: Repository<Withdrawal>,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -161,6 +165,49 @@ export class VendorsService {
             lastName: o.student.user.lastName,
           },
         },
+      })),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async findWithdrawals(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+    query: PaginationQueryDto,
+  ): Promise<{ data: VendorWithdrawalResponseDto[]; meta: object }> {
+    const vendor = await this.vendorRepo.findOne({ where: { id } });
+    if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
+
+    if (
+      currentUser.role === UserRole.VENDOR &&
+      vendor.userId !== currentUser.id
+    ) {
+      throw new ForbiddenException();
+    }
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (admin?.schoolId !== vendor.schoolId) throw new ForbiddenException();
+    }
+
+    const { page, limit } = query;
+    const [withdrawals, total] = await this.withdrawalRepo.findAndCount({
+      where: { vendorId: id },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      data: withdrawals.map((w) => ({
+        id: w.id,
+        status: w.status,
+        amount: w.amount,
+        currency: w.currency,
+        waveNumber: w.waveNumber,
+        paystackRef: w.paystackRef,
+        createdAt: w.createdAt,
       })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };

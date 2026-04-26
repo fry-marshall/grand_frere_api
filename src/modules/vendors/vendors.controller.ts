@@ -23,6 +23,7 @@ import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator
 import { VendorsService } from './vendors.service';
 import { VendorResponseDto } from './dto/vendor-response.dto';
 import { VendorOrderResponseDto } from './dto/vendor-order-response.dto';
+import { VendorWithdrawalResponseDto } from './dto/vendor-withdrawal-response.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -116,6 +117,24 @@ export class VendorsController {
     @Query() query: PaginationQueryDto,
   ) {
     return this.vendorsService.findOrders(id, currentUser, query);
+  }
+
+  @Get(':id/withdrawals')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.VENDOR)
+  @ApiOperation({ summary: "List vendor's withdrawals" })
+  @ApiSuccessResponse(VendorWithdrawalResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.VENDORS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findWithdrawals(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.vendorsService.findWithdrawals(id, currentUser, query);
   }
 
   @Post(':id/approve')
