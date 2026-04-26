@@ -1,7 +1,20 @@
-import { Controller, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiForbiddenResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
@@ -9,9 +22,12 @@ import {
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { VendorsService } from './vendors.service';
 import { VendorResponseDto } from './dto/vendor-response.dto';
+import { UpdateVendorDto } from './dto/update-vendor.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/decorators/role.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ErrorResponse } from '../../common/swagger/api-responses';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 import { UserRole } from '../users/user.types';
@@ -21,6 +37,67 @@ import { UserRole } from '../users/user.types';
 @Controller({ version: '1', path: 'vendors' })
 export class VendorsController {
   constructor(private readonly vendorsService: VendorsService) {}
+
+  @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'List vendors' })
+  @ApiSuccessResponse(VendorResponseDto)
+  findAll(
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.vendorsService.findAll(currentUser, query);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.VENDOR)
+  @ApiOperation({ summary: 'Get vendor by id' })
+  @ApiSuccessResponse(VendorResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.VENDORS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.vendorsService.findOne(id, currentUser);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.VENDOR)
+  @ApiOperation({ summary: 'Update vendor shop name or wave number' })
+  @ApiSuccessResponse(VendorResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.VENDORS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateVendorDto,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.vendorsService.update(id, dto, currentUser);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Delete a vendor' })
+  @ApiNoContentResponse({ description: 'Vendor deleted' })
+  @ApiNotFoundResponse({
+    description: ErrorMessages.VENDORS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  remove(@Param('id') id: string) {
+    return this.vendorsService.remove(id);
+  }
 
   @Post(':id/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
