@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './entities/notification.entity';
 import { NotificationType } from './notification.types';
+import type { INotificationSender } from './shared/notification-sender.interface';
 import {
-  INotificationSender,
   NOTIFICATION_SENDER,
   NotificationData,
 } from './shared/notification-sender.interface';

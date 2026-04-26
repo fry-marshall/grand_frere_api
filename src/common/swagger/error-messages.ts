@@ -35,5 +35,6 @@ export const ErrorMessages = {
     NOT_FOUND: 'Vendor not found',
     NOT_APPROVABLE: 'Vendor can only be approved when pending',
     NOT_REJECTABLE: 'Vendor can only be rejected when pending',
+    WALLET_NOT_FOUND: 'Vendor wallet not found',
   },
 } as const;
