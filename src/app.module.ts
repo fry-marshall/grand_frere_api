@@ -8,6 +8,7 @@ import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { AuthModule } from './modules/auth/auth.module';
 import { CardsModule } from './modules/cards/cards.module';
 import { SchoolsModule } from './modules/schools/schools.module';
+import { VendorsModule } from './modules/vendors/vendors.module';
 import { StorageModule } from './common/storage/storage.module';
 
 @Module({
@@ -26,6 +27,7 @@ import { StorageModule } from './common/storage/storage.module';
     AuthModule,
     CardsModule,
     SchoolsModule,
+    VendorsModule,
   ],
   providers: [
     {
