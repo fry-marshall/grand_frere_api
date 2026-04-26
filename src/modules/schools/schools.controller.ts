@@ -26,6 +26,7 @@ import { SchoolResponseDto } from './dto/school-response.dto';
 import { SchoolAdminResponseDto } from './dto/school-admin-response.dto';
 import { SchoolVendorResponseDto } from './dto/school-vendor-response.dto';
 import { SchoolStudentResponseDto } from './dto/school-student-response.dto';
+import { SchoolParentResponseDto } from './dto/school-parent-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -190,5 +191,23 @@ export class SchoolsController {
     @Query() query: PaginationQueryDto,
   ) {
     return this.schoolsService.findStudents(id, currentUser, query);
+  }
+
+  @Get(':id/parents')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'List parents of a school' })
+  @ApiSuccessResponse(SchoolParentResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.SCHOOLS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
+  findParents(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.schoolsService.findParents(id, currentUser, query);
   }
 }
