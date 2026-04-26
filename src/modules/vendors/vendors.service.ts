@@ -9,9 +9,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Vendor } from './entities/vendor.entity';
+import { Order } from '../orders/entities/order.entity';
 import { VendorStatus } from './vendor.types';
 import { UserRole } from '../users/user.types';
 import { VendorResponseDto } from './dto/vendor-response.dto';
+import { VendorOrderResponseDto } from './dto/vendor-order-response.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -25,6 +27,7 @@ export class VendorsService {
   constructor(
     @InjectRepository(Vendor) private readonly vendorRepo: Repository<Vendor>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -110,6 +113,57 @@ export class VendorsService {
     const vendor = await this.vendorRepo.findOne({ where: { id } });
     if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
     await this.vendorRepo.delete(id);
+  }
+
+  async findOrders(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+    query: PaginationQueryDto,
+  ): Promise<{ data: VendorOrderResponseDto[]; meta: object }> {
+    const vendor = await this.vendorRepo.findOne({ where: { id } });
+    if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
+
+    if (
+      currentUser.role === UserRole.VENDOR &&
+      vendor.userId !== currentUser.id
+    ) {
+      throw new ForbiddenException();
+    }
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (admin?.schoolId !== vendor.schoolId) throw new ForbiddenException();
+    }
+
+    const { page, limit } = query;
+    const [orders, total] = await this.orderRepo.findAndCount({
+      where: { vendorId: id },
+      relations: ['student', 'student.user'],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      data: orders.map((o) => ({
+        id: o.id,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        expiresAt: o.expiresAt,
+        createdAt: o.createdAt,
+        student: {
+          id: o.student.id,
+          class: o.student.class,
+          user: {
+            id: o.student.user.id,
+            firstName: o.student.user.firstName,
+            lastName: o.student.user.lastName,
+          },
+        },
+      })),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async approve(id: string): Promise<VendorResponseDto> {
