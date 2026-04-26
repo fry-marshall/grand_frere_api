@@ -5,7 +5,9 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as QRCode from 'qrcode';
@@ -20,6 +22,8 @@ import { UserRole } from '../users/user.types';
 import { CreateCardsBatchDto } from './dto/create-cards-batch.dto';
 import { CardResponseDto } from './dto/card-response.dto';
 import { UpdateDailyLimitDto } from './dto/update-daily-limit.dto';
+import { VerifyPinDto } from './dto/verify-pin.dto';
+import { ResetPinDto } from './dto/reset-pin.dto';
 import * as storageInterface from '../../common/storage/storage.interface';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -168,6 +172,75 @@ export class CardsService {
 
     await this.cardRepo.update(card.id, { dailyLimit: dto.dailyLimit });
     return this.toDto({ ...card, dailyLimit: dto.dailyLimit });
+  }
+
+  async verifyPin(code: string, dto: VerifyPinDto): Promise<CardResponseDto> {
+    const card = await this.cardRepo.findOne({ where: { code } });
+    if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
+
+    if (card.status === CardStatus.BLOCKED) {
+      throw new ForbiddenException(ErrorMessages.CARDS.CARD_BLOCKED);
+    }
+    if (card.status !== CardStatus.ACTIVE) {
+      throw new ConflictException(ErrorMessages.CARDS.NOT_ACTIVE);
+    }
+    if (!card.pinHash) {
+      throw new ConflictException(ErrorMessages.CARDS.PIN_NOT_SET);
+    }
+
+    const isValid = await bcrypt.compare(dto.pin, card.pinHash);
+
+    if (!isValid) {
+      const newAttempts = card.pinAttempts + 1;
+      if (newAttempts >= 3) {
+        await this.cardRepo.update(card.id, {
+          pinAttempts: newAttempts,
+          status: CardStatus.BLOCKED,
+        });
+        throw new ForbiddenException(ErrorMessages.CARDS.CARD_BLOCKED);
+      }
+      await this.cardRepo.update(card.id, { pinAttempts: newAttempts });
+      throw new UnauthorizedException(ErrorMessages.CARDS.PIN_INVALID);
+    }
+
+    await this.cardRepo.update(card.id, { pinAttempts: 0 });
+    return this.toDto({ ...card, pinAttempts: 0 });
+  }
+
+  async resetPin(
+    code: string,
+    dto: ResetPinDto,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<CardResponseDto> {
+    const card = await this.cardRepo.findOne({ where: { code } });
+    if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.PARENT) {
+      await this.assertParentOwnsCard(currentUser.id, card);
+    } else {
+      await this.assertStudentOwnsCard(currentUser.id, card);
+    }
+
+    const user = await this.userRepo.findOne({ where: { id: currentUser.id } });
+    if (!user?.passwordHash) {
+      throw new UnauthorizedException(ErrorMessages.CARDS.INVALID_PASSWORD);
+    }
+
+    const passwordMatch = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!passwordMatch) {
+      throw new UnauthorizedException(ErrorMessages.CARDS.INVALID_PASSWORD);
+    }
+
+    const pinHash = await bcrypt.hash(dto.newPin, 10);
+    const newStatus =
+      card.status === CardStatus.BLOCKED ? CardStatus.ACTIVE : card.status;
+
+    await this.cardRepo.update(card.id, {
+      pinHash,
+      pinAttempts: 0,
+      status: newStatus,
+    });
+    return this.toDto({ ...card, pinAttempts: 0, status: newStatus });
   }
 
   private async assertOwnership(
