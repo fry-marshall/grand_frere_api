@@ -6,6 +6,8 @@ import { envValidationSchema } from './config/env.validation';
 import { databaseConfig } from './config/database.config';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { AuthModule } from './modules/auth/auth.module';
+import { CardsModule } from './modules/cards/cards.module';
+import { StorageModule } from './common/storage/storage.module';
 
 @Module({
   imports: [
@@ -19,7 +21,9 @@ import { AuthModule } from './modules/auth/auth.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => config.get('database')!,
     }),
+    StorageModule,
     AuthModule,
+    CardsModule,
   ],
   providers: [
     {

@@ -18,10 +18,11 @@ export const envValidationSchema = Joi.object({
   ACCESS_TOKEN_EXPIRY: Joi.string().default('15m'),
   REFRESH_TOKEN_EXPIRY: Joi.string().default('7d'),
 
-  AWS_REGION: prodRequired,
-  AWS_ACCESS_KEY_ID: prodRequired,
-  AWS_SECRET_ACCESS_KEY: prodRequired,
-  AWS_S3_BUCKET: prodRequired,
+  DO_SPACES_ENDPOINT: prodRequired,
+  DO_SPACES_REGION: prodRequired,
+  DO_SPACES_KEY: prodRequired,
+  DO_SPACES_SECRET: prodRequired,
+  DO_SPACES_BUCKET: prodRequired,
 
   FIREBASE_PROJECT_ID: prodRequired,
   FIREBASE_PRIVATE_KEY: prodRequired,

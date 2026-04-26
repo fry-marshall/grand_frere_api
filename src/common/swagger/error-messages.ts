@@ -15,6 +15,7 @@ export const ErrorMessages = {
   },
   CARDS: {
     NOT_FOUND: 'Card not found',
+    CODE_ALREADY_EXISTS: 'Card code already exists',
   },
   SCHOOLS: {
     NOT_FOUND: 'School not found',
