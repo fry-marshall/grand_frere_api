@@ -1,7 +1,18 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+  HttpCode,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiResponse,
@@ -11,6 +22,7 @@ import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator
 import { CardsService } from './cards.service';
 import { CreateCardsBatchDto } from './dto/create-cards-batch.dto';
 import { CardResponseDto } from './dto/card-response.dto';
+import { UpdateDailyLimitDto } from './dto/update-daily-limit.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/decorators/role.decorator';
@@ -58,5 +70,83 @@ export class CardsController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.cardsService.findOne(code, currentUser);
+  }
+
+  @Put(':code/suspend')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PARENT,
+    UserRole.STUDENT,
+  )
+  @ApiOperation({ summary: 'Suspend an active card' })
+  @ApiSuccessResponse(CardResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.CARDS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: ErrorMessages.CARDS.NOT_SUSPENDABLE,
+    type: ErrorResponse,
+  })
+  suspend(
+    @Param('code') code: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.cardsService.suspend(code, currentUser);
+  }
+
+  @Put(':code/activate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PARENT,
+    UserRole.STUDENT,
+  )
+  @ApiOperation({ summary: 'Reactivate a suspended card' })
+  @ApiSuccessResponse(CardResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.CARDS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: ErrorMessages.CARDS.NOT_ACTIVATABLE,
+    type: ErrorResponse,
+  })
+  activate(
+    @Param('code') code: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.cardsService.activate(code, currentUser);
+  }
+
+  @Put(':code/daily-limit')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.PARENT, UserRole.STUDENT)
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "Update the daily spending limit on a student's card",
+  })
+  @ApiSuccessResponse(CardResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.CARDS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({
+    description: ErrorMessages.CARDS.DAILY_LIMIT_FORBIDDEN,
+    type: ErrorResponse,
+  })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  updateDailyLimit(
+    @Param('code') code: string,
+    @Body() dto: UpdateDailyLimitDto,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.cardsService.updateDailyLimit(code, dto, currentUser);
   }
 }

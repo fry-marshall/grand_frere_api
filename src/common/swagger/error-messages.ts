@@ -16,6 +16,9 @@ export const ErrorMessages = {
   CARDS: {
     NOT_FOUND: 'Card not found',
     CODE_ALREADY_EXISTS: 'Card code already exists',
+    NOT_SUSPENDABLE: 'Card can only be suspended when active',
+    NOT_ACTIVATABLE: 'Card can only be activated when suspended',
+    DAILY_LIMIT_FORBIDDEN: 'Only the linked parent can update the daily limit',
   },
   SCHOOLS: {
     NOT_FOUND: 'School not found',
