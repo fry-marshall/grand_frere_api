@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -23,6 +24,8 @@ import { CreateSchoolAdminDto } from './dto/create-school-admin.dto';
 import { UpdateSchoolDto } from './dto/update-school.dto';
 import { SchoolResponseDto } from './dto/school-response.dto';
 import { SchoolAdminResponseDto } from './dto/school-admin-response.dto';
+import { SchoolVendorResponseDto } from './dto/school-vendor-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/decorators/role.decorator';
@@ -150,5 +153,23 @@ export class SchoolsController {
   })
   activate(@Param('id') id: string) {
     return this.schoolsService.activate(id);
+  }
+
+  @Get(':id/vendors')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'List vendors of a school' })
+  @ApiSuccessResponse(SchoolVendorResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.SCHOOLS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
+  findVendors(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.schoolsService.findVendors(id, currentUser, query);
   }
 }
