@@ -10,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { School } from './entities/school.entity';
 import { User } from '../users/entities/user.entity';
 import { Vendor } from '../vendors/entities/vendor.entity';
+import { Student } from '../students/entities/student.entity';
 import { SchoolStatus } from './school.types';
 import { UserRole } from '../users/user.types';
 import { CreateSchoolDto } from './dto/create-school.dto';
@@ -18,6 +19,7 @@ import { UpdateSchoolDto } from './dto/update-school.dto';
 import { SchoolResponseDto } from './dto/school-response.dto';
 import { SchoolAdminResponseDto } from './dto/school-admin-response.dto';
 import { SchoolVendorResponseDto } from './dto/school-vendor-response.dto';
+import { SchoolStudentResponseDto } from './dto/school-student-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -27,6 +29,8 @@ export class SchoolsService {
     @InjectRepository(School) private readonly schoolRepo: Repository<School>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Vendor) private readonly vendorRepo: Repository<Vendor>,
+    @InjectRepository(Student)
+    private readonly studentRepo: Repository<Student>,
   ) {}
 
   async create(dto: CreateSchoolDto): Promise<SchoolResponseDto> {
@@ -161,6 +165,46 @@ export class SchoolsService {
           firstName: v.user.firstName,
           lastName: v.user.lastName,
           phone: v.user.phone,
+        },
+      })),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async findStudents(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+    query: PaginationQueryDto,
+  ): Promise<{ data: SchoolStudentResponseDto[]; meta: object }> {
+    const school = await this.schoolRepo.findOne({ where: { id } });
+    if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (admin?.schoolId !== school.id) throw new ForbiddenException();
+    }
+
+    const { page, limit } = query;
+    const [students, total] = await this.studentRepo.findAndCount({
+      where: { schoolId: id },
+      relations: ['user'],
+      order: { user: { lastName: 'ASC' } },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      data: students.map((s) => ({
+        id: s.id,
+        class: s.class,
+        cardId: s.cardId,
+        user: {
+          id: s.user.id,
+          firstName: s.user.firstName,
+          lastName: s.user.lastName,
+          phone: s.user.phone,
         },
       })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
