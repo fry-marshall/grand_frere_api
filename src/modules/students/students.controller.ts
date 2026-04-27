@@ -10,6 +10,7 @@ import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator
 import { StudentsService } from './students.service';
 import { StudentResponseDto } from './dto/student-response.dto';
 import { StudentParentResponseDto } from './dto/student-parents-response.dto';
+import { StudentOrderResponseDto } from './dto/student-order-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -69,5 +70,23 @@ export class StudentsController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.studentsService.findParents(id, currentUser);
+  }
+
+  @Get(':id/orders')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.STUDENT)
+  @ApiOperation({ summary: "List student's orders" })
+  @ApiSuccessResponse(StudentOrderResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.STUDENTS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findOrders(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.studentsService.findOrders(id, currentUser, query);
   }
 }
