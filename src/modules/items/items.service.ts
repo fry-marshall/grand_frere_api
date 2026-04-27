@@ -3,12 +3,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Item } from './entities/item.entity';
 import { Vendor } from '../vendors/entities/vendor.entity';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/user.types';
+import type { IStorageService } from '../../common/storage/storage.interface';
+import { STORAGE_SERVICE } from '../../common/storage/storage.interface';
 import { ItemResponseDto } from './dto/item-response.dto';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
@@ -24,6 +27,8 @@ export class ItemsService {
     private readonly vendorRepo: Repository<Vendor>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @Inject(STORAGE_SERVICE)
+    private readonly storageService: IStorageService,
   ) {}
 
   async findAll(
@@ -152,6 +157,38 @@ export class ItemsService {
     }
 
     await this.itemRepo.delete(id);
+  }
+
+  async updateImage(
+    id: string,
+    file: Express.Multer.File,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<ItemResponseDto> {
+    const item = await this.itemRepo.findOne({ where: { id } });
+    if (!item) throw new NotFoundException(ErrorMessages.ITEMS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.VENDOR) {
+      const vendor = await this.vendorRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (vendor?.id !== item.vendorId) throw new ForbiddenException();
+    }
+
+    if (item.imageUrl) {
+      const oldKey = item.imageUrl.split('/').slice(-2).join('/');
+      await this.storageService.deleteFile(oldKey).catch(() => undefined);
+    }
+
+    const ext = file.mimetype.split('/')[1];
+    const key = `items/${id}/${Date.now()}.${ext}`;
+    const imageUrl = await this.storageService.uploadBuffer(
+      file.buffer,
+      key,
+      file.mimetype,
+    );
+
+    await this.itemRepo.update(id, { imageUrl });
+    return this.toDto({ ...item, imageUrl });
   }
 
   private toDto(item: Item): ItemResponseDto {
