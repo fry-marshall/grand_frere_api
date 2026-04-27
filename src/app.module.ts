@@ -11,6 +11,7 @@ import { SchoolsModule } from './modules/schools/schools.module';
 import { VendorsModule } from './modules/vendors/vendors.module';
 import { StudentsModule } from './modules/students/students.module';
 import { ParentsModule } from './modules/parents/parents.module';
+import { ItemsModule } from './modules/items/items.module';
 import { StorageModule } from './common/storage/storage.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { StorageModule } from './common/storage/storage.module';
     VendorsModule,
     StudentsModule,
     ParentsModule,
+    ItemsModule,
   ],
   providers: [
     {
