@@ -6,9 +6,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Student } from './entities/student.entity';
+import { StudentParent } from './entities/student-parent.entity';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/user.types';
 import { StudentResponseDto } from './dto/student-response.dto';
+import { StudentParentResponseDto } from './dto/student-parents-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -17,6 +19,8 @@ export class StudentsService {
   constructor(
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
+    @InjectRepository(StudentParent)
+    private readonly studentParentRepo: Repository<StudentParent>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
   ) {}
@@ -75,6 +79,43 @@ export class StudentsService {
     }
 
     return this.toDto(student);
+  }
+
+  async findParents(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<StudentParentResponseDto[]> {
+    const student = await this.studentRepo.findOne({ where: { id } });
+    if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (admin?.schoolId !== student.schoolId) throw new ForbiddenException();
+    }
+
+    if (
+      currentUser.role === UserRole.STUDENT &&
+      student.userId !== currentUser.id
+    ) {
+      throw new ForbiddenException();
+    }
+
+    const links = await this.studentParentRepo.find({
+      where: { studentId: id },
+      relations: ['parent', 'parent.user'],
+    });
+
+    return links.map((link) => ({
+      id: link.parent.id,
+      user: {
+        id: link.parent.user.id,
+        firstName: link.parent.user.firstName,
+        lastName: link.parent.user.lastName,
+        phone: link.parent.user.phone,
+      },
+    }));
   }
 
   private toDto(student: Student): StudentResponseDto {
