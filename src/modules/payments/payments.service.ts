@@ -1,20 +1,25 @@
+import { createHmac } from 'crypto';
 import {
   ForbiddenException,
   Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment } from './entities/payment.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
+import { Transaction } from '../wallets/entities/transaction.entity';
 import { Student } from '../students/entities/student.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { UserRole } from '../users/user.types';
 import { Currency } from '../../common/enums/currency.enum';
 import { PaymentStatus } from './payment.types';
+import { TransactionType } from '../wallets/wallet.types';
 import type { IPaystackService } from '../../common/paystack/paystack.interface';
 import { PAYSTACK_SERVICE } from '../../common/paystack/paystack.interface';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
@@ -24,10 +29,13 @@ import { ErrorMessages } from '../../common/swagger/error-messages';
 @Injectable()
 export class PaymentsService {
   constructor(
+    private readonly configService: ConfigService,
     @InjectRepository(Payment)
     private readonly paymentRepo: Repository<Payment>,
     @InjectRepository(Wallet)
     private readonly walletRepo: Repository<Wallet>,
+    @InjectRepository(Transaction)
+    private readonly transactionRepo: Repository<Transaction>,
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
     @InjectRepository(Parent)
@@ -103,5 +111,55 @@ export class PaymentsService {
       authorizationUrl: paystackResult.authorizationUrl,
       reference: paystackResult.reference,
     };
+  }
+
+  async handleWebhook(
+    rawBody: Buffer,
+    signature: string,
+    body: Record<string, unknown>,
+  ): Promise<void> {
+    const secret = this.configService.get<string>('PAYSTACK_SECRET_KEY') ?? '';
+    const expected = createHmac('sha512', secret).update(rawBody).digest('hex');
+
+    if (signature !== expected) {
+      throw new UnauthorizedException(
+        ErrorMessages.PAYMENTS.INVALID_WEBHOOK_SIGNATURE,
+      );
+    }
+
+    if (body.event !== 'charge.success') return;
+
+    const data = body.data as { reference: string; amount: number };
+
+    const payment = await this.paymentRepo.findOne({
+      where: { paystackRef: data.reference },
+    });
+    if (!payment) return;
+
+    if (payment.status === PaymentStatus.SUCCESS) return;
+
+    await this.paymentRepo.update(payment.id, {
+      status: PaymentStatus.SUCCESS,
+    });
+
+    const wallet = await this.walletRepo.findOne({
+      where: { id: payment.walletId },
+    });
+    if (!wallet) return;
+
+    const balanceBefore = wallet.balance;
+    const balanceAfter = balanceBefore + payment.amount;
+
+    await this.walletRepo.update(wallet.id, { balance: balanceAfter });
+
+    await this.transactionRepo.save({
+      walletId: wallet.id,
+      type: TransactionType.CREDIT,
+      amount: payment.amount,
+      currency: payment.currency,
+      balanceBefore,
+      balanceAfter,
+      paymentId: payment.id,
+    });
   }
 }

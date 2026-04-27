@@ -1,8 +1,16 @@
-import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
@@ -19,13 +27,13 @@ import { ErrorResponse } from '../../common/swagger/api-responses';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
 @ApiTags('Payments')
-@ApiBearerAuth()
 @Controller({ version: '1', path: 'payments' })
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post('initiate')
   @HttpCode(201)
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.SUPER_ADMIN, UserRole.PARENT, UserRole.STUDENT)
   @ApiOperation({ summary: 'Initiate a wallet top-up via Paystack' })
@@ -40,5 +48,17 @@ export class PaymentsController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.paymentsService.initiate(dto, currentUser);
+  }
+
+  @Post('webhook')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Paystack webhook — confirms payment and credits wallet',
+  })
+  @ApiOkResponse({ description: 'Webhook processed' })
+  async webhook(@Req() req: any, @Body() body: Record<string, unknown>) {
+    const signature = req.headers['x-paystack-signature'] as string;
+    const rawBody: Buffer = req.rawBody;
+    return this.paymentsService.handleWebhook(rawBody, signature, body);
   }
 }
