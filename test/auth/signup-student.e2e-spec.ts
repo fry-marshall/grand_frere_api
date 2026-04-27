@@ -44,7 +44,7 @@ describe('POST /api/v1/auth/signup/student', () => {
     for (const phone of TEST_PHONES) {
       await userRepo.delete({ phone });
     }
-    const leftover = await schoolRepo.findOne({ where: { sigle: 'TS-SS' } });
+    const leftover = await schoolRepo.findOne({ where: { sigle: 'TS-SST' } });
     if (leftover) {
       await userRepo.delete({ schoolId: leftover.id });
       await cardRepo.delete({ schoolId: leftover.id });
@@ -54,7 +54,7 @@ describe('POST /api/v1/auth/signup/student', () => {
     // Seed
     school = await schoolRepo.save({
       name: 'Test School SS',
-      sigle: 'TS-SS',
+      sigle: 'TS-SST',
       address: '1 Test Street',
       status: SchoolStatus.ACTIVE,
     });

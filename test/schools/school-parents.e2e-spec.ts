@@ -39,7 +39,7 @@ describe('GET /api/v1/schools/:id/parents', () => {
     studentParentRepo = ds.getRepository(StudentParent);
     jwtService = moduleRef.get(JwtService, { strict: false });
 
-    for (const sigle of ['TS-SP', 'TS-SP2']) {
+    for (const sigle of ['TS-SCHP', 'TS-SCHP2']) {
       const leftover = await schoolRepo.findOne({ where: { sigle } });
       if (leftover) {
         await studentRepo.delete({ schoolId: leftover.id });
@@ -50,14 +50,14 @@ describe('GET /api/v1/schools/:id/parents', () => {
 
     school = await schoolRepo.save({
       name: 'School Parents Test',
-      sigle: 'TS-SP',
+      sigle: 'TS-SCHP',
       address: '1 Parent Street',
       status: SchoolStatus.ACTIVE,
     });
 
     otherSchool = await schoolRepo.save({
       name: 'Other School SP',
-      sigle: 'TS-SP2',
+      sigle: 'TS-SCHP2',
       address: '2 Other Street',
       status: SchoolStatus.ACTIVE,
     });

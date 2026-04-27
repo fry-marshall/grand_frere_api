@@ -36,15 +36,16 @@ describe('POST /api/v1/auth/signup/vendor', () => {
     for (const phone of TEST_PHONES) {
       await userRepo.delete({ phone });
     }
-    const leftover = await schoolRepo.findOne({ where: { sigle: 'TS-SV' } });
+    const leftover = await schoolRepo.findOne({ where: { sigle: 'TS-SVN' } });
     if (leftover) {
+      await vendorRepo.delete({ schoolId: leftover.id });
       await userRepo.delete({ schoolId: leftover.id });
       await schoolRepo.delete({ id: leftover.id });
     }
 
     school = await schoolRepo.save({
       name: 'Test School SV',
-      sigle: 'TS-SV',
+      sigle: 'TS-SVN',
       address: '1 Test Street',
       status: SchoolStatus.ACTIVE,
     });
@@ -61,6 +62,7 @@ describe('POST /api/v1/auth/signup/vendor', () => {
     for (const phone of TEST_PHONES) {
       await userRepo.delete({ phone });
     }
+    await vendorRepo.delete({ schoolId: school.id });
     await userRepo.delete({ schoolId: school.id });
     await schoolRepo.delete({ id: school.id });
     await app.close();

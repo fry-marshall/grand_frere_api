@@ -40,6 +40,17 @@ export const ErrorMessages = {
   ITEMS: {
     NOT_FOUND: 'Item not found',
   },
+  WALLETS: {
+    NOT_FOUND: 'Wallet not found',
+  },
+  PAYMENTS: {
+    NOT_FOUND: 'Payment not found',
+    INITIATION_FAILED: 'Payment initiation failed',
+    INVALID_WEBHOOK_SIGNATURE: 'Invalid webhook signature',
+  },
+  ORDERS: {
+    NOT_FOUND: 'Order not found',
+  },
   VENDORS: {
     NOT_FOUND: 'Vendor not found',
     NOT_APPROVABLE: 'Vendor can only be approved when pending',
