@@ -41,4 +41,6 @@ export const envValidationSchema = Joi.object({
   TWILIO_ACCOUNT_SID: prodRequired,
   TWILIO_AUTH_TOKEN: prodRequired,
   TWILIO_PHONE_NUMBER: prodRequired,
+
+  PAYSTACK_SECRET_KEY: prodRequired,
 });

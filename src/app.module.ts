@@ -13,7 +13,9 @@ import { StudentsModule } from './modules/students/students.module';
 import { ParentsModule } from './modules/parents/parents.module';
 import { ItemsModule } from './modules/items/items.module';
 import { WalletsModule } from './modules/wallets/wallets.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { StorageModule } from './common/storage/storage.module';
+import { PaystackModule } from './common/paystack/paystack.module';
 
 @Module({
   imports: [
@@ -28,6 +30,7 @@ import { StorageModule } from './common/storage/storage.module';
       useFactory: (config: ConfigService) => config.get('database')!,
     }),
     StorageModule,
+    PaystackModule,
     AuthModule,
     CardsModule,
     SchoolsModule,
@@ -36,6 +39,7 @@ import { StorageModule } from './common/storage/storage.module';
     ParentsModule,
     ItemsModule,
     WalletsModule,
+    PaymentsModule,
   ],
   providers: [
     {
