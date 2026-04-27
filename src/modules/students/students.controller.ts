@@ -11,6 +11,7 @@ import { StudentsService } from './students.service';
 import { StudentResponseDto } from './dto/student-response.dto';
 import { StudentParentResponseDto } from './dto/student-parents-response.dto';
 import { StudentOrderResponseDto } from './dto/student-order-response.dto';
+import { StudentTransactionResponseDto } from './dto/student-transaction-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -88,5 +89,23 @@ export class StudentsController {
     @Query() query: PaginationQueryDto,
   ) {
     return this.studentsService.findOrders(id, currentUser, query);
+  }
+
+  @Get(':id/transactions')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.STUDENT)
+  @ApiOperation({ summary: "List student's wallet transactions" })
+  @ApiSuccessResponse(StudentTransactionResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.STUDENTS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findTransactions(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.studentsService.findTransactions(id, currentUser, query);
   }
 }

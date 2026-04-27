@@ -9,10 +9,13 @@ import { Student } from './entities/student.entity';
 import { StudentParent } from './entities/student-parent.entity';
 import { User } from '../users/entities/user.entity';
 import { Order } from '../orders/entities/order.entity';
+import { Wallet } from '../wallets/entities/wallet.entity';
+import { Transaction } from '../wallets/entities/transaction.entity';
 import { UserRole } from '../users/user.types';
 import { StudentResponseDto } from './dto/student-response.dto';
 import { StudentParentResponseDto } from './dto/student-parents-response.dto';
 import { StudentOrderResponseDto } from './dto/student-order-response.dto';
+import { StudentTransactionResponseDto } from './dto/student-transaction-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -27,6 +30,10 @@ export class StudentsService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Order)
     private readonly orderRepo: Repository<Order>,
+    @InjectRepository(Wallet)
+    private readonly walletRepo: Repository<Wallet>,
+    @InjectRepository(Transaction)
+    private readonly transactionRepo: Repository<Transaction>,
   ) {}
 
   async findAll(
@@ -164,6 +171,60 @@ export class StudentsService {
           id: o.vendor.id,
           shopName: o.vendor.shopName,
         },
+      })),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async findTransactions(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+    query: PaginationQueryDto,
+  ): Promise<{ data: StudentTransactionResponseDto[]; meta: object }> {
+    const student = await this.studentRepo.findOne({ where: { id } });
+    if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (admin?.schoolId !== student.schoolId) throw new ForbiddenException();
+    }
+
+    if (
+      currentUser.role === UserRole.STUDENT &&
+      student.userId !== currentUser.id
+    ) {
+      throw new ForbiddenException();
+    }
+
+    const wallet = await this.walletRepo.findOne({ where: { studentId: id } });
+    if (!wallet) {
+      return {
+        data: [],
+        meta: { total: 0, page: query.page, limit: query.limit, totalPages: 0 },
+      };
+    }
+
+    const { page, limit } = query;
+    const [transactions, total] = await this.transactionRepo.findAndCount({
+      where: { walletId: wallet.id },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      data: transactions.map((t) => ({
+        id: t.id,
+        type: t.type,
+        amount: t.amount,
+        currency: t.currency,
+        balanceBefore: t.balanceBefore,
+        balanceAfter: t.balanceAfter,
+        orderId: t.orderId,
+        paymentId: t.paymentId,
+        createdAt: t.createdAt,
       })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
