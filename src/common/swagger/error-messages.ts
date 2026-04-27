@@ -31,6 +31,9 @@ export const ErrorMessages = {
     NOT_SUSPENDABLE: 'School can only be suspended when active',
     NOT_ACTIVATABLE: 'School can only be activated when suspended',
   },
+  STUDENTS: {
+    NOT_FOUND: 'Student not found',
+  },
   VENDORS: {
     NOT_FOUND: 'Vendor not found',
     NOT_APPROVABLE: 'Vendor can only be approved when pending',

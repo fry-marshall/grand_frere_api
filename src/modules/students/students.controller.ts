@@ -1,0 +1,55 @@
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
+import { StudentsService } from './students.service';
+import { StudentResponseDto } from './dto/student-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Role } from '../../common/decorators/role.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ErrorResponse } from '../../common/swagger/api-responses';
+import { ErrorMessages } from '../../common/swagger/error-messages';
+import { UserRole } from '../users/user.types';
+
+@ApiTags('Students')
+@ApiBearerAuth()
+@Controller({ version: '1', path: 'students' })
+export class StudentsController {
+  constructor(private readonly studentsService: StudentsService) {}
+
+  @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'List students' })
+  @ApiSuccessResponse(StudentResponseDto)
+  findAll(
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.studentsService.findAll(currentUser, query);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.STUDENT)
+  @ApiOperation({ summary: 'Get student by id' })
+  @ApiSuccessResponse(StudentResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.STUDENTS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.studentsService.findOne(id, currentUser);
+  }
+}
