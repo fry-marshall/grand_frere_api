@@ -10,6 +10,7 @@ import { CardsModule } from './modules/cards/cards.module';
 import { SchoolsModule } from './modules/schools/schools.module';
 import { VendorsModule } from './modules/vendors/vendors.module';
 import { StudentsModule } from './modules/students/students.module';
+import { ParentsModule } from './modules/parents/parents.module';
 import { StorageModule } from './common/storage/storage.module';
 
 @Module({
@@ -30,6 +31,7 @@ import { StorageModule } from './common/storage/storage.module';
     SchoolsModule,
     VendorsModule,
     StudentsModule,
+    ParentsModule,
   ],
   providers: [
     {

@@ -34,6 +34,9 @@ export const ErrorMessages = {
   STUDENTS: {
     NOT_FOUND: 'Student not found',
   },
+  PARENTS: {
+    NOT_FOUND: 'Parent not found',
+  },
   VENDORS: {
     NOT_FOUND: 'Vendor not found',
     NOT_APPROVABLE: 'Vendor can only be approved when pending',
