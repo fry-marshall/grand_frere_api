@@ -13,6 +13,7 @@ import { Repository } from 'typeorm';
 import { Payment } from './entities/payment.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import { Transaction } from '../wallets/entities/transaction.entity';
+import { User } from '../users/entities/user.entity';
 import { Student } from '../students/entities/student.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
@@ -24,6 +25,8 @@ import type { IPaystackService } from '../../common/paystack/paystack.interface'
 import { PAYSTACK_SERVICE } from '../../common/paystack/paystack.interface';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { InitiatePaymentResponseDto } from './dto/initiate-payment-response.dto';
+import { PaymentResponseDto } from './dto/payment-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
 @Injectable()
@@ -36,6 +39,8 @@ export class PaymentsService {
     private readonly walletRepo: Repository<Wallet>,
     @InjectRepository(Transaction)
     private readonly transactionRepo: Repository<Transaction>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
     @InjectRepository(Parent)
@@ -45,6 +50,45 @@ export class PaymentsService {
     @Inject(PAYSTACK_SERVICE)
     private readonly paystackService: IPaystackService,
   ) {}
+
+  async findAll(
+    currentUser: { id: string; role: UserRole },
+    query: PaginationQueryDto,
+  ): Promise<{ data: PaymentResponseDto[]; meta: object }> {
+    const { page, limit } = query;
+
+    if (currentUser.role === UserRole.SUPER_ADMIN) {
+      const [payments, total] = await this.paymentRepo.findAndCount({
+        order: { createdAt: 'DESC' },
+        skip: (page - 1) * limit,
+        take: limit,
+      });
+      return {
+        data: payments.map((p) => this.toDto(p)),
+        meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      };
+    }
+
+    const admin = await this.userRepo.findOne({
+      where: { id: currentUser.id },
+    });
+    if (!admin?.schoolId) throw new ForbiddenException();
+
+    const [payments, total] = await this.paymentRepo
+      .createQueryBuilder('p')
+      .innerJoin('p.wallet', 'w')
+      .innerJoin('w.student', 's')
+      .where('s.schoolId = :schoolId', { schoolId: admin.schoolId })
+      .orderBy('p.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data: payments.map((p) => this.toDto(p)),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
 
   async initiate(
     dto: InitiatePaymentDto,
@@ -161,5 +205,18 @@ export class PaymentsService {
       balanceAfter,
       paymentId: payment.id,
     });
+  }
+
+  private toDto(payment: Payment): PaymentResponseDto {
+    return {
+      id: payment.id,
+      walletId: payment.walletId,
+      paystackRef: payment.paystackRef,
+      amount: payment.amount,
+      currency: payment.currency,
+      status: payment.status,
+      initiatedBy: payment.initiatedBy,
+      createdAt: payment.createdAt,
+    };
   }
 }

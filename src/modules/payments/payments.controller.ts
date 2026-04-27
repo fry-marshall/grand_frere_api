@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +20,8 @@ import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator
 import { PaymentsService } from './payments.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { InitiatePaymentResponseDto } from './dto/initiate-payment-response.dto';
+import { PaymentResponseDto } from './dto/payment-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/decorators/role.decorator';
@@ -30,6 +34,20 @@ import { ErrorMessages } from '../../common/swagger/error-messages';
 @Controller({ version: '1', path: 'payments' })
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
+
+  @Get()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'List payments' })
+  @ApiSuccessResponse(PaymentResponseDto)
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findAll(
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.paymentsService.findAll(currentUser, query);
+  }
 
   @Post('initiate')
   @HttpCode(201)
