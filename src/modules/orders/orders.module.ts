@@ -11,6 +11,7 @@ import { Card } from '../cards/entities/card.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { User } from '../users/entities/user.entity';
+import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 
@@ -28,6 +29,7 @@ import { OrdersController } from './orders.controller';
       Parent,
       StudentParent,
       User,
+      VendorWallet,
     ]),
   ],
   controllers: [OrdersController],

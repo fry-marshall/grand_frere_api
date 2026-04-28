@@ -14,6 +14,7 @@ import { Student } from '../students/entities/student.entity';
 import { Vendor } from '../vendors/entities/vendor.entity';
 import { Item } from '../items/entities/item.entity';
 import { Card } from '../cards/entities/card.entity';
+import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { User } from '../users/entities/user.entity';
@@ -48,6 +49,8 @@ export class OrdersService {
     private readonly transactionRepo: Repository<Transaction>,
     @InjectRepository(Card)
     private readonly cardRepo: Repository<Card>,
+    @InjectRepository(VendorWallet)
+    private readonly vendorWalletRepo: Repository<VendorWallet>,
     @InjectRepository(Parent)
     private readonly parentRepo: Repository<Parent>,
     @InjectRepository(StudentParent)
@@ -299,6 +302,71 @@ export class OrdersService {
     });
 
     return this.toDto(order);
+  }
+
+  async validate(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<OrderResponseDto> {
+    const order = await this.orderRepo.findOne({ where: { id } });
+    if (!order) throw new NotFoundException(ErrorMessages.ORDERS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.VENDOR) {
+      const vendor = await this.vendorRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!vendor || order.vendorId !== vendor.id)
+        throw new ForbiddenException();
+    }
+
+    if (order.status !== OrderStatus.PENDING) {
+      throw new BadRequestException(ErrorMessages.ORDERS.NOT_PENDING);
+    }
+
+    const wallet = await this.walletRepo.findOne({
+      where: { studentId: order.studentId },
+    });
+    if (!wallet) throw new NotFoundException(ErrorMessages.WALLETS.NOT_FOUND);
+
+    let vendorWallet = await this.vendorWalletRepo.findOne({
+      where: { vendorId: order.vendorId },
+    });
+
+    const updated = await this.dataSource.transaction(async (manager) => {
+      await manager.update(Order, order.id, { status: OrderStatus.VALIDATED });
+
+      const balanceBefore = wallet.balance;
+      const balanceAfter = balanceBefore - order.totalAmount;
+      await manager.update(Wallet, wallet.id, {
+        balance: balanceAfter,
+        reserved: wallet.reserved - order.totalAmount,
+      });
+
+      await manager.save(Transaction, {
+        walletId: wallet.id,
+        type: TransactionType.DEBIT,
+        amount: order.totalAmount,
+        currency: wallet.currency ?? Currency.XOF,
+        balanceBefore,
+        balanceAfter,
+        orderId: order.id,
+      });
+
+      if (vendorWallet) {
+        await manager.update(VendorWallet, vendorWallet.id, {
+          balance: vendorWallet.balance + order.totalAmount,
+        });
+      } else {
+        vendorWallet = await manager.save(VendorWallet, {
+          vendorId: order.vendorId,
+          balance: order.totalAmount,
+        });
+      }
+
+      return { ...order, status: OrderStatus.VALIDATED };
+    });
+
+    return this.toDto(updated);
   }
 
   private toDto(order: Order): OrderResponseDto {

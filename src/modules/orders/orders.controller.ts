@@ -5,6 +5,7 @@ import {
   HttpCode,
   Param,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -77,6 +78,30 @@ export class OrdersController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.ordersService.findOne(id, currentUser);
+  }
+
+  @Put(':id/validate')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.VENDOR, UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary: 'Validate a pending order and credit vendor wallet',
+  })
+  @ApiSuccessResponse(OrderResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.ORDERS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiBadRequestResponse({
+    description: ErrorMessages.ORDERS.NOT_PENDING,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  validate(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.ordersService.validate(id, currentUser);
   }
 
   @Post('vendor/:vendorId')
