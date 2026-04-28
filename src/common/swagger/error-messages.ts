@@ -50,6 +50,10 @@ export const ErrorMessages = {
   },
   ORDERS: {
     NOT_FOUND: 'Order not found',
+    INSUFFICIENT_BALANCE: 'Insufficient wallet balance',
+    DAILY_LIMIT_EXCEEDED: 'Daily spending limit exceeded',
+    INVALID_ITEMS: 'One or more items are invalid or unavailable',
+    NOT_PENDING: 'Order is not in pending status',
   },
   VENDORS: {
     NOT_FOUND: 'Vendor not found',

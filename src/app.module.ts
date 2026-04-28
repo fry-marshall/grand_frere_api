@@ -14,6 +14,7 @@ import { ParentsModule } from './modules/parents/parents.module';
 import { ItemsModule } from './modules/items/items.module';
 import { WalletsModule } from './modules/wallets/wallets.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { OrdersModule } from './modules/orders/orders.module';
 import { StorageModule } from './common/storage/storage.module';
 import { PaystackModule } from './common/paystack/paystack.module';
 
@@ -40,6 +41,7 @@ import { PaystackModule } from './common/paystack/paystack.module';
     ItemsModule,
     WalletsModule,
     PaymentsModule,
+    OrdersModule,
   ],
   providers: [
     {
