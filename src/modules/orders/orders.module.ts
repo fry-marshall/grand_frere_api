@@ -8,6 +8,8 @@ import { Vendor } from '../vendors/entities/vendor.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import { Transaction } from '../wallets/entities/transaction.entity';
 import { Card } from '../cards/entities/card.entity';
+import { Parent } from '../parents/entities/parent.entity';
+import { StudentParent } from '../students/entities/student-parent.entity';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 
@@ -22,6 +24,8 @@ import { OrdersController } from './orders.controller';
       Wallet,
       Transaction,
       Card,
+      Parent,
+      StudentParent,
     ]),
   ],
   controllers: [OrdersController],

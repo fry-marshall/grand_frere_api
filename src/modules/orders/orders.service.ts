@@ -14,6 +14,8 @@ import { Student } from '../students/entities/student.entity';
 import { Vendor } from '../vendors/entities/vendor.entity';
 import { Item } from '../items/entities/item.entity';
 import { Card } from '../cards/entities/card.entity';
+import { Parent } from '../parents/entities/parent.entity';
+import { StudentParent } from '../students/entities/student-parent.entity';
 import { OrderStatus } from './order.types';
 import { ItemStatus } from '../items/item.types';
 import { CardStatus } from '../cards/card.types';
@@ -43,6 +45,10 @@ export class OrdersService {
     private readonly transactionRepo: Repository<Transaction>,
     @InjectRepository(Card)
     private readonly cardRepo: Repository<Card>,
+    @InjectRepository(Parent)
+    private readonly parentRepo: Repository<Parent>,
+    @InjectRepository(StudentParent)
+    private readonly studentParentRepo: Repository<StudentParent>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -59,6 +65,24 @@ export class OrdersService {
       vendor.userId !== currentUser.id
     ) {
       throw new ForbiddenException();
+    }
+
+    if (currentUser.role === UserRole.PARENT) {
+      const parent = await this.parentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!parent) throw new ForbiddenException();
+      const link = await this.studentParentRepo.findOne({
+        where: { studentId: dto.studentId, parentId: parent.id },
+      });
+      if (!link) throw new ForbiddenException();
+    }
+
+    if (currentUser.role === UserRole.STUDENT) {
+      const ownStudent = await this.studentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (ownStudent?.id !== dto.studentId) throw new ForbiddenException();
     }
 
     const student = await this.studentRepo.findOne({

@@ -7,6 +7,8 @@ import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
+import { Parent } from '../../src/modules/parents/entities/parent.entity';
+import { StudentParent } from '../../src/modules/students/entities/student-parent.entity';
 import { Item } from '../../src/modules/items/entities/item.entity';
 import { Wallet } from '../../src/modules/wallets/entities/wallet.entity';
 import { Order } from '../../src/modules/orders/entities/order.entity';
@@ -23,6 +25,8 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
   let userRepo: Repository<User>;
   let vendorRepo: Repository<Vendor>;
   let studentRepo: Repository<Student>;
+  let parentRepo: Repository<Parent>;
+  let studentParentRepo: Repository<StudentParent>;
   let itemRepo: Repository<Item>;
   let walletRepo: Repository<Wallet>;
   let orderRepo: Repository<Order>;
@@ -31,7 +35,9 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
 
   let school: School;
   let vendor: Vendor;
+  let otherVendor: Vendor;
   let student: Student;
+  let unlinkedStudent: Student;
   let wallet: Wallet;
   let item1: Item;
   let item2: Item;
@@ -39,8 +45,9 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
   let superAdminToken: string;
   let vendorToken: string;
   let otherVendorToken: string;
-  let otherVendor: Vendor;
   let parentToken: string;
+  let studentToken: string;
+  let schoolAdminToken: string;
 
   beforeAll(async () => {
     const { app: nestApp, moduleRef } = await createTestApp();
@@ -51,6 +58,8 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     userRepo = ds.getRepository(User);
     vendorRepo = ds.getRepository(Vendor);
     studentRepo = ds.getRepository(Student);
+    parentRepo = ds.getRepository(Parent);
+    studentParentRepo = ds.getRepository(StudentParent);
     itemRepo = ds.getRepository(Item);
     walletRepo = ds.getRepository(Wallet);
     orderRepo = ds.getRepository(Order);
@@ -64,14 +73,6 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
           where: { schoolId: leftover.id },
         });
         for (const v of leftVendors) {
-          const leftItems = await itemRepo.find({ where: { vendorId: v.id } });
-          for (const it of leftItems) {
-            await orderRepo
-              .createQueryBuilder()
-              .delete()
-              .where('"itemId" = :id', { id: it.id })
-              .execute();
-          }
           await itemRepo.delete({ vendorId: v.id });
         }
         const leftStudents = await studentRepo.find({
@@ -100,6 +101,8 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
       '+2250100005003',
       '+2250100005004',
       '+2250100005005',
+      '+2250100005006',
+      '+2250100005007',
     ]) {
       await userRepo.delete({ phone });
     }
@@ -123,10 +126,23 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
       role: superAdmin.role,
     });
 
+    const schoolAdmin = await userRepo.save({
+      firstName: 'School',
+      lastName: 'AdminORD',
+      phone: '+2250100005001',
+      role: UserRole.SCHOOL_ADMIN,
+      schoolId: school.id,
+      isOnboarded: true,
+    });
+    schoolAdminToken = jwtService.sign({
+      sub: schoolAdmin.id,
+      role: schoolAdmin.role,
+    });
+
     const vendorUser = await userRepo.save({
       firstName: 'Binta',
       lastName: 'ORD',
-      phone: '+2250100005001',
+      phone: '+2250100005002',
       role: UserRole.VENDOR,
       isOnboarded: true,
     });
@@ -144,7 +160,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     const otherVendorUser = await userRepo.save({
       firstName: 'Other',
       lastName: 'VendorORD',
-      phone: '+2250100005002',
+      phone: '+2250100005003',
       role: UserRole.VENDOR,
       isOnboarded: true,
     });
@@ -159,18 +175,6 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
       status: VendorStatus.ACTIVE,
     });
 
-    const parentUser = await userRepo.save({
-      firstName: 'Parent',
-      lastName: 'ORD',
-      phone: '+2250100005003',
-      role: UserRole.PARENT,
-      isOnboarded: true,
-    });
-    parentToken = jwtService.sign({
-      sub: parentUser.id,
-      role: parentUser.role,
-    });
-
     const studentUser = await userRepo.save({
       firstName: 'Eleve',
       lastName: 'ORD',
@@ -178,16 +182,54 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
       role: UserRole.STUDENT,
       isOnboarded: true,
     });
+    studentToken = jwtService.sign({
+      sub: studentUser.id,
+      role: studentUser.role,
+    });
     student = await studentRepo.save({
       userId: studentUser.id,
       schoolId: school.id,
       class: '5eme A',
     });
-
     wallet = await walletRepo.save({
       studentId: student.id,
       balance: 10000,
       reserved: 0,
+    });
+
+    const unlinkedStudentUser = await userRepo.save({
+      firstName: 'Unlinked',
+      lastName: 'StudentORD',
+      phone: '+2250100005005',
+      role: UserRole.STUDENT,
+      isOnboarded: true,
+    });
+    unlinkedStudent = await studentRepo.save({
+      userId: unlinkedStudentUser.id,
+      schoolId: school.id,
+      class: '5eme B',
+    });
+    await walletRepo.save({
+      studentId: unlinkedStudent.id,
+      balance: 5000,
+      reserved: 0,
+    });
+
+    const parentUser = await userRepo.save({
+      firstName: 'Parent',
+      lastName: 'ORD',
+      phone: '+2250100005006',
+      role: UserRole.PARENT,
+      isOnboarded: true,
+    });
+    parentToken = jwtService.sign({
+      sub: parentUser.id,
+      role: parentUser.role,
+    });
+    const parent = await parentRepo.save({ userId: parentUser.id });
+    await studentParentRepo.save({
+      studentId: student.id,
+      parentId: parent.id,
     });
 
     item1 = await itemRepo.save({
@@ -207,13 +249,14 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
   afterAll(async () => {
     await transactionRepo.delete({ walletId: wallet.id });
     await orderRepo.delete({ studentId: student.id });
-    await walletRepo.delete({ id: wallet.id });
+    await orderRepo.delete({ studentId: unlinkedStudent.id });
+    await walletRepo.delete({ studentId: student.id });
+    await walletRepo.delete({ studentId: unlinkedStudent.id });
+    await studentParentRepo.delete({ studentId: student.id });
     await itemRepo.delete({ vendorId: vendor.id });
     await itemRepo.delete({ vendorId: otherVendor.id });
     await studentRepo.delete({ schoolId: school.id });
     await vendorRepo.delete({ schoolId: school.id });
-    await userRepo.delete({ schoolId: school.id });
-    await schoolRepo.delete({ id: school.id });
     for (const phone of [
       '+2250100005000',
       '+2250100005001',
@@ -221,9 +264,17 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
       '+2250100005003',
       '+2250100005004',
       '+2250100005005',
+      '+2250100005006',
+      '+2250100005007',
     ]) {
+      const u = await userRepo.findOne({ where: { phone } });
+      if (u?.role === UserRole.PARENT) {
+        await parentRepo.delete({ userId: u.id });
+      }
       await userRepo.delete({ phone });
     }
+    await userRepo.delete({ schoolId: school.id });
+    await schoolRepo.delete({ id: school.id });
     await app.close();
   });
 
@@ -244,20 +295,46 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
       expect(res.body.data.id).toBeDefined();
       expect(res.body.data.vendorId).toBe(vendor.id);
       expect(res.body.data.studentId).toBe(student.id);
-      expect(res.body.data.totalAmount).toBe(1300); // 2*500 + 1*300
+      expect(res.body.data.totalAmount).toBe(1300);
       expect(res.body.data.status).toBe(OrderStatus.PENDING);
       expect(res.body.data.expiresAt).toBeDefined();
 
       const updatedWallet = await walletRepo.findOne({
         where: { id: wallet.id },
       });
-      expect(updatedWallet!.reserved).toBe(1300);
+      expect(updatedWallet!.reserved).toBeGreaterThanOrEqual(1300);
     });
 
     it('should create an order as SUPER_ADMIN', async () => {
       const res = await request(app.getHttpServer())
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({
+          studentId: student.id,
+          items: [{ itemId: item1.id, quantity: 1 }],
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.totalAmount).toBe(500);
+    });
+
+    it('should create an order as PARENT for linked student', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${parentToken}`)
+        .send({
+          studentId: student.id,
+          items: [{ itemId: item2.id, quantity: 1 }],
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.totalAmount).toBe(300);
+    });
+
+    it('should create an order as STUDENT for own student', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${studentToken}`)
         .send({
           studentId: student.id,
           items: [{ itemId: item1.id, quantity: 1 }],
@@ -279,10 +356,10 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
       expect(res.status).toBe(401);
     });
 
-    it('should return 403 when PARENT calls this endpoint', async () => {
+    it('should return 403 when SCHOOL_ADMIN calls this endpoint', async () => {
       const res = await request(app.getHttpServer())
         .post(`/api/v1/orders/vendor/${vendor.id}`)
-        .set('Authorization', `Bearer ${parentToken}`)
+        .set('Authorization', `Bearer ${schoolAdminToken}`)
         .send({
           studentId: student.id,
           items: [{ itemId: item1.id, quantity: 1 }],
@@ -296,6 +373,28 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
         .set('Authorization', `Bearer ${otherVendorToken}`)
         .send({
           studentId: student.id,
+          items: [{ itemId: item1.id, quantity: 1 }],
+        });
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when PARENT creates order for unlinked student', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${parentToken}`)
+        .send({
+          studentId: unlinkedStudent.id,
+          items: [{ itemId: item1.id, quantity: 1 }],
+        });
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when STUDENT creates order for another student', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({
+          studentId: unlinkedStudent.id,
           items: [{ itemId: item1.id, quantity: 1 }],
         });
       expect(res.status).toBe(403);

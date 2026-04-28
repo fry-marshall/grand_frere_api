@@ -35,7 +35,12 @@ export class OrdersController {
   @HttpCode(201)
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.VENDOR, UserRole.SUPER_ADMIN)
+  @Role(
+    UserRole.VENDOR,
+    UserRole.SUPER_ADMIN,
+    UserRole.PARENT,
+    UserRole.STUDENT,
+  )
   @ApiOperation({ summary: 'Create an order for a student' })
   @ApiSuccessResponse(OrderResponseDto, 201)
   @ApiNotFoundResponse({
