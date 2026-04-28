@@ -25,6 +25,7 @@ import { UserRole } from '../users/user.types';
 import { Currency } from '../../common/enums/currency.enum';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
+import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -111,6 +112,65 @@ export class OrdersService {
     return {
       data: orders.map((o) => this.toDto(o)),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async findOne(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<OrderDetailResponseDto> {
+    const order = await this.orderRepo.findOne({
+      where: { id },
+      relations: ['items'],
+    });
+    if (!order) throw new NotFoundException(ErrorMessages.ORDERS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (!admin?.schoolId) throw new ForbiddenException();
+      const student = await this.studentRepo.findOne({
+        where: { id: order.studentId },
+      });
+      if (student?.schoolId !== admin.schoolId) throw new ForbiddenException();
+    } else if (currentUser.role === UserRole.VENDOR) {
+      const vendor = await this.vendorRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!vendor || order.vendorId !== vendor.id)
+        throw new ForbiddenException();
+    } else if (currentUser.role === UserRole.PARENT) {
+      const parent = await this.parentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!parent) throw new ForbiddenException();
+      const link = await this.studentParentRepo.findOne({
+        where: { studentId: order.studentId, parentId: parent.id },
+      });
+      if (!link) throw new ForbiddenException();
+    } else if (currentUser.role === UserRole.STUDENT) {
+      const student = await this.studentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!student || order.studentId !== student.id)
+        throw new ForbiddenException();
+    }
+
+    return {
+      id: order.id,
+      studentId: order.studentId,
+      vendorId: order.vendorId,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      expiresAt: order.expiresAt,
+      createdAt: order.createdAt,
+      items: order.items.map((i) => ({
+        id: i.id,
+        itemId: i.itemId,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+      })),
     };
   }
 

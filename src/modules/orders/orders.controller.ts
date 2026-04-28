@@ -20,6 +20,7 @@ import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
+import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -52,6 +53,30 @@ export class OrdersController {
     @Query() query: PaginationQueryDto,
   ) {
     return this.ordersService.findAll(currentUser, query);
+  }
+
+  @Get(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.VENDOR,
+    UserRole.PARENT,
+    UserRole.STUDENT,
+  )
+  @ApiOperation({ summary: 'Get order details with items' })
+  @ApiSuccessResponse(OrderDetailResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.ORDERS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.ordersService.findOne(id, currentUser);
   }
 
   @Post('vendor/:vendorId')

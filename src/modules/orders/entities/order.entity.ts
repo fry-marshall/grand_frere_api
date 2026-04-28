@@ -5,10 +5,12 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Student } from '../../students/entities/student.entity';
 import { Vendor } from '../../vendors/entities/vendor.entity';
+import { OrderItem } from './order-item.entity';
 import { OrderStatus } from '../order.types';
 
 @Entity('orders')
@@ -40,6 +42,9 @@ export class Order {
 
   @Column({ type: 'timestamptz' })
   expiresAt: Date;
+
+  @OneToMany(() => OrderItem, (item) => item.order)
+  items: OrderItem[];
 
   @CreateDateColumn()
   createdAt: Date;
