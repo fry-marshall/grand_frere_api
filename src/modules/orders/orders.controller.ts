@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,6 +20,7 @@ import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/decorators/role.decorator';
@@ -30,6 +33,26 @@ import { ErrorMessages } from '../../common/swagger/error-messages';
 @Controller({ version: '1', path: 'orders' })
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  @Get()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.VENDOR,
+    UserRole.PARENT,
+    UserRole.STUDENT,
+  )
+  @ApiOperation({ summary: 'List orders (filtered by role)' })
+  @ApiSuccessResponse(OrderResponseDto)
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findAll(
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.ordersService.findAll(currentUser, query);
+  }
 
   @Post('vendor/:vendorId')
   @HttpCode(201)

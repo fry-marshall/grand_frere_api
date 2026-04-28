@@ -16,6 +16,7 @@ import { Item } from '../items/entities/item.entity';
 import { Card } from '../cards/entities/card.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
+import { User } from '../users/entities/user.entity';
 import { OrderStatus } from './order.types';
 import { ItemStatus } from '../items/item.types';
 import { CardStatus } from '../cards/card.types';
@@ -24,6 +25,7 @@ import { UserRole } from '../users/user.types';
 import { Currency } from '../../common/enums/currency.enum';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
 @Injectable()
@@ -49,8 +51,68 @@ export class OrdersService {
     private readonly parentRepo: Repository<Parent>,
     @InjectRepository(StudentParent)
     private readonly studentParentRepo: Repository<StudentParent>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
     private readonly dataSource: DataSource,
   ) {}
+
+  async findAll(
+    currentUser: { id: string; role: UserRole },
+    query: PaginationQueryDto,
+  ): Promise<{ data: OrderResponseDto[]; meta: object }> {
+    const { page, limit } = query;
+
+    const qb = this.orderRepo
+      .createQueryBuilder('o')
+      .orderBy('o.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (!admin?.schoolId) throw new ForbiddenException();
+      qb.innerJoin('o.student', 's').where('s.schoolId = :schoolId', {
+        schoolId: admin.schoolId,
+      });
+    } else if (currentUser.role === UserRole.VENDOR) {
+      const vendor = await this.vendorRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!vendor) throw new ForbiddenException();
+      qb.where('o.vendorId = :vendorId', { vendorId: vendor.id });
+    } else if (currentUser.role === UserRole.PARENT) {
+      const parent = await this.parentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!parent) throw new ForbiddenException();
+      const links = await this.studentParentRepo.find({
+        where: { parentId: parent.id },
+      });
+      const studentIds = links.map((l) => l.studentId);
+      if (studentIds.length === 0) {
+        return {
+          data: [],
+          meta: { total: 0, page, limit, totalPages: 0 },
+        };
+      }
+      qb.where('o.studentId IN (:...studentIds)', { studentIds });
+    } else if (currentUser.role === UserRole.STUDENT) {
+      const student = await this.studentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!student) throw new ForbiddenException();
+      qb.where('o.studentId = :studentId', { studentId: student.id });
+    }
+
+    const [orders, total] = await qb.getManyAndCount();
+
+    return {
+      data: orders.map((o) => this.toDto(o)),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
 
   async create(
     vendorId: string,

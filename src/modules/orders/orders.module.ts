@@ -10,6 +10,7 @@ import { Transaction } from '../wallets/entities/transaction.entity';
 import { Card } from '../cards/entities/card.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
+import { User } from '../users/entities/user.entity';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 
@@ -26,6 +27,7 @@ import { OrdersController } from './orders.controller';
       Card,
       Parent,
       StudentParent,
+      User,
     ]),
   ],
   controllers: [OrdersController],
