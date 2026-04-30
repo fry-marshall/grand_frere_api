@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_FILTER } from '@nestjs/core';
 import { envValidationSchema } from './config/env.validation';
@@ -16,6 +17,7 @@ import { WalletsModule } from './modules/wallets/wallets.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { StorageModule } from './common/storage/storage.module';
 import { PaystackModule } from './common/paystack/paystack.module';
 
@@ -31,6 +33,7 @@ import { PaystackModule } from './common/paystack/paystack.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => config.get('database')!,
     }),
+    ScheduleModule.forRoot(),
     StorageModule,
     PaystackModule,
     AuthModule,
@@ -44,6 +47,7 @@ import { PaystackModule } from './common/paystack/paystack.module';
     PaymentsModule,
     OrdersModule,
     WithdrawalsModule,
+    NotificationsModule,
   ],
   providers: [
     {

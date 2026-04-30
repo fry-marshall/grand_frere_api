@@ -61,6 +61,9 @@ export const ErrorMessages = {
     NOT_PENDING: 'Withdrawal is not in pending status',
     NOT_IN_PROGRESS: 'Withdrawal is not in progress status',
   },
+  NOTIFICATIONS: {
+    NOT_FOUND: 'Notification not found',
+  },
   VENDORS: {
     NOT_FOUND: 'Vendor not found',
     NOT_APPROVABLE: 'Vendor can only be approved when pending',
