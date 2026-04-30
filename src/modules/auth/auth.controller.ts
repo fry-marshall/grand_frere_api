@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -20,6 +27,11 @@ import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { ErrorResponse } from '../../common/swagger/api-responses';
 import { ErrorMessages } from '../../common/swagger/error-messages';
+import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { UserRole } from '../users/user.types';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Auth')
 @Controller({ version: '1', path: 'auth' })
@@ -148,5 +160,20 @@ export class AuthController {
   })
   signout(@Body() dto: RefreshTokenDto) {
     return this.authService.signout(dto);
+  }
+
+  @Put('fcm-token')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Register or clear the FCM device token for push notifications',
+  })
+  @ApiOkResponse({ description: 'FCM token updated' })
+  updateFcmToken(
+    @Body() dto: UpdateFcmTokenDto,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.authService.updateFcmToken(currentUser.id, dto.fcmToken);
   }
 }

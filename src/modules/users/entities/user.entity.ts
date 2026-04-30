@@ -42,6 +42,9 @@ export class User {
   @JoinColumn({ name: 'schoolId' })
   school: School;
 
+  @Column({ nullable: true, type: 'varchar' })
+  fcmToken: string | null;
+
   @Column({ default: false })
   isOnboarded: boolean;
 

@@ -340,6 +340,13 @@ export class AuthService {
     return { accessToken, refreshToken: rawRefreshToken };
   }
 
+  async updateFcmToken(
+    userId: string,
+    fcmToken: string | null | undefined,
+  ): Promise<void> {
+    await this.userRepo.update(userId, { fcmToken: fcmToken ?? null });
+  }
+
   private buildRefreshTokenExpiry(): Date {
     const raw = this.configService.get<string>('REFRESH_TOKEN_EXPIRY') ?? '7d';
     const match = raw.match(/^(\d+)([dhms])$/);
