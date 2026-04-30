@@ -104,6 +104,36 @@ export class OrdersController {
     return this.ordersService.validate(id, currentUser);
   }
 
+  @Put(':id/cancel')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.VENDOR,
+    UserRole.PARENT,
+    UserRole.STUDENT,
+  )
+  @ApiOperation({
+    summary: 'Cancel a pending order and release wallet reservation',
+  })
+  @ApiSuccessResponse(OrderResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.ORDERS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiBadRequestResponse({
+    description: ErrorMessages.ORDERS.NOT_PENDING,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  cancel(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.ordersService.cancel(id, currentUser);
+  }
+
   @Post('vendor/:vendorId')
   @HttpCode(201)
   @ApiBearerAuth()

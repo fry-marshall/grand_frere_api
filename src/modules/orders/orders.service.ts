@@ -369,6 +369,75 @@ export class OrdersService {
     return this.toDto(updated);
   }
 
+  async cancel(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<OrderResponseDto> {
+    const order = await this.orderRepo.findOne({ where: { id } });
+    if (!order) throw new NotFoundException(ErrorMessages.ORDERS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (!admin?.schoolId) throw new ForbiddenException();
+      const student = await this.studentRepo.findOne({
+        where: { id: order.studentId },
+      });
+      if (student?.schoolId !== admin.schoolId) throw new ForbiddenException();
+    } else if (currentUser.role === UserRole.VENDOR) {
+      const vendor = await this.vendorRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!vendor || order.vendorId !== vendor.id)
+        throw new ForbiddenException();
+    } else if (currentUser.role === UserRole.PARENT) {
+      const parent = await this.parentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!parent) throw new ForbiddenException();
+      const link = await this.studentParentRepo.findOne({
+        where: { studentId: order.studentId, parentId: parent.id },
+      });
+      if (!link) throw new ForbiddenException();
+    } else if (currentUser.role === UserRole.STUDENT) {
+      const student = await this.studentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!student || order.studentId !== student.id)
+        throw new ForbiddenException();
+    }
+
+    if (order.status !== OrderStatus.PENDING) {
+      throw new BadRequestException(ErrorMessages.ORDERS.NOT_PENDING);
+    }
+
+    const wallet = await this.walletRepo.findOne({
+      where: { studentId: order.studentId },
+    });
+    if (!wallet) throw new NotFoundException(ErrorMessages.WALLETS.NOT_FOUND);
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(Order, order.id, { status: OrderStatus.CANCELLED });
+
+      await manager.update(Wallet, wallet.id, {
+        reserved: wallet.reserved - order.totalAmount,
+      });
+
+      await manager.save(Transaction, {
+        walletId: wallet.id,
+        type: TransactionType.RELEASE,
+        amount: order.totalAmount,
+        currency: wallet.currency ?? Currency.XOF,
+        balanceBefore: wallet.balance,
+        balanceAfter: wallet.balance,
+        orderId: order.id,
+      });
+    });
+
+    return this.toDto({ ...order, status: OrderStatus.CANCELLED });
+  }
+
   private toDto(order: Order): OrderResponseDto {
     return {
       id: order.id,
