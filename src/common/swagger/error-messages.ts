@@ -55,6 +55,12 @@ export const ErrorMessages = {
     INVALID_ITEMS: 'One or more items are invalid or unavailable',
     NOT_PENDING: 'Order is not in pending status',
   },
+  WITHDRAWALS: {
+    NOT_FOUND: 'Withdrawal not found',
+    INSUFFICIENT_BALANCE: 'Insufficient vendor wallet balance',
+    NOT_PENDING: 'Withdrawal is not in pending status',
+    NOT_IN_PROGRESS: 'Withdrawal is not in progress status',
+  },
   VENDORS: {
     NOT_FOUND: 'Vendor not found',
     NOT_APPROVABLE: 'Vendor can only be approved when pending',
