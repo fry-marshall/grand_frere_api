@@ -31,5 +31,5 @@ jobs:
     uses: fry-marshall/github-workflows/.github/workflows/api-deploy.yml@main
     with:
       folder: /opt/grand-frere-api
-      environment: beta
+      environment: staging
     secrets: inherit
