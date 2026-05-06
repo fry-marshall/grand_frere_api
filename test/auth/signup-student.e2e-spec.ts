@@ -13,8 +13,9 @@ import { UserRole } from '../../src/modules/users/user.types';
 import { ErrorMessages } from '../../src/common/swagger/error-messages';
 
 const PHONE_SUCCESS = '+2250100000010';
+const PHONE_SUCCESS_PIN = '+2250100000011';
 const PHONE_EXISTING = '+2250500000019';
-const TEST_PHONES = [PHONE_SUCCESS, PHONE_EXISTING];
+const TEST_PHONES = [PHONE_SUCCESS, PHONE_SUCCESS_PIN, PHONE_EXISTING];
 
 describe('POST /api/v1/auth/signup/student', () => {
   let app: INestApplication;
@@ -27,6 +28,7 @@ describe('POST /api/v1/auth/signup/student', () => {
   let school: School;
   let unassignedCard: Card;
   let unassignedCard2: Card;
+  let unassignedCard3: Card;
   let activeCard: Card;
 
   beforeAll(async () => {
@@ -66,9 +68,16 @@ describe('POST /api/v1/auth/signup/student', () => {
       schoolId: school.id,
     });
 
-    // Card 2: UNASSIGNED → phone conflict case (stays unassigned after success test)
+    // Card 2: UNASSIGNED → phone conflict case
     unassignedCard2 = await cardRepo.save({
       code: 'GF-SS-003',
+      status: CardStatus.UNASSIGNED,
+      schoolId: school.id,
+    });
+
+    // Card 3: UNASSIGNED → PIN set at activation case
+    unassignedCard3 = await cardRepo.save({
+      code: 'GF-SS-004',
       status: CardStatus.UNASSIGNED,
       schoolId: school.id,
     });
@@ -143,6 +152,27 @@ describe('POST /api/v1/auth/signup/student', () => {
       });
       expect(wallet).toBeDefined();
       expect(wallet?.balance).toBe(0);
+    });
+
+    it('should set pinHash on card when pin is provided', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/signup/student')
+        .send({
+          cardCode: unassignedCard3.code,
+          firstName: 'Awa',
+          lastName: 'Diallo',
+          phone: PHONE_SUCCESS_PIN,
+          password: 'SecurePass123',
+          pin: '5678',
+        });
+
+      expect(res.status).toBe(201);
+
+      const updatedCard = await cardRepo.findOne({
+        where: { id: unassignedCard3.id },
+      });
+      expect(updatedCard!.status).toBe(CardStatus.ACTIVE);
+      expect(updatedCard!.pinHash).not.toBeNull();
     });
   });
 

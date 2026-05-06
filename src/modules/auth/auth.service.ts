@@ -75,10 +75,82 @@ export class AuthService {
     const card = await this.cardRepo.findOne({ where: { code: dto.cardCode } });
     if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
 
-    if (card.status !== CardStatus.ACTIVE) {
+    if (
+      card.status !== CardStatus.ACTIVE &&
+      card.status !== CardStatus.UNASSIGNED
+    ) {
       throw new ConflictException(ErrorMessages.AUTH.CARD_NOT_ACTIVE);
     }
 
+    const existingUser = await this.userRepo.findOne({
+      where: { phone: dto.phone },
+    });
+    if (existingUser)
+      throw new ConflictException(ErrorMessages.AUTH.PHONE_ALREADY_EXISTS);
+
+    if (card.status === CardStatus.UNASSIGNED) {
+      return this.dataSource.transaction(async (manager) => {
+        const studentUser = await manager.save(User, {
+          firstName: dto.studentFirstName,
+          lastName: dto.studentLastName,
+          role: UserRole.STUDENT,
+          schoolId: card.schoolId,
+          isOnboarded: false,
+        });
+
+        const student = await manager.save(Student, {
+          userId: studentUser.id,
+          cardId: card.id,
+          schoolId: card.schoolId,
+          class: dto.studentClass,
+        });
+
+        await manager.save(Wallet, { studentId: student.id });
+
+        const pinHash = dto.pin ? await bcrypt.hash(dto.pin, 10) : undefined;
+        await manager.update(Card, card.id, {
+          status: CardStatus.ACTIVE,
+          studentId: student.id,
+          ...(pinHash !== undefined ? { pinHash } : {}),
+        });
+
+        const passwordHash = await bcrypt.hash(dto.password, 10);
+        const parentUser = await manager.save(User, {
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          phone: dto.phone,
+          passwordHash,
+          role: UserRole.PARENT,
+          isOnboarded: true,
+        });
+
+        const parent = await manager.save(Parent, { userId: parentUser.id });
+        await manager.save(StudentParent, {
+          studentId: student.id,
+          parentId: parent.id,
+        });
+
+        const accessToken = this.jwtService.sign({
+          sub: parentUser.id,
+          role: parentUser.role,
+        });
+
+        const rawRefreshToken = randomBytes(64).toString('hex');
+        const tokenHash = createHash('sha256')
+          .update(rawRefreshToken)
+          .digest('hex');
+
+        await manager.save(RefreshToken, {
+          userId: parentUser.id,
+          tokenHash,
+          expiresAt: this.buildRefreshTokenExpiry(),
+        });
+
+        return { accessToken, refreshToken: rawRefreshToken };
+      });
+    }
+
+    // Card ACTIVE — student already exists, just link the parent
     const student = await this.studentRepo.findOne({
       where: { cardId: card.id },
     });
@@ -93,12 +165,6 @@ export class AuthService {
         ErrorMessages.AUTH.STUDENT_ALREADY_HAS_TWO_PARENTS,
       );
     }
-
-    const existingUser = await this.userRepo.findOne({
-      where: { phone: dto.phone },
-    });
-    if (existingUser)
-      throw new ConflictException(ErrorMessages.AUTH.PHONE_ALREADY_EXISTS);
 
     return this.dataSource.transaction(async (manager) => {
       const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -175,9 +241,11 @@ export class AuthService {
 
       await manager.save(Wallet, { studentId: student.id });
 
+      const pinHash = dto.pin ? await bcrypt.hash(dto.pin, 10) : undefined;
       await manager.update(Card, card.id, {
         status: CardStatus.ACTIVE,
         studentId: student.id,
+        ...(pinHash !== undefined ? { pinHash } : {}),
       });
 
       const accessToken = this.jwtService.sign({

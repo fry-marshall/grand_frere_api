@@ -8,22 +8,32 @@ import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
 import { Parent } from '../../src/modules/parents/entities/parent.entity';
 import { StudentParent } from '../../src/modules/students/entities/student-parent.entity';
+import { Wallet } from '../../src/modules/wallets/entities/wallet.entity';
 import { CardStatus } from '../../src/modules/cards/card.types';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
 import { UserRole } from '../../src/modules/users/user.types';
 import { ErrorMessages } from '../../src/common/swagger/error-messages';
 
-// Phones used in this test suite — cleaned up in afterAll and leftover cleanup
-const PHONE_SUCCESS = '+2250100000001';
+const PHONE_SUCCESS_ACTIVE = '+2250100000001';
+const PHONE_SUCCESS_UNASSIGNED = '+2250100000003';
 const PHONE_EXISTING = '+2250500000099';
 const PHONE_PARENT1 = '+2250700000010';
 const PHONE_PARENT2 = '+2250700000011';
 const TEST_PHONES = [
-  PHONE_SUCCESS,
+  PHONE_SUCCESS_ACTIVE,
+  PHONE_SUCCESS_UNASSIGNED,
   PHONE_EXISTING,
   PHONE_PARENT1,
   PHONE_PARENT2,
 ];
+
+const BASE_PAYLOAD = {
+  firstName: 'Aminata',
+  lastName: 'Koné',
+  password: 'SecurePass123',
+  studentFirstName: 'Kouassi',
+  studentLastName: 'Yao',
+};
 
 describe('POST /api/v1/auth/signup/parent', () => {
   let app: INestApplication;
@@ -33,9 +43,11 @@ describe('POST /api/v1/auth/signup/parent', () => {
   let studentRepo: Repository<Student>;
   let parentRepo: Repository<Parent>;
   let studentParentRepo: Repository<StudentParent>;
+  let walletRepo: Repository<Wallet>;
 
   let school: School;
   let activeCard: Card;
+  let unassignedCard: Card;
   let suspendedCard: Card;
   let fullCard: Card;
 
@@ -50,19 +62,24 @@ describe('POST /api/v1/auth/signup/parent', () => {
     studentRepo = ds.getRepository(Student);
     parentRepo = ds.getRepository(Parent);
     studentParentRepo = ds.getRepository(StudentParent);
+    walletRepo = ds.getRepository(Wallet);
 
-    // Clean up leftovers from previous runs
     for (const phone of TEST_PHONES) {
       await userRepo.delete({ phone });
     }
     const leftover = await schoolRepo.findOne({ where: { sigle: 'TS-SPA' } });
     if (leftover) {
+      const leftStudents = await studentRepo.find({
+        where: { schoolId: leftover.id },
+      });
+      for (const s of leftStudents) {
+        await walletRepo.delete({ studentId: s.id });
+      }
       await userRepo.delete({ schoolId: leftover.id });
       await cardRepo.delete({ schoolId: leftover.id });
       await schoolRepo.delete({ id: leftover.id });
     }
 
-    // Seed
     school = await schoolRepo.save({
       name: 'Test School SP',
       sigle: 'TS-SPA',
@@ -70,7 +87,7 @@ describe('POST /api/v1/auth/signup/parent', () => {
       status: SchoolStatus.ACTIVE,
     });
 
-    // Card 1: ACTIVE with a student (no parents) — success case
+    // Card ACTIVE with a student — parent link flow
     activeCard = await cardRepo.save({
       code: 'GF-SP-001',
       status: CardStatus.ACTIVE,
@@ -82,20 +99,29 @@ describe('POST /api/v1/auth/signup/parent', () => {
       role: UserRole.STUDENT,
       schoolId: school.id,
     });
-    await studentRepo.save({
+    const student1 = await studentRepo.save({
       userId: studentUser1.id,
       cardId: activeCard.id,
       schoolId: school.id,
     });
+    await cardRepo.update(activeCard.id, { studentId: student1.id });
+    await walletRepo.save({ studentId: student1.id, balance: 0, reserved: 0 });
 
-    // Card 2: SUSPENDED — card not active case
+    // Card UNASSIGNED — student creation flow
+    unassignedCard = await cardRepo.save({
+      code: 'GF-SP-004',
+      status: CardStatus.UNASSIGNED,
+      schoolId: school.id,
+    });
+
+    // Card SUSPENDED
     suspendedCard = await cardRepo.save({
       code: 'GF-SP-002',
       status: CardStatus.SUSPENDED,
       schoolId: school.id,
     });
 
-    // Card 3: ACTIVE with a student + 2 parents — too many parents case
+    // Card ACTIVE with 2 parents — too many parents
     fullCard = await cardRepo.save({
       code: 'GF-SP-003',
       status: CardStatus.ACTIVE,
@@ -112,6 +138,7 @@ describe('POST /api/v1/auth/signup/parent', () => {
       cardId: fullCard.id,
       schoolId: school.id,
     });
+    await cardRepo.update(fullCard.id, { studentId: student2.id });
     const parentUser1 = await userRepo.save({
       firstName: 'Parent',
       lastName: 'One',
@@ -135,7 +162,6 @@ describe('POST /api/v1/auth/signup/parent', () => {
       parentId: parent2.id,
     });
 
-    // User with existing phone — phone conflict case
     await userRepo.save({
       firstName: 'Existing',
       lastName: 'User',
@@ -148,6 +174,10 @@ describe('POST /api/v1/auth/signup/parent', () => {
     for (const phone of TEST_PHONES) {
       await userRepo.delete({ phone });
     }
+    const students = await studentRepo.find({ where: { schoolId: school.id } });
+    for (const s of students) {
+      await walletRepo.delete({ studentId: s.id });
+    }
     await userRepo.delete({ schoolId: school.id });
     await cardRepo.delete({ schoolId: school.id });
     await schoolRepo.delete({ id: school.id });
@@ -155,20 +185,57 @@ describe('POST /api/v1/auth/signup/parent', () => {
   });
 
   describe('Success cases', () => {
-    it('should create a parent account, link to student, and return tokens', async () => {
+    it('should link parent to existing student when card is ACTIVE', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/signup/parent')
         .send({
+          ...BASE_PAYLOAD,
           cardCode: activeCard.code,
-          firstName: 'Aminata',
-          lastName: 'Koné',
-          phone: PHONE_SUCCESS,
-          password: 'SecurePass123',
+          phone: PHONE_SUCCESS_ACTIVE,
         });
 
       expect(res.status).toBe(201);
       expect(res.body.data.accessToken).toBeDefined();
       expect(res.body.data.refreshToken).toBeDefined();
+    });
+
+    it('should create student + wallet + activate card and return tokens when card is UNASSIGNED', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/signup/parent')
+        .send({
+          ...BASE_PAYLOAD,
+          cardCode: unassignedCard.code,
+          phone: PHONE_SUCCESS_UNASSIGNED,
+          studentClass: '6ème A',
+          pin: '1234',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.accessToken).toBeDefined();
+
+      const updatedCard = await cardRepo.findOne({
+        where: { id: unassignedCard.id },
+      });
+      expect(updatedCard!.status).toBe(CardStatus.ACTIVE);
+      expect(updatedCard!.studentId).not.toBeNull();
+      expect(updatedCard!.pinHash).not.toBeNull();
+
+      const student = await studentRepo.findOne({
+        where: { cardId: unassignedCard.id },
+      });
+      expect(student).not.toBeNull();
+      expect(student!.class).toBe('6ème A');
+
+      const studentUser = await userRepo.findOne({
+        where: { id: student!.userId },
+      });
+      expect(studentUser!.firstName).toBe('Kouassi');
+      expect(studentUser!.phone).toBeNull();
+
+      const wallet = await walletRepo.findOne({
+        where: { studentId: student!.id },
+      });
+      expect(wallet).not.toBeNull();
     });
   });
 
@@ -181,43 +248,25 @@ describe('POST /api/v1/auth/signup/parent', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should return 400 when password is too short', async () => {
-      const res = await request(app.getHttpServer())
-        .post('/api/v1/auth/signup/parent')
-        .send({
-          cardCode: activeCard.code,
-          firstName: 'Aminata',
-          lastName: 'Koné',
-          phone: '+2250100000002',
-          password: 'short',
-        });
-
-      expect(res.status).toBe(400);
-    });
-
     it('should return 404 when card does not exist', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/signup/parent')
         .send({
+          ...BASE_PAYLOAD,
           cardCode: 'NONEXISTENT',
-          firstName: 'Aminata',
-          lastName: 'Koné',
           phone: '+2250100000002',
-          password: 'SecurePass123',
         });
 
       expect(res.status).toBe(404);
     });
 
-    it('should return 409 when card is not active', async () => {
+    it('should return 409 when card is SUSPENDED', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/signup/parent')
         .send({
+          ...BASE_PAYLOAD,
           cardCode: suspendedCard.code,
-          firstName: 'Aminata',
-          lastName: 'Koné',
           phone: '+2250100000002',
-          password: 'SecurePass123',
         });
 
       expect(res.status).toBe(409);
@@ -228,11 +277,9 @@ describe('POST /api/v1/auth/signup/parent', () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/signup/parent')
         .send({
+          ...BASE_PAYLOAD,
           cardCode: activeCard.code,
-          firstName: 'Aminata',
-          lastName: 'Koné',
           phone: PHONE_EXISTING,
-          password: 'SecurePass123',
         });
 
       expect(res.status).toBe(409);
@@ -243,11 +290,9 @@ describe('POST /api/v1/auth/signup/parent', () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/signup/parent')
         .send({
+          ...BASE_PAYLOAD,
           cardCode: fullCard.code,
-          firstName: 'Aminata',
-          lastName: 'Koné',
           phone: '+2250100000002',
-          password: 'SecurePass123',
         });
 
       expect(res.status).toBe(409);

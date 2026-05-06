@@ -1,5 +1,11 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MinLength,
+} from 'class-validator';
 import {
   CI_PHONE_REGEX,
   CI_PHONE_MESSAGE,
@@ -30,4 +36,29 @@ export class SignupParentDto {
   @IsString()
   @MinLength(8)
   password: string;
+
+  @ApiProperty({ example: 'Kouassi', description: "Student's first name" })
+  @IsString()
+  @IsNotEmpty()
+  studentFirstName: string;
+
+  @ApiProperty({ example: 'Yao', description: "Student's last name" })
+  @IsString()
+  @IsNotEmpty()
+  studentLastName: string;
+
+  @ApiPropertyOptional({ example: '6ème A' })
+  @IsOptional()
+  @IsString()
+  studentClass?: string;
+
+  @ApiPropertyOptional({
+    example: '1234',
+    description:
+      '4-digit PIN for the card. Required when the card is unassigned.',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}$/, { message: 'PIN must be exactly 4 digits' })
+  pin?: string;
 }

@@ -41,4 +41,13 @@ export class SignupStudentDto {
   @IsOptional()
   @IsString()
   class?: string;
+
+  @ApiPropertyOptional({
+    example: '1234',
+    description: '4-digit PIN to set on the card at activation.',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}$/, { message: 'PIN must be exactly 4 digits' })
+  pin?: string;
 }

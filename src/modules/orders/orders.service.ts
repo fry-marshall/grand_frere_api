@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -29,9 +30,12 @@ import { OrderResponseDto } from './dto/order-response.dto';
 import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     @InjectRepository(Order)
     private readonly orderRepo: Repository<Order>,
@@ -58,6 +62,7 @@ export class OrdersService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly dataSource: DataSource,
+    private readonly gateway: NotificationsGateway,
   ) {}
 
   async findAll(
@@ -301,6 +306,8 @@ export class OrdersService {
       return newOrder;
     });
 
+    this.gateway.emitOrderCreated(vendorId, this.toDto(order));
+
     return this.toDto(order);
   }
 
@@ -366,7 +373,12 @@ export class OrdersService {
       return { ...order, status: OrderStatus.VALIDATED };
     });
 
-    return this.toDto(updated);
+    const dto = this.toDto(updated);
+    this.emitOrderUpdatedToAffectedUsers(updated.studentId, dto).catch((err) =>
+      this.logger.error(`WS emit failed for order ${updated.id}`, err.stack),
+    );
+
+    return dto;
   }
 
   async cancel(
@@ -435,7 +447,34 @@ export class OrdersService {
       });
     });
 
-    return this.toDto({ ...order, status: OrderStatus.CANCELLED });
+    const dto = this.toDto({ ...order, status: OrderStatus.CANCELLED });
+    this.emitOrderUpdatedToAffectedUsers(order.studentId, dto).catch((err) =>
+      this.logger.error(`WS emit failed for order ${order.id}`, err.stack),
+    );
+
+    return dto;
+  }
+
+  private async emitOrderUpdatedToAffectedUsers(
+    studentId: string,
+    order: OrderResponseDto,
+  ): Promise<void> {
+    const student = await this.studentRepo.findOne({
+      where: { id: studentId },
+    });
+    if (!student?.userId) return;
+
+    const userIds = [student.userId];
+
+    const links = await this.studentParentRepo.find({ where: { studentId } });
+    for (const link of links) {
+      const parent = await this.parentRepo.findOne({
+        where: { id: link.parentId },
+      });
+      if (parent?.userId) userIds.push(parent.userId);
+    }
+
+    this.gateway.emitOrderUpdated(userIds, order);
   }
 
   private toDto(order: Order): OrderResponseDto {

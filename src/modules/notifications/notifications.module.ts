@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Notification } from './entities/notification.entity';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
+import { NotificationsGateway } from './notifications.gateway';
 import { NOTIFICATION_SENDER } from './shared/notification-sender.interface';
 import { NoopNotificationSenderService } from './shared/noop-notification-sender.service';
 import { NotificationSenderService } from './shared/notification-sender.service';
@@ -21,6 +23,12 @@ import { User } from '../users/entities/user.entity';
 
 @Module({
   imports: [
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.getOrThrow<string>('ACCESS_TOKEN_SECRET'),
+      }),
+    }),
     TypeOrmModule.forFeature([
       Notification,
       Order,
@@ -36,6 +44,7 @@ import { User } from '../users/entities/user.entity';
   controllers: [NotificationsController],
   providers: [
     NotificationsService,
+    NotificationsGateway,
     NotificationFirebase,
     {
       provide: NOTIFICATION_SENDER,
@@ -48,6 +57,6 @@ import { User } from '../users/entities/user.entity';
     OrderExpiryScheduler,
     VendorSummaryScheduler,
   ],
-  exports: [NotificationsService],
+  exports: [NotificationsService, NotificationsGateway],
 })
 export class NotificationsModule {}
