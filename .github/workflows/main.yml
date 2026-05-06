@@ -26,10 +26,17 @@ jobs:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
-  deploy-beta:
+  deploy-staging:
     needs: build-push
     uses: fry-marshall/github-workflows/.github/workflows/api-deploy.yml@main
     with:
       folder: /opt/grand-frere-api
       environment: staging
-    secrets: inherit
+    secrets:
+      ENV_FILE: ${{ secrets.ENV_FILE }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      VPS_IP: ${{ secrets.VPS_IP }}
+      VPS_PORT: ${{ secrets.VPS_PORT }}
+      VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
