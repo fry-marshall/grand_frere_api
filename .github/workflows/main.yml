@@ -1,35 +1,35 @@
-#name: CI/CD
+name: CI/CD
 
-#on:
-#  push:
-#    branches: [main]
+on:
+  push:
+    branches: [main]
 
-#jobs:
-#  lint:
-#    uses: fry-marshall/github-workflows/.github/workflows/api-lint.yml@main
-#    secrets:
-#      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+jobs:
+  lint:
+    uses: fry-marshall/github-workflows/.github/workflows/api-lint.yml@main
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
-#  e2e:
-#    uses: fry-marshall/github-workflows/.github/workflows/api-e2e.yml@main
-#    secrets:
-#      GH_TOKEN: ${{ secrets.GH_TOKEN }}
-#      ENV_FILE: ${{ secrets.ENV_FILE }}
+  e2e:
+    uses: fry-marshall/github-workflows/.github/workflows/api-e2e.yml@main
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      ENV_FILE: ${{ secrets.ENV_FILE }}
 
-#  build-push:
-#    needs: [lint, e2e]
-#    uses: fry-marshall/github-workflows/.github/workflows/api-build-push.yml@main
-#    with:
-#      image: {{IMAGE_NAME}}
-#    secrets:
-#      GH_TOKEN: ${{ secrets.GH_TOKEN }}
-#      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-#      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  build-push:
+    needs: [lint, e2e]
+    uses: fry-marshall/github-workflows/.github/workflows/api-build-push.yml@main
+    with:
+      image: frymarshall/grand-frere-api
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
-#  deploy-beta:
-#    needs: build-push
-#    uses: fry-marshall/github-workflows/.github/workflows/api-deploy.yml@main
-#    with:
-#      folder: {{DEPLOY_FOLDER}}
-#      environment: beta
-#    secrets: inherit
+  deploy-beta:
+    needs: build-push
+    uses: fry-marshall/github-workflows/.github/workflows/api-deploy.yml@main
+    with:
+      folder: /opt/grand-frere-api
+      environment: beta
+    secrets: inherit

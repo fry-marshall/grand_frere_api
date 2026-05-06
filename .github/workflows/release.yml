@@ -19,6 +19,6 @@ jobs:
     needs: validate-tag
     uses: fry-marshall/github-workflows/.github/workflows/api-deploy.yml@main
     with:
-      folder: {{DEPLOY_FOLDER}}
+      folder: /opt/grand-frere-api
       environment: production
     secrets: inherit
