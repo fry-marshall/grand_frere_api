@@ -32,11 +32,4 @@ jobs:
     with:
       folder: /opt/grand-frere-api
       environment: staging
-    secrets:
-      ENV_FILE: ${{ secrets.ENV_FILE }}
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      VPS_IP: ${{ secrets.VPS_IP }}
-      VPS_PORT: ${{ secrets.VPS_PORT }}
-      VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+    secrets: inherit
