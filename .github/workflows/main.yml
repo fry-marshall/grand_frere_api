@@ -14,7 +14,7 @@ jobs:
     uses: fry-marshall/github-workflows/.github/workflows/api-e2e.yml@main
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
-      ENV_FILE: ${{ secrets.ENV_FILE }}
+      ENV_FILE_TEST: ${{ secrets.ENV_FILE_TEST }}
 
   build-push:
     needs: [lint, e2e]
