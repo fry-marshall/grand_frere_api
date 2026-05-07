@@ -150,6 +150,11 @@ describe('GET /api/v1/wallets/student/:studentId', () => {
       schoolId: school.id,
       class: 'CM2',
     });
+    await walletRepo.save({
+      studentId: student.id,
+      balance: 5000,
+      reserved: 500,
+    });
 
     const otherStudentUser = await userRepo.save({
       firstName: 'Other',
