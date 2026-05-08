@@ -11,7 +11,6 @@ export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('dev', 'test', 'prod').required(),
   PORT: Joi.number().default(3000),
   ALLOWED_ORIGINS: optionalString,
-  ADMIN_DASHBOARD_URL: Joi.string().uri().allow('').optional(),
   DATABASE_URL: Joi.string().required(),
   ACCESS_TOKEN_SECRET: Joi.string().min(32).required(),
   REFRESH_TOKEN_SECRET: Joi.string().min(32).required(),
@@ -38,9 +37,9 @@ export const envValidationSchema = Joi.object({
   MAIL_PASSWORD: prodRequired,
   MAIL_FROM: Joi.string().email().default('noreply@example.com'),
 
-  TWILIO_ACCOUNT_SID: prodRequired,
+  /* TWILIO_ACCOUNT_SID: prodRequired,
   TWILIO_AUTH_TOKEN: prodRequired,
-  TWILIO_PHONE_NUMBER: prodRequired,
+  TWILIO_PHONE_NUMBER: prodRequired, */
 
-  PAYSTACK_SECRET_KEY: prodRequired,
+  /* PAYSTACK_SECRET_KEY: prodRequired, */
 });
