@@ -23,18 +23,18 @@ export const envValidationSchema = Joi.object({
   DO_SPACES_SECRET: prodRequired,
   DO_SPACES_BUCKET: prodRequired,
 
-  FIREBASE_PROJECT_ID: prodRequired,
+  /* FIREBASE_PROJECT_ID: prodRequired,
   FIREBASE_PRIVATE_KEY: prodRequired,
   FIREBASE_CLIENT_EMAIL: Joi.string().email().allow('').when('NODE_ENV', {
     is: 'prod',
     then: Joi.required(),
     otherwise: optionalString,
-  }),
+  }), */
 
-  MAIL_HOST: prodRequired,
+  /* MAIL_HOST: prodRequired, */
   MAIL_PORT: Joi.number().default(587),
-  MAIL_USER: prodRequired,
-  MAIL_PASSWORD: prodRequired,
+  /* MAIL_USER: prodRequired,
+  MAIL_PASSWORD: prodRequired, */
   MAIL_FROM: Joi.string().email().default('noreply@example.com'),
 
   /* TWILIO_ACCOUNT_SID: prodRequired,
