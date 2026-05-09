@@ -31,15 +31,15 @@ export const envValidationSchema = Joi.object({
     otherwise: optionalString,
   }),
 
-  MAIL_HOST: Joi.string().optional(),
+  MAIL_HOST: optionalString,
   MAIL_PORT: Joi.number().default(587),
-  MAIL_USER: Joi.string().optional(),
-  MAIL_PASSWORD: Joi.string().optional(),
-  MAIL_FROM: Joi.string().email().optional(),
+  MAIL_USER: optionalString,
+  MAIL_PASSWORD: optionalString,
+  MAIL_FROM: Joi.string().email().allow('').optional(),
 
-  TWILIO_ACCOUNT_SID: Joi.string().optional(),
-  TWILIO_AUTH_TOKEN: Joi.string().optional(),
-  TWILIO_PHONE_NUMBER: Joi.string().optional(),
+  TWILIO_ACCOUNT_SID: optionalString,
+  TWILIO_AUTH_TOKEN: optionalString,
+  TWILIO_PHONE_NUMBER: optionalString,
 
   PAYSTACK_SECRET_KEY: prodRequired,
 });
