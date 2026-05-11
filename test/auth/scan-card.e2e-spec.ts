@@ -91,6 +91,7 @@ describe('POST /api/v1/auth/scan-card', () => {
       expect(res.body.data).toEqual({
         status: CardStatus.UNASSIGNED,
         student: false,
+        requiresStudentInfo: true,
         parents: [false, false],
       });
     });
@@ -104,6 +105,7 @@ describe('POST /api/v1/auth/scan-card', () => {
       expect(res.body.data).toEqual({
         status: CardStatus.ACTIVE,
         student: true,
+        requiresStudentInfo: true,
         parents: [false, false],
       });
     });

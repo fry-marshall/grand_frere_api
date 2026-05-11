@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -57,16 +58,23 @@ export class AuthService {
       where: { cardId: card.id },
     });
     if (!student) {
-      return { status: card.status, student: false, parents: [false, false] };
+      return {
+        status: card.status,
+        student: false,
+        requiresStudentInfo: true,
+        parents: [false, false],
+      };
     }
 
-    const linkedParents = await this.studentParentRepo.find({
-      where: { studentId: student.id },
-    });
+    const [studentUser, linkedParents] = await Promise.all([
+      this.userRepo.findOne({ where: { id: student.userId } }),
+      this.studentParentRepo.find({ where: { studentId: student.id } }),
+    ]);
 
     return {
       status: card.status,
       student: true,
+      requiresStudentInfo: !studentUser?.phone,
       parents: [linkedParents.length >= 1, linkedParents.length >= 2],
     };
   }
@@ -89,6 +97,12 @@ export class AuthService {
       throw new ConflictException(ErrorMessages.AUTH.PHONE_ALREADY_EXISTS);
 
     if (card.status === CardStatus.UNASSIGNED) {
+      if (!dto.studentFirstName || !dto.studentLastName) {
+        throw new BadRequestException(
+          ErrorMessages.AUTH.STUDENT_FIELDS_REQUIRED,
+        );
+      }
+
       return this.dataSource.transaction(async (manager) => {
         const studentUser = await manager.save(User, {
           firstName: dto.studentFirstName,

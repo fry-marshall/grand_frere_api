@@ -37,15 +37,25 @@ export class SignupParentDto {
   @MinLength(8)
   password: string;
 
-  @ApiProperty({ example: 'Kouassi', description: "Student's first name" })
+  @ApiPropertyOptional({
+    example: 'Kouassi',
+    description:
+      "Student's first name. Required only when the card is unassigned (first parent).",
+  })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  studentFirstName: string;
+  studentFirstName?: string;
 
-  @ApiProperty({ example: 'Yao', description: "Student's last name" })
+  @ApiPropertyOptional({
+    example: 'Yao',
+    description:
+      "Student's last name. Required only when the card is unassigned (first parent).",
+  })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  studentLastName: string;
+  studentLastName?: string;
 
   @ApiPropertyOptional({ example: '6ème A' })
   @IsOptional()

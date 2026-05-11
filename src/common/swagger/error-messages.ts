@@ -8,6 +8,8 @@ export const ErrorMessages = {
     CARD_NOT_AVAILABLE: 'Card is not available for registration',
     CARD_HAS_NO_STUDENT: 'No student is linked to this card',
     STUDENT_ALREADY_HAS_TWO_PARENTS: 'Student already has two parents',
+    STUDENT_FIELDS_REQUIRED:
+      'studentFirstName and studentLastName are required for the first parent registration',
     PARENT_ALREADY_LINKED: 'Parent already linked to this student',
   },
   USERS: {

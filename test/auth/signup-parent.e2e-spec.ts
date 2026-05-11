@@ -48,6 +48,7 @@ describe('POST /api/v1/auth/signup/parent', () => {
   let school: School;
   let activeCard: Card;
   let unassignedCard: Card;
+  let unassignedCardNoStudent: Card;
   let suspendedCard: Card;
   let fullCard: Card;
 
@@ -110,6 +111,13 @@ describe('POST /api/v1/auth/signup/parent', () => {
     // Card UNASSIGNED — student creation flow
     unassignedCard = await cardRepo.save({
       code: 'GF-SP-004',
+      status: CardStatus.UNASSIGNED,
+      schoolId: school.id,
+    });
+
+    // Card UNASSIGNED — used only for failure test (missing student fields)
+    unassignedCardNoStudent = await cardRepo.save({
+      code: 'GF-SP-005',
       status: CardStatus.UNASSIGNED,
       schoolId: school.id,
     });
@@ -258,6 +266,21 @@ describe('POST /api/v1/auth/signup/parent', () => {
         });
 
       expect(res.status).toBe(404);
+    });
+
+    it('should return 400 when card is UNASSIGNED and student fields are missing', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/signup/parent')
+        .send({
+          cardCode: unassignedCardNoStudent.code,
+          firstName: 'Aminata',
+          lastName: 'Koné',
+          phone: '+2250100000099',
+          password: 'SecurePass123',
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe(ErrorMessages.AUTH.STUDENT_FIELDS_REQUIRED);
     });
 
     it('should return 409 when card is SUSPENDED', async () => {
