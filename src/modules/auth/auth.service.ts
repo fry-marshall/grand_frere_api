@@ -228,7 +228,10 @@ export class AuthService {
     const card = await this.cardRepo.findOne({ where: { code: dto.cardCode } });
     if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
 
-    if (card.status !== CardStatus.UNASSIGNED) {
+    if (
+      card.status !== CardStatus.UNASSIGNED &&
+      card.status !== CardStatus.ACTIVE
+    ) {
       throw new ConflictException(ErrorMessages.AUTH.CARD_NOT_AVAILABLE);
     }
 
@@ -238,6 +241,59 @@ export class AuthService {
     if (existingUser)
       throw new ConflictException(ErrorMessages.AUTH.PHONE_ALREADY_EXISTS);
 
+    // Card ACTIVE — check if the parent registered first and left a shell student
+    if (card.status === CardStatus.ACTIVE) {
+      const student = await this.studentRepo.findOne({
+        where: { cardId: card.id },
+        relations: ['user'],
+      });
+
+      if (!student || student.user.phone) {
+        throw new ConflictException(ErrorMessages.AUTH.CARD_NOT_AVAILABLE);
+      }
+
+      // Claim the shell student account created by the parent
+      return this.dataSource.transaction(async (manager) => {
+        const passwordHash = await bcrypt.hash(dto.password, 10);
+        const pinHash = dto.pin ? await bcrypt.hash(dto.pin, 10) : undefined;
+
+        await manager.update(User, student.userId, {
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          phone: dto.phone,
+          passwordHash,
+          isOnboarded: true,
+        });
+
+        if (dto.class) {
+          await manager.update(Student, student.id, { class: dto.class });
+        }
+
+        if (pinHash !== undefined) {
+          await manager.update(Card, card.id, { pinHash });
+        }
+
+        const accessToken = this.jwtService.sign({
+          sub: student.userId,
+          role: UserRole.STUDENT,
+        });
+
+        const rawRefreshToken = randomBytes(64).toString('hex');
+        const tokenHash = createHash('sha256')
+          .update(rawRefreshToken)
+          .digest('hex');
+
+        await manager.save(RefreshToken, {
+          userId: student.userId,
+          tokenHash,
+          expiresAt: this.buildRefreshTokenExpiry(),
+        });
+
+        return { accessToken, refreshToken: rawRefreshToken };
+      });
+    }
+
+    // Card UNASSIGNED — student registers first
     return this.dataSource.transaction(async (manager) => {
       const passwordHash = await bcrypt.hash(dto.password, 10);
 

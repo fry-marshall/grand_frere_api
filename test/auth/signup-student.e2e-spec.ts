@@ -14,8 +14,16 @@ import { ErrorMessages } from '../../src/common/swagger/error-messages';
 
 const PHONE_SUCCESS = '+2250100000010';
 const PHONE_SUCCESS_PIN = '+2250100000011';
+const PHONE_CLAIM_SUCCESS = '+2250100000012';
 const PHONE_EXISTING = '+2250500000019';
-const TEST_PHONES = [PHONE_SUCCESS, PHONE_SUCCESS_PIN, PHONE_EXISTING];
+const PHONE_ACTIVE_STUDENT = '+2250500000020';
+const TEST_PHONES = [
+  PHONE_SUCCESS,
+  PHONE_SUCCESS_PIN,
+  PHONE_CLAIM_SUCCESS,
+  PHONE_EXISTING,
+  PHONE_ACTIVE_STUDENT,
+];
 
 describe('POST /api/v1/auth/signup/student', () => {
   let app: INestApplication;
@@ -30,6 +38,7 @@ describe('POST /api/v1/auth/signup/student', () => {
   let unassignedCard2: Card;
   let unassignedCard3: Card;
   let activeCard: Card;
+  let shellCard: Card;
 
   beforeAll(async () => {
     const { app: nestApp, moduleRef } = await createTestApp();
@@ -82,7 +91,7 @@ describe('POST /api/v1/auth/signup/student', () => {
       schoolId: school.id,
     });
 
-    // Card 3: ACTIVE (already has a student) → card not available case
+    // Card ACTIVE with real student (has phone) → card not available case
     activeCard = await cardRepo.save({
       code: 'GF-SS-002',
       status: CardStatus.ACTIVE,
@@ -91,6 +100,7 @@ describe('POST /api/v1/auth/signup/student', () => {
     const existingStudentUser = await userRepo.save({
       firstName: 'Existing',
       lastName: 'Student',
+      phone: PHONE_ACTIVE_STUDENT,
       role: UserRole.STUDENT,
       schoolId: school.id,
     });
@@ -99,6 +109,26 @@ describe('POST /api/v1/auth/signup/student', () => {
       cardId: activeCard.id,
       schoolId: school.id,
     });
+
+    // Card ACTIVE with shell student (no phone, parent registered first) → claim case
+    shellCard = await cardRepo.save({
+      code: 'GF-SS-005',
+      status: CardStatus.ACTIVE,
+      schoolId: school.id,
+    });
+    const shellStudentUser = await userRepo.save({
+      firstName: 'Shell',
+      lastName: 'Student',
+      role: UserRole.STUDENT,
+      schoolId: school.id,
+      isOnboarded: false,
+    });
+    const shellStudent = await studentRepo.save({
+      userId: shellStudentUser.id,
+      cardId: shellCard.id,
+      schoolId: school.id,
+    });
+    await cardRepo.update(shellCard.id, { studentId: shellStudent.id });
 
     // User with existing phone → phone conflict case
     await userRepo.save({
@@ -152,6 +182,42 @@ describe('POST /api/v1/auth/signup/student', () => {
       });
       expect(wallet).toBeDefined();
       expect(wallet?.balance).toBe(0);
+    });
+
+    it('should claim shell student account when parent registered first', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/signup/student')
+        .send({
+          cardCode: shellCard.code,
+          firstName: 'Kwame',
+          lastName: 'Mensah',
+          phone: PHONE_CLAIM_SUCCESS,
+          password: 'SecurePass123',
+          class: '5ème B',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.accessToken).toBeDefined();
+      expect(res.body.data.refreshToken).toBeDefined();
+
+      // Card should still be ACTIVE (unchanged)
+      const updatedCard = await cardRepo.findOne({
+        where: { id: shellCard.id },
+      });
+      expect(updatedCard?.status).toBe(CardStatus.ACTIVE);
+
+      // The shell user should now have the phone and be onboarded
+      const user = await userRepo.findOne({
+        where: { phone: PHONE_CLAIM_SUCCESS },
+      });
+      expect(user).toBeDefined();
+      expect(user?.isOnboarded).toBe(true);
+
+      // No duplicate student should have been created
+      const students = await studentRepo.find({
+        where: { cardId: shellCard.id },
+      });
+      expect(students).toHaveLength(1);
     });
 
     it('should set pinHash on card when pin is provided', async () => {
@@ -213,7 +279,7 @@ describe('POST /api/v1/auth/signup/student', () => {
       expect(res.status).toBe(404);
     });
 
-    it('should return 409 when card is not UNASSIGNED', async () => {
+    it('should return 409 when card is ACTIVE and student already has credentials', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/signup/student')
         .send({
