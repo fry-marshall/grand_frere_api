@@ -9,7 +9,7 @@ import { UserRole } from '../../src/modules/users/user.types';
 import { ErrorMessages } from '../../src/common/swagger/error-messages';
 import * as bcrypt from 'bcrypt';
 
-const PHONE = '+2250100000050';
+const PHONE = '+2250100000052';
 
 describe('POST /api/v1/auth/forgot-password', () => {
   let app: INestApplication;

@@ -39,6 +39,15 @@ export class StudentsController {
     return this.studentsService.findAll(currentUser, query);
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.STUDENT)
+  @ApiOperation({ summary: 'Get current student profile' })
+  @ApiSuccessResponse(StudentResponseDto)
+  getMe(@CurrentUser() currentUser: { id: string; role: UserRole }) {
+    return this.studentsService.findMe(currentUser.id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.STUDENT)

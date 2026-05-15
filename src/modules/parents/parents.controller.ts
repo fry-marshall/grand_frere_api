@@ -36,6 +36,15 @@ export class ParentsController {
     return this.parentsService.findAll(currentUser, query);
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.PARENT)
+  @ApiOperation({ summary: 'Get current parent profile' })
+  @ApiSuccessResponse(ParentResponseDto)
+  getMe(@CurrentUser() currentUser: { id: string; role: UserRole }) {
+    return this.parentsService.findMe(currentUser.id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.PARENT)

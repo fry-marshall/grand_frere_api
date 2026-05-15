@@ -67,6 +67,15 @@ export class ParentsService {
     };
   }
 
+  async findMe(userId: string): Promise<ParentResponseDto> {
+    const parent = await this.parentRepo.findOne({
+      where: { userId },
+      relations: ['user'],
+    });
+    if (!parent) throw new NotFoundException(ErrorMessages.PARENTS.NOT_FOUND);
+    return this.toDto(parent);
+  }
+
   async findOne(
     id: string,
     currentUser: { id: string; role: UserRole },

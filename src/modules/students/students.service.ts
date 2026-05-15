@@ -65,6 +65,15 @@ export class StudentsService {
     };
   }
 
+  async findMe(userId: string): Promise<StudentResponseDto> {
+    const student = await this.studentRepo.findOne({
+      where: { userId },
+      relations: ['user', 'card'],
+    });
+    if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
+    return this.toDto(student);
+  }
+
   async findOne(
     id: string,
     currentUser: { id: string; role: UserRole },
