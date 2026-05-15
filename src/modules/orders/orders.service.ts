@@ -31,6 +31,8 @@ import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.types';
 
 @Injectable()
 export class OrdersService {
@@ -63,6 +65,7 @@ export class OrdersService {
     private readonly userRepo: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly gateway: NotificationsGateway,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findAll(
@@ -475,6 +478,25 @@ export class OrdersService {
     }
 
     this.gateway.emitOrderUpdated(userIds, order);
+
+    const isValidated = order.status === OrderStatus.VALIDATED;
+    const notificationType = isValidated
+      ? NotificationType.ORDER_VALIDATED
+      : NotificationType.ORDER_CANCELLED;
+    const notificationData = {
+      title: isValidated ? 'Commande validée' : 'Commande annulée',
+      body: isValidated
+        ? `Votre commande de ${order.totalAmount} FCFA a été validée.`
+        : `Votre commande de ${order.totalAmount} FCFA a été annulée.`,
+    };
+
+    for (const userId of userIds) {
+      await this.notificationsService.createNotification(
+        notificationType,
+        userId,
+        notificationData,
+      );
+    }
   }
 
   private toDto(order: Order): OrderResponseDto {
