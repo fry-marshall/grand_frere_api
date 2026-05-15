@@ -23,6 +23,8 @@ import { SignupStudentDto } from './dto/signup-student.dto';
 import { SignupVendorDto } from './dto/signup-vendor.dto';
 import { SigninDto } from './dto/signin.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { ErrorResponse } from '../../common/swagger/api-responses';
@@ -160,6 +162,44 @@ export class AuthController {
   })
   signout(@Body() dto: RefreshTokenDto) {
     return this.authService.signout(dto);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Request a password reset OTP (dev: OTP returned in response)',
+  })
+  @ApiOkResponse({ description: 'OTP generated' })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  @ApiNotFoundResponse({
+    description: ErrorMessages.USERS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Reset password using OTP code' })
+  @ApiOkResponse({ description: 'Password updated' })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  @ApiUnauthorizedResponse({
+    description: ErrorMessages.AUTH.OTP_INVALID_OR_EXPIRED,
+    type: ErrorResponse,
+  })
+  @ApiNotFoundResponse({
+    description: ErrorMessages.USERS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   @Put('fcm-token')

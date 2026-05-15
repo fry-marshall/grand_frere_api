@@ -11,6 +11,7 @@ export const ErrorMessages = {
     STUDENT_FIELDS_REQUIRED:
       'studentFirstName and studentLastName are required for the first parent registration',
     PARENT_ALREADY_LINKED: 'Parent already linked to this student',
+    OTP_INVALID_OR_EXPIRED: 'Invalid or expired OTP',
   },
   USERS: {
     NOT_FOUND: 'User not found',

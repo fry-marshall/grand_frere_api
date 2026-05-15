@@ -21,6 +21,8 @@ import { Wallet } from '../wallets/entities/wallet.entity';
 import { School } from '../schools/entities/school.entity';
 import { Vendor } from '../vendors/entities/vendor.entity';
 import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
+import { Otp } from '../otp/entities/otp.entity';
+import { OtpType } from '../otp/otp.types';
 import { CardStatus } from '../cards/card.types';
 import { UserRole } from '../users/user.types';
 import { ScanCardDto } from './dto/scan-card.dto';
@@ -30,6 +32,8 @@ import { SignupStudentDto } from './dto/signup-student.dto';
 import { SignupVendorDto } from './dto/signup-vendor.dto';
 import { SigninDto } from './dto/signin.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -45,6 +49,7 @@ export class AuthService {
     @InjectRepository(School) private readonly schoolRepo: Repository<School>,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepo: Repository<RefreshToken>,
+    @InjectRepository(Otp) private readonly otpRepo: Repository<Otp>,
     private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
@@ -420,6 +425,52 @@ export class AuthService {
     });
 
     return { accessToken, refreshToken: rawRefreshToken };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ code: string }> {
+    const user = await this.userRepo.findOne({ where: { phone: dto.phone } });
+    if (!user) throw new NotFoundException(ErrorMessages.USERS.NOT_FOUND);
+
+    await this.otpRepo.update(
+      { phone: dto.phone, type: OtpType.PASSWORD_RESET, isUsed: false },
+      { isUsed: true },
+    );
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    await this.otpRepo.save({
+      phone: dto.phone,
+      code,
+      type: OtpType.PASSWORD_RESET,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    return { code };
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+    const otp = await this.otpRepo.findOne({
+      where: {
+        phone: dto.phone,
+        code: dto.code,
+        type: OtpType.PASSWORD_RESET,
+        isUsed: false,
+      },
+    });
+
+    if (!otp || otp.expiresAt < new Date()) {
+      throw new UnauthorizedException(
+        ErrorMessages.AUTH.OTP_INVALID_OR_EXPIRED,
+      );
+    }
+
+    const user = await this.userRepo.findOne({ where: { phone: dto.phone } });
+    if (!user) throw new NotFoundException(ErrorMessages.USERS.NOT_FOUND);
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await Promise.all([
+      this.userRepo.update(user.id, { passwordHash }),
+      this.otpRepo.update(otp.id, { isUsed: true }),
+    ]);
   }
 
   async updateFcmToken(

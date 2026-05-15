@@ -16,6 +16,7 @@ import { Wallet } from '../wallets/entities/wallet.entity';
 import { School } from '../schools/entities/school.entity';
 import { Vendor } from '../vendors/entities/vendor.entity';
 import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
+import { Otp } from '../otp/entities/otp.entity';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
       School,
       Vendor,
       VendorWallet,
+      Otp,
     ]),
     JwtModule.registerAsync({
       inject: [ConfigService],
