@@ -6,18 +6,23 @@ import { createTestApp } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
+import { VendorWallet } from '../../src/modules/vendors/entities/vendor-wallet.entity';
+import { Item } from '../../src/modules/items/entities/item.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
 import { Parent } from '../../src/modules/parents/entities/parent.entity';
 import { StudentParent } from '../../src/modules/students/entities/student-parent.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
 import { UserRole } from '../../src/modules/users/user.types';
 import { VendorStatus } from '../../src/modules/vendors/vendor.types';
+import { ItemStatus } from '../../src/modules/items/item.types';
 
-describe('GET /api/v1/schools/:id/vendors', () => {
+describe('GET /api/v1/vendors/:id/items', () => {
   let app: INestApplication;
   let schoolRepo: Repository<School>;
   let userRepo: Repository<User>;
   let vendorRepo: Repository<Vendor>;
+  let vendorWalletRepo: Repository<VendorWallet>;
+  let itemRepo: Repository<Item>;
   let studentRepo: Repository<Student>;
   let parentRepo: Repository<Parent>;
   let studentParentRepo: Repository<StudentParent>;
@@ -25,10 +30,14 @@ describe('GET /api/v1/schools/:id/vendors', () => {
 
   let school: School;
   let otherSchool: School;
+  let vendor: Vendor;
+  let otherVendor: Vendor;
 
   let superAdminToken: string;
-  let ownSchoolAdminToken: string;
+  let schoolAdminToken: string;
   let otherSchoolAdminToken: string;
+  let vendorToken: string;
+  let otherVendorToken: string;
   let studentToken: string;
   let foreignStudentToken: string;
   let parentToken: string;
@@ -42,18 +51,24 @@ describe('GET /api/v1/schools/:id/vendors', () => {
     schoolRepo = ds.getRepository(School);
     userRepo = ds.getRepository(User);
     vendorRepo = ds.getRepository(Vendor);
+    vendorWalletRepo = ds.getRepository(VendorWallet);
+    itemRepo = ds.getRepository(Item);
     studentRepo = ds.getRepository(Student);
     parentRepo = ds.getRepository(Parent);
     studentParentRepo = ds.getRepository(StudentParent);
     jwtService = moduleRef.get(JwtService, { strict: false });
 
-    for (const sigle of ['TS-SV', 'TS-SV2']) {
+    for (const sigle of ['TS-VI', 'TS-VI2']) {
       const leftover = await schoolRepo.findOne({ where: { sigle } });
       if (leftover) {
         const leftVendors = await vendorRepo.find({
           where: { schoolId: leftover.id },
         });
-        for (const v of leftVendors) await vendorRepo.delete({ id: v.id });
+        for (const v of leftVendors) {
+          await itemRepo.delete({ vendorId: v.id });
+          await vendorWalletRepo.delete({ vendorId: v.id });
+          await vendorRepo.delete({ id: v.id });
+        }
         const leftStudents = await studentRepo.find({
           where: { schoolId: leftover.id },
         });
@@ -67,97 +82,107 @@ describe('GET /api/v1/schools/:id/vendors', () => {
     }
 
     school = await schoolRepo.save({
-      name: 'School Vendors Test',
-      sigle: 'TS-SV',
-      address: '1 Vendor Street',
+      name: 'Vendor Items Test School',
+      sigle: 'TS-VI',
+      address: '1 Items Street',
       status: SchoolStatus.ACTIVE,
     });
 
     otherSchool = await schoolRepo.save({
-      name: 'Other School SV',
-      sigle: 'TS-SV2',
-      address: '2 Other Street',
+      name: 'Other Vendor Items School',
+      sigle: 'TS-VI2',
+      address: '2 Items Street',
       status: SchoolStatus.ACTIVE,
     });
 
     // SUPER_ADMIN
-    const superAdmin = await userRepo.save({
+    const superAdminUser = await userRepo.save({
       firstName: 'Super',
-      lastName: 'AdminSV',
-      phone: '+2250100000530',
+      lastName: 'AdminVI',
+      phone: '+2250100000600',
       role: UserRole.SUPER_ADMIN,
       isOnboarded: true,
     });
     superAdminToken = jwtService.sign({
-      sub: superAdmin.id,
-      role: superAdmin.role,
+      sub: superAdminUser.id,
+      role: superAdminUser.role,
     });
 
-    // SCHOOL_ADMIN — own school
-    const ownAdmin = await userRepo.save({
-      firstName: 'Own',
-      lastName: 'AdminSV',
-      phone: '+2250100000531',
+    // SCHOOL_ADMIN — school
+    const schoolAdminUser = await userRepo.save({
+      firstName: 'Admin',
+      lastName: 'VI',
+      phone: '+2250100000601',
       role: UserRole.SCHOOL_ADMIN,
       schoolId: school.id,
       isOnboarded: true,
     });
-    ownSchoolAdminToken = jwtService.sign({
-      sub: ownAdmin.id,
-      role: ownAdmin.role,
+    schoolAdminToken = jwtService.sign({
+      sub: schoolAdminUser.id,
+      role: schoolAdminUser.role,
     });
 
     // SCHOOL_ADMIN — other school
-    const otherAdmin = await userRepo.save({
-      firstName: 'Other',
-      lastName: 'AdminSV',
-      phone: '+2250100000532',
+    const otherSchoolAdminUser = await userRepo.save({
+      firstName: 'OtherAdmin',
+      lastName: 'VI',
+      phone: '+2250100000602',
       role: UserRole.SCHOOL_ADMIN,
       schoolId: otherSchool.id,
       isOnboarded: true,
     });
     otherSchoolAdminToken = jwtService.sign({
-      sub: otherAdmin.id,
-      role: otherAdmin.role,
+      sub: otherSchoolAdminUser.id,
+      role: otherSchoolAdminUser.role,
     });
 
-    // Active vendor in school
+    // VENDOR — in school
     const vendorUser = await userRepo.save({
       firstName: 'Vendor',
-      lastName: 'One',
-      phone: '+2250100000533',
+      lastName: 'VI',
+      phone: '+2250100000603',
       role: UserRole.VENDOR,
       schoolId: school.id,
       isOnboarded: true,
     });
-    await vendorRepo.save({
+    vendor = await vendorRepo.save({
       userId: vendorUser.id,
       schoolId: school.id,
-      shopName: 'Snack du Coin',
+      shopName: 'La Cantine VI',
       status: VendorStatus.ACTIVE,
     });
+    await vendorWalletRepo.save({ vendorId: vendor.id });
+    vendorToken = jwtService.sign({
+      sub: vendorUser.id,
+      role: vendorUser.role,
+    });
 
-    // Pending vendor in school (should be hidden from STUDENT/PARENT)
-    const pendingVendorUser = await userRepo.save({
-      firstName: 'Vendor',
-      lastName: 'Pending',
-      phone: '+2250100000534',
+    // VENDOR — in other school
+    const otherVendorUser = await userRepo.save({
+      firstName: 'OtherVendor',
+      lastName: 'VI',
+      phone: '+2250100000604',
       role: UserRole.VENDOR,
-      schoolId: school.id,
+      schoolId: otherSchool.id,
       isOnboarded: true,
     });
-    await vendorRepo.save({
-      userId: pendingVendorUser.id,
-      schoolId: school.id,
-      shopName: 'En attente',
-      status: VendorStatus.PENDING,
+    otherVendor = await vendorRepo.save({
+      userId: otherVendorUser.id,
+      schoolId: otherSchool.id,
+      shopName: 'Other Cantine VI',
+      status: VendorStatus.ACTIVE,
+    });
+    await vendorWalletRepo.save({ vendorId: otherVendor.id });
+    otherVendorToken = jwtService.sign({
+      sub: otherVendorUser.id,
+      role: otherVendorUser.role,
     });
 
-    // STUDENT in school
+    // STUDENT — in school
     const studentUser = await userRepo.save({
       firstName: 'Student',
-      lastName: 'SV',
-      phone: '+2250100000535',
+      lastName: 'VI',
+      phone: '+2250100000605',
       role: UserRole.STUDENT,
       schoolId: school.id,
       isOnboarded: true,
@@ -171,11 +196,11 @@ describe('GET /api/v1/schools/:id/vendors', () => {
       role: studentUser.role,
     });
 
-    // PARENT linked to the student above
+    // PARENT — linked to student above
     const parentUser = await userRepo.save({
       firstName: 'Parent',
-      lastName: 'SV',
-      phone: '+2250100000536',
+      lastName: 'VI',
+      phone: '+2250100000606',
       role: UserRole.PARENT,
       isOnboarded: true,
     });
@@ -189,11 +214,11 @@ describe('GET /api/v1/schools/:id/vendors', () => {
       role: parentUser.role,
     });
 
-    // STUDENT in other school
+    // STUDENT — in other school
     const foreignStudentUser = await userRepo.save({
       firstName: 'Foreign',
-      lastName: 'StudentSV',
-      phone: '+2250100000537',
+      lastName: 'StudentVI',
+      phone: '+2250100000607',
       role: UserRole.STUDENT,
       schoolId: otherSchool.id,
       isOnboarded: true,
@@ -207,11 +232,11 @@ describe('GET /api/v1/schools/:id/vendors', () => {
       role: foreignStudentUser.role,
     });
 
-    // PARENT with no child in school
+    // PARENT — with no child in school
     const foreignParentUser = await userRepo.save({
       firstName: 'Foreign',
-      lastName: 'ParentSV',
-      phone: '+2250100000538',
+      lastName: 'ParentVI',
+      phone: '+2250100000608',
       role: UserRole.PARENT,
       isOnboarded: true,
     });
@@ -220,14 +245,43 @@ describe('GET /api/v1/schools/:id/vendors', () => {
       sub: foreignParentUser.id,
       role: foreignParentUser.role,
     });
+
+    // Items for vendor
+    await itemRepo.save([
+      {
+        vendorId: vendor.id,
+        name: 'Thiéboudienne',
+        price: 1500,
+        description: 'Riz au poisson',
+        status: ItemStatus.ACTIVE,
+      },
+      {
+        vendorId: vendor.id,
+        name: 'Yassa Poulet',
+        price: 1200,
+        description: 'Poulet mariné',
+        status: ItemStatus.ACTIVE,
+      },
+      {
+        vendorId: vendor.id,
+        name: 'Plat retiré',
+        price: 500,
+        description: 'Non disponible',
+        status: ItemStatus.INACTIVE,
+      },
+    ]);
   });
 
   afterAll(async () => {
-    for (const sigle of ['TS-SV', 'TS-SV2']) {
+    for (const sigle of ['TS-VI', 'TS-VI2']) {
       const s = await schoolRepo.findOne({ where: { sigle } });
       if (!s) continue;
       const vendors = await vendorRepo.find({ where: { schoolId: s.id } });
-      for (const v of vendors) await vendorRepo.delete({ id: v.id });
+      for (const v of vendors) {
+        await itemRepo.delete({ vendorId: v.id });
+        await vendorWalletRepo.delete({ vendorId: v.id });
+        await vendorRepo.delete({ id: v.id });
+      }
       const students = await studentRepo.find({ where: { schoolId: s.id } });
       for (const st of students) {
         await studentParentRepo.delete({ studentId: st.id });
@@ -237,15 +291,15 @@ describe('GET /api/v1/schools/:id/vendors', () => {
       await schoolRepo.delete({ id: s.id });
     }
     for (const phone of [
-      '+2250100000530',
-      '+2250100000531',
-      '+2250100000532',
-      '+2250100000533',
-      '+2250100000534',
-      '+2250100000535',
-      '+2250100000536',
-      '+2250100000537',
-      '+2250100000538',
+      '+2250100000600',
+      '+2250100000601',
+      '+2250100000602',
+      '+2250100000603',
+      '+2250100000604',
+      '+2250100000605',
+      '+2250100000606',
+      '+2250100000607',
+      '+2250100000608',
     ]) {
       const u = await userRepo.findOne({ where: { phone } });
       if (u) {
@@ -257,109 +311,126 @@ describe('GET /api/v1/schools/:id/vendors', () => {
   });
 
   describe('Success cases', () => {
-    it('should return vendors list for SUPER_ADMIN', async () => {
+    it('should return only ACTIVE items for STUDENT in same school', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/api/v1/schools/${school.id}/vendors`)
-        .set('Authorization', `Bearer ${superAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body.data.data)).toBe(true);
-      expect(res.body.data.data[0].user).toBeDefined();
-      expect(res.body.data.meta.total).toBe(2);
-    });
-
-    it('should return vendors list for own SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
-        .get(`/api/v1/schools/${school.id}/vendors`)
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.meta.total).toBe(2);
-    });
-
-    it('should return only ACTIVE vendors for STUDENT', async () => {
-      const res = await request(app.getHttpServer())
-        .get(`/api/v1/schools/${school.id}/vendors`)
+        .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${studentToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.meta.total).toBe(1);
-      expect(res.body.data.data[0].shopName).toBe('Snack du Coin');
-      expect(res.body.data.data[0].status).toBe('ACTIVE');
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data).toHaveLength(2);
+      expect(
+        res.body.data.every((i: { status: string }) => i.status === 'ACTIVE'),
+      ).toBe(true);
     });
 
-    it('should return only ACTIVE vendors for PARENT', async () => {
+    it('should return only ACTIVE items for PARENT with child in same school', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/api/v1/schools/${school.id}/vendors`)
+        .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${parentToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.meta.total).toBe(1);
-      expect(res.body.data.data[0].status).toBe('ACTIVE');
+      expect(res.body.data).toHaveLength(2);
+      expect(
+        res.body.data.every((i: { status: string }) => i.status === 'ACTIVE'),
+      ).toBe(true);
     });
 
-    it('should return empty list for school with no vendors', async () => {
+    it('should return items with correct shape', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/api/v1/schools/${otherSchool.id}/vendors`)
+        .get(`/api/v1/vendors/${vendor.id}/items`)
+        .set('Authorization', `Bearer ${studentToken}`);
+
+      expect(res.status).toBe(200);
+      const item = res.body.data[0];
+      expect(item).toHaveProperty('id');
+      expect(item).toHaveProperty('vendorId', vendor.id);
+      expect(item).toHaveProperty('name');
+      expect(item).toHaveProperty('price');
+      expect(item).toHaveProperty('description');
+      expect(item).toHaveProperty('imageUrl');
+      expect(item).toHaveProperty('status', 'ACTIVE');
+      expect(item).toHaveProperty('createdAt');
+    });
+
+    it('should return own items for VENDOR', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/vendors/${vendor.id}/items`)
+        .set('Authorization', `Bearer ${vendorToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(2);
+    });
+
+    it('should return items for SCHOOL_ADMIN of same school', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/vendors/${vendor.id}/items`)
+        .set('Authorization', `Bearer ${schoolAdminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(2);
+    });
+
+    it('should return items for SUPER_ADMIN', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.data).toEqual([]);
-      expect(res.body.data.meta.total).toBe(0);
+      expect(res.body.data).toHaveLength(2);
     });
 
-    it('should respect pagination params', async () => {
+    it('should return empty list when vendor has no active items', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/api/v1/schools/${school.id}/vendors?page=1&limit=5`)
+        .get(`/api/v1/vendors/${otherVendor.id}/items`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.meta.limit).toBe(5);
-      expect(res.body.data.meta.page).toBe(1);
+      expect(res.body.data).toEqual([]);
     });
   });
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
       const res = await request(app.getHttpServer()).get(
-        `/api/v1/schools/${school.id}/vendors`,
+        `/api/v1/vendors/${vendor.id}/items`,
       );
       expect(res.status).toBe(401);
     });
 
-    it('should return 403 when SCHOOL_ADMIN accesses another school', async () => {
+    it('should return 403 when STUDENT is from another school', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/api/v1/schools/${school.id}/vendors`)
-        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
-      expect(res.status).toBe(403);
-    });
-
-    it('should return 403 when STUDENT accesses another school', async () => {
-      const res = await request(app.getHttpServer())
-        .get(`/api/v1/schools/${school.id}/vendors`)
+        .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${foreignStudentToken}`);
       expect(res.status).toBe(403);
     });
 
-    it('should return 403 when PARENT has no child in the school', async () => {
+    it('should return 403 when PARENT has no child in the vendor school', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/api/v1/schools/${school.id}/vendors`)
+        .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${foreignParentToken}`);
       expect(res.status).toBe(403);
     });
 
-    it('should return 404 when school does not exist', async () => {
+    it('should return 403 when VENDOR accesses another vendor items', async () => {
       const res = await request(app.getHttpServer())
-        .get('/api/v1/schools/00000000-0000-0000-0000-000000000000/vendors')
-        .set('Authorization', `Bearer ${superAdminToken}`);
-      expect(res.status).toBe(404);
+        .get(`/api/v1/vendors/${vendor.id}/items`)
+        .set('Authorization', `Bearer ${otherVendorToken}`);
+      expect(res.status).toBe(403);
     });
 
-    it('should return 400 when pagination params are invalid', async () => {
+    it('should return 403 when SCHOOL_ADMIN accesses vendor from another school', async () => {
       const res = await request(app.getHttpServer())
-        .get(`/api/v1/schools/${school.id}/vendors?page=0`)
+        .get(`/api/v1/vendors/${vendor.id}/items`)
+        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 404 when vendor does not exist', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/vendors/00000000-0000-0000-0000-000000000000/items')
         .set('Authorization', `Bearer ${superAdminToken}`);
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(404);
     });
   });
 });

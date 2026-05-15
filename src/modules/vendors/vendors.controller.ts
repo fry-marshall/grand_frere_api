@@ -25,6 +25,7 @@ import { VendorResponseDto } from './dto/vendor-response.dto';
 import { VendorOrderResponseDto } from './dto/vendor-order-response.dto';
 import { VendorWithdrawalResponseDto } from './dto/vendor-withdrawal-response.dto';
 import { VendorBalanceResponseDto } from './dto/vendor-balance-response.dto';
+import { ItemResponseDto } from '../items/dto/item-response.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -153,6 +154,29 @@ export class VendorsController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.vendorsService.findBalance(id, currentUser);
+  }
+
+  @Get(':id/items')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.VENDOR,
+    UserRole.STUDENT,
+    UserRole.PARENT,
+  )
+  @ApiOperation({ summary: 'List active items of a vendor' })
+  @ApiSuccessResponse(ItemResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.VENDORS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findItems(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.vendorsService.findItems(id, currentUser);
   }
 
   @Post(':id/approve')

@@ -15,6 +15,7 @@ import { Vendor } from '../vendors/entities/vendor.entity';
 import { Student } from '../students/entities/student.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { SchoolStatus } from './school.types';
+import { VendorStatus } from '../vendors/vendor.types';
 import { UserRole } from '../users/user.types';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { CreateSchoolAdminDto } from './dto/create-school-admin.dto';
@@ -154,9 +155,39 @@ export class SchoolsService {
       if (admin?.schoolId !== school.id) throw new ForbiddenException();
     }
 
+    if (currentUser.role === UserRole.STUDENT) {
+      const student = await this.studentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (student?.schoolId !== id) throw new ForbiddenException();
+    }
+
+    if (currentUser.role === UserRole.PARENT) {
+      const parent = await this.parentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!parent) throw new ForbiddenException();
+      const studentInSchool = await this.studentRepo
+        .createQueryBuilder('s')
+        .innerJoin('student_parents', 'sp', 'sp.studentId = s.id')
+        .where('sp.parentId = :parentId AND s.schoolId = :schoolId', {
+          parentId: parent.id,
+          schoolId: id,
+        })
+        .getOne();
+      if (!studentInSchool) throw new ForbiddenException();
+    }
+
+    const isPublicRole =
+      currentUser.role === UserRole.STUDENT ||
+      currentUser.role === UserRole.PARENT;
+
     const { page, limit } = query;
     const [vendors, total] = await this.vendorRepo.findAndCount({
-      where: { schoolId: id },
+      where: {
+        schoolId: id,
+        ...(isPublicRole ? { status: VendorStatus.ACTIVE } : {}),
+      },
       relations: ['user'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,

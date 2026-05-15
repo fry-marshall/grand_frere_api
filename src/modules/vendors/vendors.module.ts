@@ -6,6 +6,8 @@ import { Vendor } from './entities/vendor.entity';
 import { User } from '../users/entities/user.entity';
 import { Order } from '../orders/entities/order.entity';
 import { Student } from '../students/entities/student.entity';
+import { Parent } from '../parents/entities/parent.entity';
+import { Item } from '../items/entities/item.entity';
 import { Withdrawal } from '../withdrawals/entities/withdrawal.entity';
 import { VendorWallet } from './entities/vendor-wallet.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -17,6 +19,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
       User,
       Order,
       Student,
+      Parent,
+      Item,
       Withdrawal,
       VendorWallet,
     ]),

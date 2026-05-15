@@ -23,6 +23,7 @@
     "migration:run:prod": "typeorm migration:run -d dist/data-source.js",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/data-source.ts",
     "seed": "ts-node -r tsconfig-paths/register src/database/seeds/seed-super-admin.ts",
+    "seed:vendors": "ts-node -r tsconfig-paths/register src/database/seeds/seed-vendors.ts",
     "prepare": "husky"
   },
   "lint-staged": {

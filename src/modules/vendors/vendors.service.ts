@@ -12,12 +12,17 @@ import { Vendor } from './entities/vendor.entity';
 import { Order } from '../orders/entities/order.entity';
 import { Withdrawal } from '../withdrawals/entities/withdrawal.entity';
 import { VendorWallet } from './entities/vendor-wallet.entity';
+import { Item } from '../items/entities/item.entity';
+import { Student } from '../students/entities/student.entity';
+import { Parent } from '../parents/entities/parent.entity';
 import { VendorStatus } from './vendor.types';
+import { ItemStatus } from '../items/item.types';
 import { UserRole } from '../users/user.types';
 import { VendorResponseDto } from './dto/vendor-response.dto';
 import { VendorOrderResponseDto } from './dto/vendor-order-response.dto';
 import { VendorWithdrawalResponseDto } from './dto/vendor-withdrawal-response.dto';
 import { VendorBalanceResponseDto } from './dto/vendor-balance-response.dto';
+import { ItemResponseDto } from '../items/dto/item-response.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -36,6 +41,11 @@ export class VendorsService {
     private readonly withdrawalRepo: Repository<Withdrawal>,
     @InjectRepository(VendorWallet)
     private readonly vendorWalletRepo: Repository<VendorWallet>,
+    @InjectRepository(Item) private readonly itemRepo: Repository<Item>,
+    @InjectRepository(Student)
+    private readonly studentRepo: Repository<Student>,
+    @InjectRepository(Parent)
+    private readonly parentRepo: Repository<Parent>,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -249,6 +259,67 @@ export class VendorsService {
       currency: wallet.currency,
       updatedAt: wallet.updatedAt,
     };
+  }
+
+  async findItems(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<ItemResponseDto[]> {
+    const vendor = await this.vendorRepo.findOne({ where: { id } });
+    if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
+
+    if (
+      currentUser.role === UserRole.VENDOR &&
+      vendor.userId !== currentUser.id
+    ) {
+      throw new ForbiddenException();
+    }
+
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (admin?.schoolId !== vendor.schoolId) throw new ForbiddenException();
+    }
+
+    if (currentUser.role === UserRole.STUDENT) {
+      const student = await this.studentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (student?.schoolId !== vendor.schoolId) throw new ForbiddenException();
+    }
+
+    if (currentUser.role === UserRole.PARENT) {
+      const parent = await this.parentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!parent) throw new ForbiddenException();
+      const studentInSchool = await this.studentRepo
+        .createQueryBuilder('s')
+        .innerJoin('student_parents', 'sp', 'sp.studentId = s.id')
+        .where('sp.parentId = :parentId AND s.schoolId = :schoolId', {
+          parentId: parent.id,
+          schoolId: vendor.schoolId,
+        })
+        .getOne();
+      if (!studentInSchool) throw new ForbiddenException();
+    }
+
+    const items = await this.itemRepo.find({
+      where: { vendorId: id, status: ItemStatus.ACTIVE },
+      order: { createdAt: 'ASC' },
+    });
+
+    return items.map((i) => ({
+      id: i.id,
+      vendorId: i.vendorId,
+      name: i.name,
+      price: i.price,
+      description: i.description,
+      imageUrl: i.imageUrl,
+      status: i.status,
+      createdAt: i.createdAt,
+    }));
   }
 
   async approve(id: string): Promise<VendorResponseDto> {

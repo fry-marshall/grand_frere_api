@@ -161,7 +161,12 @@ export class SchoolsController {
 
   @Get(':id/vendors')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Role(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.STUDENT,
+    UserRole.PARENT,
+  )
   @ApiOperation({ summary: 'List vendors of a school' })
   @ApiSuccessResponse(SchoolVendorResponseDto)
   @ApiNotFoundResponse({
