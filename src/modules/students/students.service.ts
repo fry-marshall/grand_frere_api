@@ -16,6 +16,7 @@ import { StudentResponseDto } from './dto/student-response.dto';
 import { StudentParentResponseDto } from './dto/student-parents-response.dto';
 import { StudentOrderResponseDto } from './dto/student-order-response.dto';
 import { StudentTransactionResponseDto } from './dto/student-transaction-response.dto';
+import { UpdateStudentProfileDto } from './dto/update-student-profile.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -237,6 +238,23 @@ export class StudentsService {
       })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  async updateProfile(
+    userId: string,
+    dto: UpdateStudentProfileDto,
+  ): Promise<StudentResponseDto> {
+    const student = await this.studentRepo.findOne({
+      where: { userId },
+      relations: ['user', 'card'],
+    });
+    if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
+
+    if (dto.firstName !== undefined) student.user.firstName = dto.firstName;
+    if (dto.lastName !== undefined) student.user.lastName = dto.lastName;
+
+    await this.userRepo.save(student.user);
+    return this.toDto(student);
   }
 
   private toDto(student: Student): StudentResponseDto {

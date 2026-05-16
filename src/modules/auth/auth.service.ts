@@ -34,6 +34,7 @@ import { SigninDto } from './dto/signin.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -527,6 +528,18 @@ export class AuthService {
       this.userRepo.update(user.id, { passwordHash }),
       this.otpRepo.update(otp.id, { isUsed: true }),
     ]);
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException(ErrorMessages.USERS.NOT_FOUND);
+
+    const match = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!match)
+      throw new UnauthorizedException(ErrorMessages.AUTH.WRONG_PASSWORD);
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.userRepo.update(userId, { passwordHash });
   }
 
   async updateFcmToken(

@@ -1,6 +1,16 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOperation,
@@ -9,6 +19,8 @@ import {
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { ParentsService } from './parents.service';
 import { ParentResponseDto } from './dto/parent-response.dto';
+import { UpdateParentProfileDto } from './dto/update-parent-profile.dto';
+import { AddBeneficiaryDto } from './dto/add-beneficiary.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -43,6 +55,43 @@ export class ParentsController {
   @ApiSuccessResponse(ParentResponseDto)
   getMe(@CurrentUser() currentUser: { id: string; role: UserRole }) {
     return this.parentsService.findMe(currentUser.id);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.PARENT)
+  @ApiOperation({ summary: 'Update current parent profile' })
+  @ApiSuccessResponse(ParentResponseDto)
+  @ApiConflictResponse({
+    description: ErrorMessages.AUTH.PHONE_ALREADY_EXISTS,
+    type: ErrorResponse,
+  })
+  updateMe(
+    @Body() dto: UpdateParentProfileDto,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.parentsService.updateProfile(currentUser.id, dto);
+  }
+
+  @Post('me/students')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.PARENT)
+  @ApiOperation({ summary: 'Link an additional student to the current parent' })
+  @ApiSuccessResponse(ParentResponseDto, 201)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.CARDS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description:
+      'Card not active / parent already linked / student has 2 parents / parent has 2 students',
+    type: ErrorResponse,
+  })
+  addBeneficiary(
+    @Body() dto: AddBeneficiaryDto,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.parentsService.addBeneficiary(currentUser.id, dto);
   }
 
   @Get(':id')

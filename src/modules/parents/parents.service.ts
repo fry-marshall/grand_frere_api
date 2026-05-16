@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -7,9 +8,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Parent } from './entities/parent.entity';
 import { User } from '../users/entities/user.entity';
+import { Student } from '../students/entities/student.entity';
+import { Card } from '../cards/entities/card.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
+import { CardStatus } from '../cards/card.types';
 import { UserRole } from '../users/user.types';
 import { ParentResponseDto } from './dto/parent-response.dto';
+import { UpdateParentProfileDto } from './dto/update-parent-profile.dto';
+import { AddBeneficiaryDto } from './dto/add-beneficiary.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -20,6 +26,10 @@ export class ParentsService {
     private readonly parentRepo: Repository<Parent>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(Student)
+    private readonly studentRepo: Repository<Student>,
+    @InjectRepository(Card)
+    private readonly cardRepo: Repository<Card>,
     @InjectRepository(StudentParent)
     private readonly studentParentRepo: Repository<StudentParent>,
   ) {}
@@ -158,6 +168,95 @@ export class ParentsService {
         lastName: link.student.user.lastName,
       },
     }));
+  }
+
+  async updateProfile(
+    userId: string,
+    dto: UpdateParentProfileDto,
+  ): Promise<ParentResponseDto> {
+    const parent = await this.parentRepo.findOne({
+      where: { userId },
+      relations: ['user'],
+    });
+    if (!parent) throw new NotFoundException(ErrorMessages.PARENTS.NOT_FOUND);
+
+    if (dto.phone && dto.phone !== parent.user.phone) {
+      const existing = await this.userRepo.findOne({
+        where: { phone: dto.phone },
+      });
+      if (existing)
+        throw new ConflictException(ErrorMessages.AUTH.PHONE_ALREADY_EXISTS);
+    }
+
+    if (dto.firstName !== undefined) parent.user.firstName = dto.firstName;
+    if (dto.lastName !== undefined) parent.user.lastName = dto.lastName;
+    if (dto.phone !== undefined) parent.user.phone = dto.phone;
+
+    await this.userRepo.save(parent.user);
+    return this.toDto(parent);
+  }
+
+  async addBeneficiary(
+    userId: string,
+    dto: AddBeneficiaryDto,
+  ): Promise<{
+    id: string;
+    class: string;
+    schoolId: string;
+    user: { id: string; firstName: string; lastName: string };
+  }> {
+    const parent = await this.parentRepo.findOne({ where: { userId } });
+    if (!parent) throw new NotFoundException(ErrorMessages.PARENTS.NOT_FOUND);
+
+    const linkedCount = await this.studentParentRepo.count({
+      where: { parentId: parent.id },
+    });
+    if (linkedCount >= 2)
+      throw new ConflictException(ErrorMessages.PARENTS.MAX_STUDENTS_REACHED);
+
+    const card = await this.cardRepo.findOne({
+      where: { code: dto.cardCode },
+    });
+    if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
+    if (card.status !== CardStatus.ACTIVE)
+      throw new ConflictException(ErrorMessages.AUTH.CARD_NOT_ACTIVE);
+
+    const student = await this.studentRepo.findOne({
+      where: { cardId: card.id },
+      relations: ['user'],
+    });
+    if (!student)
+      throw new ConflictException(ErrorMessages.AUTH.CARD_HAS_NO_STUDENT);
+
+    const alreadyLinked = await this.studentParentRepo.findOne({
+      where: { parentId: parent.id, studentId: student.id },
+    });
+    if (alreadyLinked)
+      throw new ConflictException(ErrorMessages.AUTH.PARENT_ALREADY_LINKED);
+
+    const parentCountOnStudent = await this.studentParentRepo.count({
+      where: { studentId: student.id },
+    });
+    if (parentCountOnStudent >= 2)
+      throw new ConflictException(
+        ErrorMessages.AUTH.STUDENT_ALREADY_HAS_TWO_PARENTS,
+      );
+
+    await this.studentParentRepo.save({
+      parentId: parent.id,
+      studentId: student.id,
+    });
+
+    return {
+      id: student.id,
+      class: student.class,
+      schoolId: student.schoolId,
+      user: {
+        id: student.user.id,
+        firstName: student.user.firstName,
+        lastName: student.user.lastName,
+      },
+    };
   }
 
   private toDto(parent: Parent): ParentResponseDto {

@@ -30,6 +30,7 @@ import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator
 import { ErrorResponse } from '../../common/swagger/api-responses';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../users/user.types';
@@ -200,6 +201,27 @@ export class AuthController {
   })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Put('change-password')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Change password (authenticated user)' })
+  @ApiOkResponse({ description: 'Password updated' })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Current password is incorrect',
+    type: ErrorResponse,
+  })
+  changePassword(
+    @Body() dto: ChangePasswordDto,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.authService.changePassword(currentUser.id, dto);
   }
 
   @Put('fcm-token')

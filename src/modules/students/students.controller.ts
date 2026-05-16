@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiForbiddenResponse,
@@ -9,6 +17,7 @@ import {
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { StudentsService } from './students.service';
 import { StudentResponseDto } from './dto/student-response.dto';
+import { UpdateStudentProfileDto } from './dto/update-student-profile.dto';
 import { StudentParentResponseDto } from './dto/student-parents-response.dto';
 import { StudentOrderResponseDto } from './dto/student-order-response.dto';
 import { StudentTransactionResponseDto } from './dto/student-transaction-response.dto';
@@ -46,6 +55,18 @@ export class StudentsController {
   @ApiSuccessResponse(StudentResponseDto)
   getMe(@CurrentUser() currentUser: { id: string; role: UserRole }) {
     return this.studentsService.findMe(currentUser.id);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.STUDENT)
+  @ApiOperation({ summary: 'Update current student profile' })
+  @ApiSuccessResponse(StudentResponseDto)
+  updateMe(
+    @Body() dto: UpdateStudentProfileDto,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.studentsService.updateProfile(currentUser.id, dto);
   }
 
   @Get(':id')

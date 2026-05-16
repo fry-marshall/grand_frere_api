@@ -2,6 +2,7 @@ export const ErrorMessages = {
   AUTH: {
     PHONE_ALREADY_EXISTS: 'Phone already exists',
     INVALID_CREDENTIALS: 'Invalid credentials',
+    WRONG_PASSWORD: 'Current password is incorrect',
     TOKEN_EXPIRED: 'Token expired',
     INVALID_REFRESH_TOKEN: 'Invalid or expired refresh token',
     CARD_NOT_ACTIVE: 'Card is not active',
@@ -39,6 +40,7 @@ export const ErrorMessages = {
   },
   PARENTS: {
     NOT_FOUND: 'Parent not found',
+    MAX_STUDENTS_REACHED: 'Parent already has two linked students',
   },
   ITEMS: {
     NOT_FOUND: 'Item not found',
