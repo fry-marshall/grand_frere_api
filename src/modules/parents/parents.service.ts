@@ -208,18 +208,18 @@ export class ParentsService {
     const parent = await this.parentRepo.findOne({ where: { userId } });
     if (!parent) throw new NotFoundException(ErrorMessages.PARENTS.NOT_FOUND);
 
-    const linkedCount = await this.studentParentRepo.count({
-      where: { parentId: parent.id },
-    });
-    if (linkedCount >= 2)
-      throw new ConflictException(ErrorMessages.PARENTS.MAX_STUDENTS_REACHED);
-
     const card = await this.cardRepo.findOne({
       where: { code: dto.cardCode },
     });
     if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
     if (card.status !== CardStatus.ACTIVE)
       throw new ConflictException(ErrorMessages.AUTH.CARD_NOT_ACTIVE);
+
+    const linkedCount = await this.studentParentRepo.count({
+      where: { parentId: parent.id },
+    });
+    if (linkedCount >= 2)
+      throw new ConflictException(ErrorMessages.PARENTS.MAX_STUDENTS_REACHED);
 
     const student = await this.studentRepo.findOne({
       where: { cardId: card.id },
