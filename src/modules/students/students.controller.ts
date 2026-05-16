@@ -3,7 +3,7 @@ import {
   Controller,
   Get,
   Param,
-  Patch,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -57,7 +57,7 @@ export class StudentsController {
     return this.studentsService.findMe(currentUser.id);
   }
 
-  @Patch('me')
+  @Put('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.STUDENT)
   @ApiOperation({ summary: 'Update current student profile' })

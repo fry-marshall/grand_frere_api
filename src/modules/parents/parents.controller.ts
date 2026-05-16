@@ -3,8 +3,8 @@ import {
   Controller,
   Get,
   Param,
-  Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -57,7 +57,7 @@ export class ParentsController {
     return this.parentsService.findMe(currentUser.id);
   }
 
-  @Patch('me')
+  @Put('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.PARENT)
   @ApiOperation({ summary: 'Update current parent profile' })

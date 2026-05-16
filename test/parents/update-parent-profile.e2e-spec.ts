@@ -7,7 +7,7 @@ import { User } from '../../src/modules/users/entities/user.entity';
 import { Parent } from '../../src/modules/parents/entities/parent.entity';
 import { UserRole } from '../../src/modules/users/user.types';
 
-describe('PATCH /api/v1/parents/me', () => {
+describe('PUT /api/v1/parents/me', () => {
   let app: INestApplication;
   let userRepo: Repository<User>;
   let parentRepo: Repository<Parent>;
@@ -88,7 +88,7 @@ describe('PATCH /api/v1/parents/me', () => {
   describe('Success cases', () => {
     it('should update firstName', async () => {
       const res = await request(app.getHttpServer())
-        .patch('/api/v1/parents/me')
+        .put('/api/v1/parents/me')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ firstName: 'Updated' });
 
@@ -98,7 +98,7 @@ describe('PATCH /api/v1/parents/me', () => {
 
     it('should update lastName', async () => {
       const res = await request(app.getHttpServer())
-        .patch('/api/v1/parents/me')
+        .put('/api/v1/parents/me')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ lastName: 'Renamed' });
 
@@ -108,7 +108,7 @@ describe('PATCH /api/v1/parents/me', () => {
 
     it('should update phone', async () => {
       const res = await request(app.getHttpServer())
-        .patch('/api/v1/parents/me')
+        .put('/api/v1/parents/me')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ phone: '+2250100000730' });
 
@@ -118,7 +118,7 @@ describe('PATCH /api/v1/parents/me', () => {
 
     it('should accept empty body (no-op)', async () => {
       const res = await request(app.getHttpServer())
-        .patch('/api/v1/parents/me')
+        .put('/api/v1/parents/me')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({});
 
@@ -129,7 +129,7 @@ describe('PATCH /api/v1/parents/me', () => {
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
       const res = await request(app.getHttpServer())
-        .patch('/api/v1/parents/me')
+        .put('/api/v1/parents/me')
         .send({ firstName: 'Updated' });
 
       expect(res.status).toBe(401);
@@ -137,7 +137,7 @@ describe('PATCH /api/v1/parents/me', () => {
 
     it('should return 403 when role is STUDENT', async () => {
       const res = await request(app.getHttpServer())
-        .patch('/api/v1/parents/me')
+        .put('/api/v1/parents/me')
         .set('Authorization', `Bearer ${studentToken}`)
         .send({ firstName: 'Updated' });
 
@@ -146,7 +146,7 @@ describe('PATCH /api/v1/parents/me', () => {
 
     it('should return 409 when phone is already taken by another user', async () => {
       const res = await request(app.getHttpServer())
-        .patch('/api/v1/parents/me')
+        .put('/api/v1/parents/me')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ phone: '+2250100000731' });
 
@@ -155,7 +155,7 @@ describe('PATCH /api/v1/parents/me', () => {
 
     it('should return 400 when firstName is empty string', async () => {
       const res = await request(app.getHttpServer())
-        .patch('/api/v1/parents/me')
+        .put('/api/v1/parents/me')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ firstName: '' });
 
@@ -164,7 +164,7 @@ describe('PATCH /api/v1/parents/me', () => {
 
     it('should return 400 when phone has invalid format', async () => {
       const res = await request(app.getHttpServer())
-        .patch('/api/v1/parents/me')
+        .put('/api/v1/parents/me')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ phone: '0102030405' });
 
