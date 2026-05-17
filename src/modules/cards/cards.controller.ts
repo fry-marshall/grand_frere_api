@@ -61,7 +61,12 @@ export class CardsController {
 
   @Get(':code')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Role(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PARENT,
+    UserRole.STUDENT,
+  )
   @ApiOperation({ summary: 'Get card details by code' })
   @ApiSuccessResponse(CardResponseDto)
   @ApiNotFoundResponse({
