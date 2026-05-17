@@ -279,6 +279,41 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
       expect(walletAfter!.reserved).toBe(walletBefore!.reserved);
       expect(vendorWalletAfter!.balance).toBe(vendorWalletBefore!.balance);
     });
+
+    it('should cancel a CASH order without creating a RELEASE transaction', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${studentToken}`)
+        .send({
+          studentId: student.id,
+          items: [{ itemId: item.id, quantity: 1 }],
+          paymentMethod: PaymentMethod.CASH,
+        });
+      expect(createRes.status).toBe(201);
+      const orderId = createRes.body.data.id as string;
+
+      const walletBefore = await walletRepo.findOne({
+        where: { studentId: student.id },
+      });
+
+      const cancelRes = await request(app.getHttpServer())
+        .put(`/api/v1/orders/${orderId}/cancel`)
+        .set('Authorization', `Bearer ${vendorToken}`);
+
+      expect(cancelRes.status).toBe(200);
+      expect(cancelRes.body.data.status).toBe('CANCELLED');
+
+      const walletAfter = await walletRepo.findOne({
+        where: { studentId: student.id },
+      });
+      expect(walletAfter!.reserved).toBe(walletBefore!.reserved);
+      expect(walletAfter!.balance).toBe(walletBefore!.balance);
+
+      const releaseTx = await transactionRepo.findOne({
+        where: { orderId },
+      });
+      expect(releaseTx).toBeNull();
+    });
   });
 
   describe('Failure cases', () => {
