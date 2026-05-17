@@ -4,3 +4,8 @@ export enum OrderStatus {
   CANCELLED = 'CANCELLED',
   EXPIRED = 'EXPIRED',
 }
+
+export enum PaymentMethod {
+  WALLET = 'WALLET',
+  CASH = 'CASH',
+}

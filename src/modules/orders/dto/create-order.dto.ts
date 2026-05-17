@@ -1,14 +1,34 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsUUID, ValidateNested } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsEnum,
+  IsOptional,
+  IsUUID,
+  ValidateNested,
+} from 'class-validator';
 import { CreateOrderItemDto } from './create-order-item.dto';
+import { PaymentMethod } from '../order.types';
 
 export class CreateOrderDto {
+  @ApiProperty({ example: 'uuid' })
   @IsUUID()
   studentId: string;
 
+  @ApiProperty({ type: [CreateOrderItemDto] })
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
   items: CreateOrderItemDto[];
+
+  @ApiPropertyOptional({
+    enum: PaymentMethod,
+    default: PaymentMethod.WALLET,
+    description: 'Payment method. Defaults to WALLET.',
+  })
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
 }

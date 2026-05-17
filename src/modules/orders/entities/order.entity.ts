@@ -11,7 +11,7 @@ import {
 import { Student } from '../../students/entities/student.entity';
 import { Vendor } from '../../vendors/entities/vendor.entity';
 import { OrderItem } from './order-item.entity';
-import { OrderStatus } from '../order.types';
+import { OrderStatus, PaymentMethod } from '../order.types';
 
 @Entity('orders')
 export class Order {
@@ -36,6 +36,13 @@ export class Order {
 
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;
+
+  @Column({
+    type: 'enum',
+    enum: PaymentMethod,
+    default: PaymentMethod.WALLET,
+  })
+  paymentMethod: PaymentMethod;
 
   @Column({ type: 'integer' })
   totalAmount: number;

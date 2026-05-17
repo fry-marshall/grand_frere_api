@@ -19,7 +19,7 @@ import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { User } from '../users/entities/user.entity';
-import { OrderStatus } from './order.types';
+import { OrderStatus, PaymentMethod } from './order.types';
 import { ItemStatus } from '../items/item.types';
 import { CardStatus } from '../cards/card.types';
 import { TransactionType } from '../wallets/wallet.types';
@@ -173,6 +173,7 @@ export class OrdersService {
       studentId: order.studentId,
       vendorId: order.vendorId,
       status: order.status,
+      paymentMethod: order.paymentMethod,
       totalAmount: order.totalAmount,
       expiresAt: order.expiresAt,
       createdAt: order.createdAt,
@@ -236,39 +237,45 @@ export class OrdersService {
       throw new BadRequestException(ErrorMessages.ORDERS.INVALID_ITEMS);
     }
 
+    const paymentMethod = dto.paymentMethod ?? PaymentMethod.WALLET;
+
     const itemPriceMap = new Map(items.map((i) => [i.id, i.price]));
     const totalAmount = dto.items.reduce(
       (sum, line) => sum + itemPriceMap.get(line.itemId)! * line.quantity,
       0,
     );
 
-    const available = wallet.balance - wallet.reserved;
-    if (available < totalAmount) {
-      throw new BadRequestException(ErrorMessages.ORDERS.INSUFFICIENT_BALANCE);
-    }
-
-    const card = await this.cardRepo.findOne({
-      where: { studentId: student.id, status: CardStatus.ACTIVE },
-    });
-    if (card) {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
-      const row = await this.orderRepo
-        .createQueryBuilder('o')
-        .select('COALESCE(SUM(o.totalAmount), 0)', 'total')
-        .where('o.studentId = :studentId', { studentId: dto.studentId })
-        .andWhere('o.status IN (:...statuses)', {
-          statuses: [OrderStatus.PENDING, OrderStatus.VALIDATED],
-        })
-        .andWhere('o.createdAt >= :todayStart', { todayStart })
-        .getRawOne<{ total: string }>();
-
-      const spentToday = parseInt(row?.total ?? '0', 10);
-      if (spentToday + totalAmount > card.dailyLimit) {
+    if (paymentMethod === PaymentMethod.WALLET) {
+      const available = wallet.balance - wallet.reserved;
+      if (available < totalAmount) {
         throw new BadRequestException(
-          ErrorMessages.ORDERS.DAILY_LIMIT_EXCEEDED,
+          ErrorMessages.ORDERS.INSUFFICIENT_BALANCE,
         );
+      }
+
+      const card = await this.cardRepo.findOne({
+        where: { studentId: student.id, status: CardStatus.ACTIVE },
+      });
+      if (card) {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const row = await this.orderRepo
+          .createQueryBuilder('o')
+          .select('COALESCE(SUM(o.totalAmount), 0)', 'total')
+          .where('o.studentId = :studentId', { studentId: dto.studentId })
+          .andWhere('o.status IN (:...statuses)', {
+            statuses: [OrderStatus.PENDING, OrderStatus.VALIDATED],
+          })
+          .andWhere('o.createdAt >= :todayStart', { todayStart })
+          .getRawOne<{ total: string }>();
+
+        const spentToday = parseInt(row?.total ?? '0', 10);
+        if (spentToday + totalAmount > card.dailyLimit) {
+          throw new BadRequestException(
+            ErrorMessages.ORDERS.DAILY_LIMIT_EXCEEDED,
+          );
+        }
       }
     }
 
@@ -279,6 +286,7 @@ export class OrdersService {
         vendorId,
         studentId: dto.studentId,
         status: OrderStatus.PENDING,
+        paymentMethod,
         totalAmount,
         expiresAt,
       });
@@ -292,19 +300,21 @@ export class OrdersService {
         });
       }
 
-      await manager.update(Wallet, wallet.id, {
-        reserved: wallet.reserved + totalAmount,
-      });
+      if (paymentMethod === PaymentMethod.WALLET) {
+        await manager.update(Wallet, wallet.id, {
+          reserved: wallet.reserved + totalAmount,
+        });
 
-      await manager.save(Transaction, {
-        walletId: wallet.id,
-        type: TransactionType.RESERVE,
-        amount: totalAmount,
-        currency: wallet.currency ?? Currency.XOF,
-        balanceBefore: wallet.balance,
-        balanceAfter: wallet.balance,
-        orderId: newOrder.id,
-      });
+        await manager.save(Transaction, {
+          walletId: wallet.id,
+          type: TransactionType.RESERVE,
+          amount: totalAmount,
+          currency: wallet.currency ?? Currency.XOF,
+          balanceBefore: wallet.balance,
+          balanceAfter: wallet.balance,
+          orderId: newOrder.id,
+        });
+      }
 
       return newOrder;
     });
@@ -345,32 +355,34 @@ export class OrdersService {
     const updated = await this.dataSource.transaction(async (manager) => {
       await manager.update(Order, order.id, { status: OrderStatus.VALIDATED });
 
-      const balanceBefore = wallet.balance;
-      const balanceAfter = balanceBefore - order.totalAmount;
-      await manager.update(Wallet, wallet.id, {
-        balance: balanceAfter,
-        reserved: wallet.reserved - order.totalAmount,
-      });
-
-      await manager.save(Transaction, {
-        walletId: wallet.id,
-        type: TransactionType.DEBIT,
-        amount: order.totalAmount,
-        currency: wallet.currency ?? Currency.XOF,
-        balanceBefore,
-        balanceAfter,
-        orderId: order.id,
-      });
-
-      if (vendorWallet) {
-        await manager.update(VendorWallet, vendorWallet.id, {
-          balance: vendorWallet.balance + order.totalAmount,
+      if (order.paymentMethod === PaymentMethod.WALLET) {
+        const balanceBefore = wallet.balance;
+        const balanceAfter = balanceBefore - order.totalAmount;
+        await manager.update(Wallet, wallet.id, {
+          balance: balanceAfter,
+          reserved: wallet.reserved - order.totalAmount,
         });
-      } else {
-        vendorWallet = await manager.save(VendorWallet, {
-          vendorId: order.vendorId,
-          balance: order.totalAmount,
+
+        await manager.save(Transaction, {
+          walletId: wallet.id,
+          type: TransactionType.DEBIT,
+          amount: order.totalAmount,
+          currency: wallet.currency ?? Currency.XOF,
+          balanceBefore,
+          balanceAfter,
+          orderId: order.id,
         });
+
+        if (vendorWallet) {
+          await manager.update(VendorWallet, vendorWallet.id, {
+            balance: vendorWallet.balance + order.totalAmount,
+          });
+        } else {
+          vendorWallet = await manager.save(VendorWallet, {
+            vendorId: order.vendorId,
+            balance: order.totalAmount,
+          });
+        }
       }
 
       return { ...order, status: OrderStatus.VALIDATED };
@@ -435,19 +447,21 @@ export class OrdersService {
     await this.dataSource.transaction(async (manager) => {
       await manager.update(Order, order.id, { status: OrderStatus.CANCELLED });
 
-      await manager.update(Wallet, wallet.id, {
-        reserved: wallet.reserved - order.totalAmount,
-      });
+      if (order.paymentMethod === PaymentMethod.WALLET) {
+        await manager.update(Wallet, wallet.id, {
+          reserved: wallet.reserved - order.totalAmount,
+        });
 
-      await manager.save(Transaction, {
-        walletId: wallet.id,
-        type: TransactionType.RELEASE,
-        amount: order.totalAmount,
-        currency: wallet.currency ?? Currency.XOF,
-        balanceBefore: wallet.balance,
-        balanceAfter: wallet.balance,
-        orderId: order.id,
-      });
+        await manager.save(Transaction, {
+          walletId: wallet.id,
+          type: TransactionType.RELEASE,
+          amount: order.totalAmount,
+          currency: wallet.currency ?? Currency.XOF,
+          balanceBefore: wallet.balance,
+          balanceAfter: wallet.balance,
+          orderId: order.id,
+        });
+      }
     });
 
     const dto = this.toDto({ ...order, status: OrderStatus.CANCELLED });
@@ -505,6 +519,7 @@ export class OrdersService {
       studentId: order.studentId,
       vendorId: order.vendorId,
       status: order.status,
+      paymentMethod: order.paymentMethod,
       totalAmount: order.totalAmount,
       expiresAt: order.expiresAt,
       createdAt: order.createdAt,

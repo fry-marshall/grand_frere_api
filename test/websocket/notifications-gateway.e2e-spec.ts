@@ -17,7 +17,10 @@ import { SchoolStatus } from '../../src/modules/schools/school.types';
 import { UserRole } from '../../src/modules/users/user.types';
 import { VendorStatus } from '../../src/modules/vendors/vendor.types';
 import { ItemStatus } from '../../src/modules/items/item.types';
-import { OrderStatus } from '../../src/modules/orders/order.types';
+import {
+  OrderStatus,
+  PaymentMethod,
+} from '../../src/modules/orders/order.types';
 import { CardStatus } from '../../src/modules/cards/card.types';
 import { NotificationsGateway } from '../../src/modules/notifications/notifications.gateway';
 
@@ -239,6 +242,7 @@ describe('NotificationsGateway (WebSocket)', () => {
         studentId: student.id,
         vendorId: vendor.id,
         status: OrderStatus.PENDING,
+        paymentMethod: PaymentMethod.WALLET,
         totalAmount: 500,
         expiresAt: savedOrder.expiresAt,
         createdAt: savedOrder.createdAt,
@@ -281,6 +285,7 @@ describe('NotificationsGateway (WebSocket)', () => {
         studentId: student.id,
         vendorId: vendor.id,
         status: OrderStatus.VALIDATED,
+        paymentMethod: PaymentMethod.WALLET,
         totalAmount: 500,
         expiresAt: savedOrder.expiresAt,
         createdAt: savedOrder.createdAt,
