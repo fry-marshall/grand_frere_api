@@ -115,9 +115,7 @@ export class CardsService {
     const card = await this.cardRepo.findOne({ where: { code } });
     if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
 
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      await this.assertSchoolAdminOwnsCard(currentUser.id, card);
-    }
+    await this.assertOwnership(currentUser, card);
 
     return this.toDto(card);
   }
