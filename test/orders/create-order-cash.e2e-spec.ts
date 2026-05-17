@@ -58,22 +58,19 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
 
     const leftover = await schoolRepo.findOne({ where: { sigle: 'TS-CASH' } });
     if (leftover) {
-      const orders = await orderRepo.find({
-        where: {
-          vendorId: (
-            await vendorRepo.findOne({ where: { schoolId: leftover.id } })
-          )?.id,
-        },
+      const leftStudents = await studentRepo.find({
+        where: { schoolId: leftover.id },
       });
-      for (const o of orders) {
-        await orderItemRepo.delete({ orderId: o.id });
-        await transactionRepo.delete({ orderId: o.id });
+      for (const s of leftStudents) {
+        const orders = await orderRepo.find({ where: { studentId: s.id } });
+        for (const o of orders) {
+          await orderItemRepo.delete({ orderId: o.id });
+          await transactionRepo.delete({ orderId: o.id });
+          await orderRepo.delete({ id: o.id });
+        }
+        await walletRepo.delete({ studentId: s.id });
       }
-      await orderRepo.delete({
-        studentId: (
-          await studentRepo.findOne({ where: { schoolId: leftover.id } })
-        )?.id,
-      });
+      await studentRepo.delete({ schoolId: leftover.id });
       const vendors = await vendorRepo.find({
         where: { schoolId: leftover.id },
       });
@@ -82,13 +79,6 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
         await vendorWalletRepo.delete({ vendorId: v.id });
         await vendorRepo.delete({ id: v.id });
       }
-      const students = await studentRepo.find({
-        where: { schoolId: leftover.id },
-      });
-      for (const s of students) {
-        await walletRepo.delete({ studentId: s.id });
-      }
-      await studentRepo.delete({ schoolId: leftover.id });
       await userRepo.delete({ schoolId: leftover.id });
       await schoolRepo.delete({ id: leftover.id });
     }
@@ -103,7 +93,7 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
     const vendorUser = await userRepo.save({
       firstName: 'Vendor',
       lastName: 'Cash',
-      phone: '+2250100006000',
+      phone: '+2250100009000',
       role: UserRole.VENDOR,
       schoolId: school.id,
       isOnboarded: true,
@@ -131,7 +121,7 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
     const studentUser = await userRepo.save({
       firstName: 'Student',
       lastName: 'Cash',
-      phone: '+2250100006001',
+      phone: '+2250100009001',
       role: UserRole.STUDENT,
       schoolId: school.id,
       isOnboarded: true,
@@ -150,27 +140,25 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
   afterAll(async () => {
     const school = await schoolRepo.findOne({ where: { sigle: 'TS-CASH' } });
     if (school) {
-      const orders = await orderRepo.find({
-        where: { studentId: student?.id },
+      const students = await studentRepo.find({
+        where: { schoolId: school.id },
       });
-      for (const o of orders) {
-        await orderItemRepo.delete({ orderId: o.id });
-        await transactionRepo.delete({ orderId: o.id });
-        await orderRepo.delete({ id: o.id });
+      for (const s of students) {
+        const orders = await orderRepo.find({ where: { studentId: s.id } });
+        for (const o of orders) {
+          await orderItemRepo.delete({ orderId: o.id });
+          await transactionRepo.delete({ orderId: o.id });
+          await orderRepo.delete({ id: o.id });
+        }
+        await walletRepo.delete({ studentId: s.id });
       }
+      await studentRepo.delete({ schoolId: school.id });
       const vendors = await vendorRepo.find({ where: { schoolId: school.id } });
       for (const v of vendors) {
         await itemRepo.delete({ vendorId: v.id });
         await vendorWalletRepo.delete({ vendorId: v.id });
         await vendorRepo.delete({ id: v.id });
       }
-      const students = await studentRepo.find({
-        where: { schoolId: school.id },
-      });
-      for (const s of students) {
-        await walletRepo.delete({ studentId: s.id });
-      }
-      await studentRepo.delete({ schoolId: school.id });
       await userRepo.delete({ schoolId: school.id });
       await schoolRepo.delete({ id: school.id });
     }
@@ -214,7 +202,7 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
       const studentUser2 = await userRepo.save({
         firstName: 'Student2',
         lastName: 'Cash',
-        phone: '+2250100006002',
+        phone: '+2250100009002',
         role: UserRole.STUDENT,
         schoolId: (await schoolRepo.findOne({ where: { sigle: 'TS-CASH' } }))!
           .id,
