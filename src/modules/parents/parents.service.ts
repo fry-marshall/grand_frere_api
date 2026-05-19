@@ -155,7 +155,7 @@ export class ParentsService {
 
     const links = await this.studentParentRepo.find({
       where: { parentId: id },
-      relations: ['student', 'student.user'],
+      relations: ['student', 'student.user', 'student.card'],
     });
 
     return links.map((link) => ({
@@ -167,6 +167,12 @@ export class ParentsService {
         firstName: link.student.user.firstName,
         lastName: link.student.user.lastName,
       },
+      card: link.student.card
+        ? {
+            code: link.student.card.code,
+            dailyLimit: link.student.card.dailyLimit,
+          }
+        : null,
     }));
   }
 

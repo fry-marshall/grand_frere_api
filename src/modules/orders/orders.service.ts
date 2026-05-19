@@ -132,7 +132,7 @@ export class OrdersService {
   ): Promise<OrderDetailResponseDto> {
     const order = await this.orderRepo.findOne({
       where: { id },
-      relations: ['items'],
+      relations: ['items', 'items.item', 'vendor', 'student', 'student.user'],
     });
     if (!order) throw new NotFoundException(ErrorMessages.ORDERS.NOT_FOUND);
 
@@ -177,11 +177,27 @@ export class OrdersService {
       totalAmount: order.totalAmount,
       expiresAt: order.expiresAt,
       createdAt: order.createdAt,
+      vendor: order.vendor
+        ? {
+            id: order.vendor.id,
+            shopName: order.vendor.shopName,
+            waveNumber: order.vendor.waveNumber,
+          }
+        : undefined,
+      student: order.student?.user
+        ? {
+            user: {
+              firstName: order.student.user.firstName,
+              lastName: order.student.user.lastName,
+            },
+          }
+        : undefined,
       items: order.items.map((i) => ({
         id: i.id,
         itemId: i.itemId,
         quantity: i.quantity,
         unitPrice: i.unitPrice,
+        item: i.item ? { name: i.item.name } : undefined,
       })),
     };
   }

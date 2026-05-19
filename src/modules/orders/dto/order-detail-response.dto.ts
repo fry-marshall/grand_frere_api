@@ -5,6 +5,7 @@ export class OrderItemResponseDto {
   itemId: string;
   quantity: number;
   unitPrice: number;
+  item?: { name: string };
 }
 
 export class OrderDetailResponseDto {
@@ -16,5 +17,7 @@ export class OrderDetailResponseDto {
   totalAmount: number;
   expiresAt: Date;
   createdAt: Date;
+  vendor?: { id: string; shopName: string; waveNumber: string };
+  student?: { user: { firstName: string; lastName: string } };
   items: OrderItemResponseDto[];
 }
