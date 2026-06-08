@@ -246,7 +246,7 @@ export class ParentsService {
           userId: newUser.id,
           cardId: card.id,
           schoolId: card.schoolId,
-          class: dto.class ?? null,
+          class: dto.class,
         });
 
         await manager.update(Card, card.id, { studentId: newStudent.id });
