@@ -6,6 +6,8 @@ import { createTestApp } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
+import { Parent } from '../../src/modules/parents/entities/parent.entity';
+import { StudentParent } from '../../src/modules/students/entities/student-parent.entity';
 import { Wallet } from '../../src/modules/wallets/entities/wallet.entity';
 import { Transaction } from '../../src/modules/wallets/entities/transaction.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
@@ -18,6 +20,8 @@ describe('GET /api/v1/students/:id/transactions', () => {
   let schoolRepo: Repository<School>;
   let userRepo: Repository<User>;
   let studentRepo: Repository<Student>;
+  let parentRepo: Repository<Parent>;
+  let studentParentRepo: Repository<StudentParent>;
   let walletRepo: Repository<Wallet>;
   let transactionRepo: Repository<Transaction>;
   let jwtService: JwtService;
@@ -30,6 +34,8 @@ describe('GET /api/v1/students/:id/transactions', () => {
   let superAdminToken: string;
   let ownSchoolAdminToken: string;
   let otherSchoolAdminToken: string;
+  let linkedParentToken: string;
+  let unlinkedParentToken: string;
   let ownStudentToken: string;
   let otherStudentToken: string;
 
@@ -41,6 +47,8 @@ describe('GET /api/v1/students/:id/transactions', () => {
     schoolRepo = ds.getRepository(School);
     userRepo = ds.getRepository(User);
     studentRepo = ds.getRepository(Student);
+    parentRepo = ds.getRepository(Parent);
+    studentParentRepo = ds.getRepository(StudentParent);
     walletRepo = ds.getRepository(Wallet);
     transactionRepo = ds.getRepository(Transaction);
     jwtService = moduleRef.get(JwtService, { strict: false });
@@ -57,10 +65,19 @@ describe('GET /api/v1/students/:id/transactions', () => {
             await transactionRepo.delete({ walletId: w.id });
             await walletRepo.delete({ id: w.id });
           }
+          await studentParentRepo.delete({ studentId: s.id });
         }
         await studentRepo.delete({ schoolId: leftover.id });
         await userRepo.delete({ schoolId: leftover.id });
         await schoolRepo.delete({ id: leftover.id });
+      }
+    }
+    for (const phone of ['+2250100000680', '+2250100000681']) {
+      const u = await userRepo.findOne({ where: { phone } });
+      if (u) {
+        const p = await parentRepo.findOne({ where: { userId: u.id } });
+        if (p) await parentRepo.delete({ id: p.id });
+        await userRepo.delete({ id: u.id });
       }
     }
 
@@ -157,6 +174,36 @@ describe('GET /api/v1/students/:id/transactions', () => {
       balanceAfter: 3000,
     });
 
+    const linkedParentUser = await userRepo.save({
+      firstName: 'Adjoua',
+      lastName: 'KouaméSTX',
+      phone: '+2250100000680',
+      role: UserRole.PARENT,
+      isOnboarded: true,
+    });
+    linkedParentToken = jwtService.sign({
+      sub: linkedParentUser.id,
+      role: linkedParentUser.role,
+    });
+    const linkedParent = await parentRepo.save({ userId: linkedParentUser.id });
+    await studentParentRepo.save({
+      studentId: student.id,
+      parentId: linkedParent.id,
+    });
+
+    const unlinkedParentUser = await userRepo.save({
+      firstName: 'Unlinked',
+      lastName: 'ParentSTX',
+      phone: '+2250100000681',
+      role: UserRole.PARENT,
+      isOnboarded: true,
+    });
+    unlinkedParentToken = jwtService.sign({
+      sub: unlinkedParentUser.id,
+      role: unlinkedParentUser.role,
+    });
+    await parentRepo.save({ userId: unlinkedParentUser.id });
+
     const otherStudentUser = await userRepo.save({
       firstName: 'Méite',
       lastName: 'Noël',
@@ -179,6 +226,7 @@ describe('GET /api/v1/students/:id/transactions', () => {
   afterAll(async () => {
     await transactionRepo.delete({ walletId: wallet.id });
     await walletRepo.delete({ id: wallet.id });
+    await studentParentRepo.delete({ studentId: student.id });
     await studentRepo.delete({ schoolId: school.id });
     await studentRepo.delete({ schoolId: otherSchool.id });
     await userRepo.delete({ schoolId: school.id });
@@ -191,6 +239,8 @@ describe('GET /api/v1/students/:id/transactions', () => {
       '+2250100000672',
       '+2250100000673',
       '+2250100000674',
+      '+2250100000680',
+      '+2250100000681',
     ]) {
       await userRepo.delete({ phone });
     }
@@ -224,6 +274,15 @@ describe('GET /api/v1/students/:id/transactions', () => {
       const res = await request(app.getHttpServer())
         .get(`/api/v1/students/${student.id}/transactions`)
         .set('Authorization', `Bearer ${ownStudentToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.data.length).toBe(2);
+    });
+
+    it('should return transactions for linked PARENT', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/students/${student.id}/transactions`)
+        .set('Authorization', `Bearer ${linkedParentToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.data.data.length).toBe(2);
@@ -266,6 +325,13 @@ describe('GET /api/v1/students/:id/transactions', () => {
       const res = await request(app.getHttpServer())
         .get(`/api/v1/students/${student.id}/transactions`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 for unlinked PARENT', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/students/${student.id}/transactions`)
+        .set('Authorization', `Bearer ${unlinkedParentToken}`);
       expect(res.status).toBe(403);
     });
 

@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { Student } from './entities/student.entity';
 import { StudentParent } from './entities/student-parent.entity';
 import { User } from '../users/entities/user.entity';
+import { Parent } from '../parents/entities/parent.entity';
 import { Order } from '../orders/entities/order.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import { Transaction } from '../wallets/entities/transaction.entity';
@@ -29,6 +30,8 @@ export class StudentsService {
     private readonly studentParentRepo: Repository<StudentParent>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(Parent)
+    private readonly parentRepo: Repository<Parent>,
     @InjectRepository(Order)
     private readonly orderRepo: Repository<Order>,
     @InjectRepository(Wallet)
@@ -199,6 +202,17 @@ export class StudentsService {
         where: { id: currentUser.id },
       });
       if (admin?.schoolId !== student.schoolId) throw new ForbiddenException();
+    }
+
+    if (currentUser.role === UserRole.PARENT) {
+      const parent = await this.parentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!parent) throw new ForbiddenException();
+      const link = await this.studentParentRepo.findOne({
+        where: { studentId: id, parentId: parent.id },
+      });
+      if (!link) throw new ForbiddenException();
     }
 
     if (

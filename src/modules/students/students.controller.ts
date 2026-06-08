@@ -123,7 +123,12 @@ export class StudentsController {
 
   @Get(':id/transactions')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.STUDENT)
+  @Role(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PARENT,
+    UserRole.STUDENT,
+  )
   @ApiOperation({ summary: "List student's wallet transactions" })
   @ApiSuccessResponse(StudentTransactionResponseDto)
   @ApiNotFoundResponse({
