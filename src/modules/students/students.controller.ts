@@ -121,6 +121,24 @@ export class StudentsController {
     return this.studentsService.findOrders(id, currentUser, query);
   }
 
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.PARENT)
+  @ApiOperation({ summary: "Update a student's profile" })
+  @ApiSuccessResponse(StudentResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.STUDENTS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  updateById(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+    @Body() dto: UpdateStudentProfileDto,
+  ) {
+    return this.studentsService.updateById(id, currentUser, dto);
+  }
+
   @Get(':id/transactions')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(

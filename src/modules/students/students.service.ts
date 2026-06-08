@@ -254,6 +254,42 @@ export class StudentsService {
     };
   }
 
+  async updateById(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+    dto: UpdateStudentProfileDto,
+  ): Promise<StudentResponseDto> {
+    const student = await this.studentRepo.findOne({
+      where: { id },
+      relations: ['user', 'card'],
+    });
+    if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (admin?.schoolId !== student.schoolId) throw new ForbiddenException();
+    }
+
+    if (currentUser.role === UserRole.PARENT) {
+      const parent = await this.parentRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!parent) throw new ForbiddenException();
+      const link = await this.studentParentRepo.findOne({
+        where: { studentId: id, parentId: parent.id },
+      });
+      if (!link) throw new ForbiddenException();
+    }
+
+    if (dto.firstName !== undefined) student.user.firstName = dto.firstName;
+    if (dto.lastName !== undefined) student.user.lastName = dto.lastName;
+
+    await this.userRepo.save(student.user);
+    return this.toDto(student);
+  }
+
   async updateProfile(
     userId: string,
     dto: UpdateStudentProfileDto,
