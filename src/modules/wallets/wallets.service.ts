@@ -6,8 +6,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Wallet } from './entities/wallet.entity';
-import { Transaction } from './entities/transaction.entity';
-import { TransactionType } from './wallet.types';
+import { Order } from '../orders/entities/order.entity';
+import { OrderStatus } from '../orders/order.types';
 import { Student } from '../students/entities/student.entity';
 import { User } from '../users/entities/user.entity';
 import { Parent } from '../parents/entities/parent.entity';
@@ -21,8 +21,8 @@ export class WalletsService {
   constructor(
     @InjectRepository(Wallet)
     private readonly walletRepo: Repository<Wallet>,
-    @InjectRepository(Transaction)
-    private readonly transactionRepo: Repository<Transaction>,
+    @InjectRepository(Order)
+    private readonly orderRepo: Repository<Order>,
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
     @InjectRepository(User)
@@ -70,23 +70,22 @@ export class WalletsService {
     const wallet = await this.walletRepo.findOne({ where: { studentId } });
     if (!wallet) throw new NotFoundException(ErrorMessages.WALLETS.NOT_FOUND);
 
-    const spentToday = await this.computeSpentToday(wallet.id);
+    const spentToday = await this.computeSpentToday(studentId);
     return this.toDto(wallet, spentToday);
   }
 
-  private async computeSpentToday(walletId: string): Promise<number> {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
+  private async computeSpentToday(studentId: string): Promise<number> {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
-    const result = await this.transactionRepo
-      .createQueryBuilder('t')
-      .select('COALESCE(SUM(t.amount), 0)', 'total')
-      .where('t.walletId = :walletId', { walletId })
-      .andWhere('t.type = :type', { type: TransactionType.DEBIT })
-      .andWhere('t.createdAt >= :start', { start })
-      .andWhere('t.createdAt <= :end', { end })
+    const result = await this.orderRepo
+      .createQueryBuilder('o')
+      .select('COALESCE(SUM(o.totalAmount), 0)', 'total')
+      .where('o.studentId = :studentId', { studentId })
+      .andWhere('o.status IN (:...statuses)', {
+        statuses: [OrderStatus.PENDING, OrderStatus.VALIDATED],
+      })
+      .andWhere('o.createdAt >= :todayStart', { todayStart })
       .getRawOne<{ total: string }>();
 
     return parseInt(result?.total ?? '0', 10);

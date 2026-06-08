@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Wallet } from './entities/wallet.entity';
 import { Transaction } from './entities/transaction.entity';
+import { Order } from '../orders/entities/order.entity';
 import { Student } from '../students/entities/student.entity';
 import { User } from '../users/entities/user.entity';
 import { Parent } from '../parents/entities/parent.entity';
@@ -14,6 +15,7 @@ import { WalletsController } from './wallets.controller';
     TypeOrmModule.forFeature([
       Wallet,
       Transaction,
+      Order,
       Student,
       User,
       Parent,
