@@ -1,17 +1,18 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Parent } from './entities/parent.entity';
 import { User } from '../users/entities/user.entity';
 import { Student } from '../students/entities/student.entity';
 import { Card } from '../cards/entities/card.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
-import { CardStatus } from '../cards/card.types';
+import { Wallet } from '../wallets/entities/wallet.entity';
 import { UserRole } from '../users/user.types';
 import { ParentResponseDto } from './dto/parent-response.dto';
 import { UpdateParentProfileDto } from './dto/update-parent-profile.dto';
@@ -32,6 +33,9 @@ export class ParentsService {
     private readonly cardRepo: Repository<Card>,
     @InjectRepository(StudentParent)
     private readonly studentParentRepo: Repository<StudentParent>,
+    @InjectRepository(Wallet)
+    private readonly walletRepo: Repository<Wallet>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async findAll(
@@ -214,34 +218,67 @@ export class ParentsService {
     const parent = await this.parentRepo.findOne({ where: { userId } });
     if (!parent) throw new NotFoundException(ErrorMessages.PARENTS.NOT_FOUND);
 
-    const card = await this.cardRepo.findOne({
-      where: { code: dto.cardCode },
-    });
+    const card = await this.cardRepo.findOne({ where: { code: dto.cardCode } });
     if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
-    if (card.status !== CardStatus.ACTIVE)
-      throw new ConflictException(ErrorMessages.AUTH.CARD_NOT_ACTIVE);
 
-    const linkedCount = await this.studentParentRepo.count({
-      where: { parentId: parent.id },
-    });
-    if (linkedCount >= 2)
-      throw new ConflictException(ErrorMessages.PARENTS.MAX_STUDENTS_REACHED);
-
-    const student = await this.studentRepo.findOne({
+    const existingStudent = await this.studentRepo.findOne({
       where: { cardId: card.id },
       relations: ['user'],
     });
-    if (!student)
-      throw new ConflictException(ErrorMessages.AUTH.CARD_HAS_NO_STUDENT);
+
+    if (!existingStudent) {
+      if (!dto.firstName || !dto.lastName) {
+        throw new BadRequestException(
+          ErrorMessages.AUTH.STUDENT_FIELDS_REQUIRED,
+        );
+      }
+
+      const student = await this.dataSource.transaction(async (manager) => {
+        const newUser = await manager.save(User, {
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          role: UserRole.STUDENT,
+          schoolId: card.schoolId,
+          isOnboarded: false,
+        });
+
+        const newStudent = await manager.save(Student, {
+          userId: newUser.id,
+          cardId: card.id,
+          schoolId: card.schoolId,
+          class: dto.class ?? null,
+        });
+
+        await manager.update(Card, card.id, { studentId: newStudent.id });
+        await manager.save(Wallet, { studentId: newStudent.id });
+        await manager.save(StudentParent, {
+          parentId: parent.id,
+          studentId: newStudent.id,
+        });
+
+        return { ...newStudent, user: newUser };
+      });
+
+      return {
+        id: student.id,
+        class: student.class,
+        schoolId: student.schoolId,
+        user: {
+          id: student.user.id,
+          firstName: student.user.firstName,
+          lastName: student.user.lastName,
+        },
+      };
+    }
 
     const alreadyLinked = await this.studentParentRepo.findOne({
-      where: { parentId: parent.id, studentId: student.id },
+      where: { parentId: parent.id, studentId: existingStudent.id },
     });
     if (alreadyLinked)
       throw new ConflictException(ErrorMessages.AUTH.PARENT_ALREADY_LINKED);
 
     const parentCountOnStudent = await this.studentParentRepo.count({
-      where: { studentId: student.id },
+      where: { studentId: existingStudent.id },
     });
     if (parentCountOnStudent >= 2)
       throw new ConflictException(
@@ -250,17 +287,17 @@ export class ParentsService {
 
     await this.studentParentRepo.save({
       parentId: parent.id,
-      studentId: student.id,
+      studentId: existingStudent.id,
     });
 
     return {
-      id: student.id,
-      class: student.class,
-      schoolId: student.schoolId,
+      id: existingStudent.id,
+      class: existingStudent.class,
+      schoolId: existingStudent.schoolId,
       user: {
-        id: student.user.id,
-        firstName: student.user.firstName,
-        lastName: student.user.lastName,
+        id: existingStudent.user.id,
+        firstName: existingStudent.user.firstName,
+        lastName: existingStudent.user.lastName,
       },
     };
   }

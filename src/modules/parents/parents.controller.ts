@@ -76,15 +76,16 @@ export class ParentsController {
   @Post('me/students')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.PARENT)
-  @ApiOperation({ summary: 'Link an additional student to the current parent' })
+  @ApiOperation({ summary: 'Link or create a student for the current parent' })
   @ApiSuccessResponse(ParentResponseDto, 201)
   @ApiNotFoundResponse({
     description: ErrorMessages.CARDS.NOT_FOUND,
     type: ErrorResponse,
   })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
   @ApiConflictResponse({
     description:
-      'Card not active / parent already linked / student has 2 parents / parent has 2 students',
+      'Parent already linked to student / student already has 2 parents',
     type: ErrorResponse,
   })
   addBeneficiary(

@@ -28,11 +28,12 @@ describe('POST /api/v1/parents/me/students', () => {
   let school: School;
 
   let parentToken: string;
-  let fullParentToken: string;
+  let parent: Parent;
   let studentToken: string;
 
   let cardWithStudent: Card;
   let cardUnassigned: Card;
+  let cardUnassignedNoFields: Card;
   let cardWithTwoParents: Card;
   let alreadyLinkedCard: Card;
 
@@ -70,8 +71,6 @@ describe('POST /api/v1/parents/me/students', () => {
       '+2250100000752',
       '+2250100000753',
       '+2250100000754',
-      '+2250100000755',
-      '+2250100000756',
     ]) {
       await userRepo.delete({ phone });
     }
@@ -83,7 +82,7 @@ describe('POST /api/v1/parents/me/students', () => {
       status: SchoolStatus.ACTIVE,
     });
 
-    // Parent under test — starts with 0 students
+    // Parent under test
     const parentUser = await userRepo.save({
       firstName: 'Parent',
       lastName: 'AB',
@@ -91,38 +90,24 @@ describe('POST /api/v1/parents/me/students', () => {
       role: UserRole.PARENT,
       isOnboarded: true,
     });
-    const parent = await parentRepo.save({ userId: parentUser.id });
+    parent = await parentRepo.save({ userId: parentUser.id });
     parentToken = jwtService.sign({
       sub: parentUser.id,
       role: parentUser.role,
-    });
-
-    // Parent that already has 2 students (should get 409)
-    const fullParentUser = await userRepo.save({
-      firstName: 'Full',
-      lastName: 'Parent',
-      phone: '+2250100000751',
-      role: UserRole.PARENT,
-      isOnboarded: true,
-    });
-    const fullParent = await parentRepo.save({ userId: fullParentUser.id });
-    fullParentToken = jwtService.sign({
-      sub: fullParentUser.id,
-      role: fullParentUser.role,
     });
 
     // Student user (to test 403)
     const stuUser = await userRepo.save({
       firstName: 'Student',
       lastName: 'AB',
-      phone: '+2250100000752',
+      phone: '+2250100000751',
       role: UserRole.STUDENT,
       schoolId: school.id,
       isOnboarded: true,
     });
     studentToken = jwtService.sign({ sub: stuUser.id, role: stuUser.role });
 
-    // Card with a student (main happy-path card)
+    // Card with an existing student
     cardWithStudent = await cardRepo.save({
       code: 'AB-CARD-001',
       schoolId: school.id,
@@ -142,9 +127,16 @@ describe('POST /api/v1/parents/me/students', () => {
     });
     await walletRepo.save({ studentId: stu1.id });
 
-    // Card UNASSIGNED (no student → 409 CARD_HAS_NO_STUDENT)
+    // Unassigned card — no student (create student flow)
     cardUnassigned = await cardRepo.save({
       code: 'AB-CARD-002',
+      schoolId: school.id,
+      status: CardStatus.UNASSIGNED,
+    });
+
+    // Another unassigned card — used to test missing firstName/lastName
+    cardUnassignedNoFields = await cardRepo.save({
+      code: 'AB-CARD-007',
       schoolId: school.id,
       status: CardStatus.UNASSIGNED,
     });
@@ -168,9 +160,7 @@ describe('POST /api/v1/parents/me/students', () => {
       schoolId: school.id,
     });
     await walletRepo.save({ studentId: stu2.id });
-
-    // Create 2 parents for stu2
-    for (const phone of ['+2250100000753', '+2250100000754']) {
+    for (const phone of ['+2250100000752', '+2250100000753']) {
       const u = await userRepo.save({
         firstName: 'P',
         lastName: 'Extra',
@@ -182,7 +172,7 @@ describe('POST /api/v1/parents/me/students', () => {
       await studentParentRepo.save({ parentId: p.id, studentId: stu2.id });
     }
 
-    // Card already linked to the main parent (to test PARENT_ALREADY_LINKED)
+    // Card already linked to the main parent
     alreadyLinkedCard = await cardRepo.save({
       code: 'AB-CARD-004',
       schoolId: school.id,
@@ -202,32 +192,6 @@ describe('POST /api/v1/parents/me/students', () => {
     });
     await walletRepo.save({ studentId: stu3.id });
     await studentParentRepo.save({ parentId: parent.id, studentId: stu3.id });
-
-    // Build fullParent's 2 students so it hits MAX_STUDENTS_REACHED
-    for (const code of ['AB-CARD-005', 'AB-CARD-006']) {
-      const c = await cardRepo.save({
-        code,
-        schoolId: school.id,
-        status: CardStatus.ACTIVE,
-      });
-      const u = await userRepo.save({
-        firstName: 'Extra',
-        lastName: 'Stu',
-        role: UserRole.STUDENT,
-        schoolId: school.id,
-        isOnboarded: false,
-      });
-      const s = await studentRepo.save({
-        userId: u.id,
-        cardId: c.id,
-        schoolId: school.id,
-      });
-      await walletRepo.save({ studentId: s.id });
-      await studentParentRepo.save({
-        parentId: fullParent.id,
-        studentId: s.id,
-      });
-    }
   });
 
   afterAll(async () => {
@@ -249,8 +213,6 @@ describe('POST /api/v1/parents/me/students', () => {
       '+2250100000752',
       '+2250100000753',
       '+2250100000754',
-      '+2250100000755',
-      '+2250100000756',
     ]) {
       const u = await userRepo.findOne({ where: { phone } });
       if (u) {
@@ -262,17 +224,70 @@ describe('POST /api/v1/parents/me/students', () => {
   });
 
   describe('Success cases', () => {
-    it('should link a student to the parent and return student info', async () => {
+    it('should link an existing student to the parent', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
-        .send({ cardCode: 'AB-CARD-001' });
+        .send({ cardCode: cardWithStudent.code });
 
       expect(res.status).toBe(201);
       expect(res.body.data).toHaveProperty('id');
       expect(res.body.data).toHaveProperty('schoolId');
-      expect(res.body.data).toHaveProperty('user');
-      expect(res.body.data.user).toHaveProperty('firstName');
+      expect(res.body.data.user).toHaveProperty('firstName', 'Stu1');
+    });
+
+    it('should create a new student when card is UNASSIGNED', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/parents/me/students')
+        .set('Authorization', `Bearer ${parentToken}`)
+        .send({
+          cardCode: cardUnassigned.code,
+          firstName: 'Nouveau',
+          lastName: 'Eleve',
+          class: 'CE2',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.user.firstName).toBe('Nouveau');
+      expect(res.body.data.user.lastName).toBe('Eleve');
+      expect(res.body.data.class).toBe('CE2');
+      expect(res.body.data.schoolId).toBe(school.id);
+    });
+
+    it('should allow a parent to add more than 2 students', async () => {
+      // Parent already has stu3 (alreadyLinked) + stu1 (cardWithStudent) + the one from UNASSIGNED
+      // Adding a 4th card should succeed
+      const extraCard = await cardRepo.save({
+        code: 'AB-CARD-EXTRA',
+        schoolId: school.id,
+        status: CardStatus.ACTIVE,
+      });
+      const extraUser = await userRepo.save({
+        firstName: 'Extra',
+        lastName: 'Student',
+        role: UserRole.STUDENT,
+        schoolId: school.id,
+        isOnboarded: false,
+      });
+      const extraStudent = await studentRepo.save({
+        userId: extraUser.id,
+        cardId: extraCard.id,
+        schoolId: school.id,
+      });
+      await walletRepo.save({ studentId: extraStudent.id });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/parents/me/students')
+        .set('Authorization', `Bearer ${parentToken}`)
+        .send({ cardCode: extraCard.code });
+
+      expect(res.status).toBe(201);
+
+      await studentParentRepo.delete({ studentId: extraStudent.id });
+      await walletRepo.delete({ studentId: extraStudent.id });
+      await studentRepo.delete({ id: extraStudent.id });
+      await userRepo.delete({ id: extraUser.id });
+      await cardRepo.delete({ id: extraCard.id });
     });
   });
 
@@ -280,7 +295,7 @@ describe('POST /api/v1/parents/me/students', () => {
     it('should return 401 when no token', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/parents/me/students')
-        .send({ cardCode: 'AB-CARD-001' });
+        .send({ cardCode: cardWithStudent.code });
 
       expect(res.status).toBe(401);
     });
@@ -289,7 +304,7 @@ describe('POST /api/v1/parents/me/students', () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${studentToken}`)
-        .send({ cardCode: 'AB-CARD-001' });
+        .send({ cardCode: cardWithStudent.code });
 
       expect(res.status).toBe(403);
     });
@@ -303,13 +318,13 @@ describe('POST /api/v1/parents/me/students', () => {
       expect(res.status).toBe(404);
     });
 
-    it('should return 409 when card is not ACTIVE', async () => {
+    it('should return 400 when card is UNASSIGNED and firstName/lastName are missing', async () => {
       const res = await request(app.getHttpServer())
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
-        .send({ cardCode: cardUnassigned.code });
+        .send({ cardCode: cardUnassignedNoFields.code });
 
-      expect(res.status).toBe(409);
+      expect(res.status).toBe(400);
     });
 
     it('should return 409 when student already has 2 parents', async () => {
@@ -326,15 +341,6 @@ describe('POST /api/v1/parents/me/students', () => {
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ cardCode: alreadyLinkedCard.code });
-
-      expect(res.status).toBe(409);
-    });
-
-    it('should return 409 when parent already has 2 linked students', async () => {
-      const res = await request(app.getHttpServer())
-        .post('/api/v1/parents/me/students')
-        .set('Authorization', `Bearer ${fullParentToken}`)
-        .send({ cardCode: cardWithStudent.code });
 
       expect(res.status).toBe(409);
     });
