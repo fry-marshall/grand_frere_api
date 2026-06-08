@@ -6,4 +6,5 @@ export class WalletResponseDto {
   balance: number;
   reserved: number;
   currency: Currency;
+  spentToday: number;
 }
