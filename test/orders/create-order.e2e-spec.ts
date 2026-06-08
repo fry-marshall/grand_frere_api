@@ -13,10 +13,12 @@ import { Item } from '../../src/modules/items/entities/item.entity';
 import { Wallet } from '../../src/modules/wallets/entities/wallet.entity';
 import { Order } from '../../src/modules/orders/entities/order.entity';
 import { Transaction } from '../../src/modules/wallets/entities/transaction.entity';
+import { Card } from '../../src/modules/cards/entities/card.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
 import { UserRole } from '../../src/modules/users/user.types';
 import { VendorStatus } from '../../src/modules/vendors/vendor.types';
 import { ItemStatus } from '../../src/modules/items/item.types';
+import { CardStatus } from '../../src/modules/cards/card.types';
 import { OrderStatus } from '../../src/modules/orders/order.types';
 
 describe('POST /api/v1/orders/vendor/:vendorId', () => {
@@ -31,6 +33,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
   let walletRepo: Repository<Wallet>;
   let orderRepo: Repository<Order>;
   let transactionRepo: Repository<Transaction>;
+  let cardRepo: Repository<Card>;
   let jwtService: JwtService;
 
   let school: School;
@@ -64,6 +67,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     walletRepo = ds.getRepository(Wallet);
     orderRepo = ds.getRepository(Order);
     transactionRepo = ds.getRepository(Transaction);
+    cardRepo = ds.getRepository(Card);
     jwtService = moduleRef.get(JwtService, { strict: false });
 
     for (const sigle of ['TS-ORD', 'TS-ORD2']) {
@@ -455,6 +459,48 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
       expect(res.status).toBe(400);
 
       await walletRepo.update(wallet.id, { balance: 10000, reserved: 0 });
+    });
+
+    it('should return 400 when card is SUSPENDED', async () => {
+      const card = await cardRepo.save({
+        code: 'TEST-SUSP-001',
+        schoolId: school.id,
+        studentId: student.id,
+        status: CardStatus.SUSPENDED,
+        dailyLimit: 5000,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${vendorToken}`)
+        .send({
+          studentId: student.id,
+          items: [{ itemId: item1.id, quantity: 1 }],
+        });
+      expect(res.status).toBe(400);
+
+      await cardRepo.delete({ id: card.id });
+    });
+
+    it('should return 400 when card is BLOCKED', async () => {
+      const card = await cardRepo.save({
+        code: 'TEST-BLCK-001',
+        schoolId: school.id,
+        studentId: student.id,
+        status: CardStatus.BLOCKED,
+        dailyLimit: 5000,
+      });
+
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${vendorToken}`)
+        .send({
+          studentId: student.id,
+          items: [{ itemId: item1.id, quantity: 1 }],
+        });
+      expect(res.status).toBe(400);
+
+      await cardRepo.delete({ id: card.id });
     });
   });
 });

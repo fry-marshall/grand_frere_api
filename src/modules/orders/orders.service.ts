@@ -270,9 +270,15 @@ export class OrdersService {
       }
 
       const card = await this.cardRepo.findOne({
-        where: { studentId: student.id, status: CardStatus.ACTIVE },
+        where: { studentId: student.id },
       });
       if (card) {
+        if (
+          card.status === CardStatus.SUSPENDED ||
+          card.status === CardStatus.BLOCKED
+        ) {
+          throw new BadRequestException(ErrorMessages.CARDS.NOT_ACTIVE);
+        }
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
 
