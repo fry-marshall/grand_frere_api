@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
@@ -208,7 +208,7 @@ describe('GET /api/v1/cards/:code', () => {
 
   describe('Success cases', () => {
     it('should return card details to SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/cards/${card.code}`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -220,7 +220,7 @@ describe('GET /api/v1/cards/:code', () => {
     });
 
     it('should return card details to SCHOOL_ADMIN of the same school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/cards/${card.code}`)
         .set('Authorization', `Bearer ${schoolAdminToken}`);
 
@@ -229,7 +229,7 @@ describe('GET /api/v1/cards/:code', () => {
     });
 
     it('should return card details to PARENT linked to the card student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/cards/${studentCard.code}`)
         .set('Authorization', `Bearer ${linkedParentToken}`);
 
@@ -238,7 +238,7 @@ describe('GET /api/v1/cards/:code', () => {
     });
 
     it('should return card details to STUDENT who owns the card', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/cards/${studentCard.code}`)
         .set('Authorization', `Bearer ${studentToken}`);
 
@@ -249,35 +249,35 @@ describe('GET /api/v1/cards/:code', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token is provided', async () => {
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(getServer(app)).get(
         `/api/v1/cards/${card.code}`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when PARENT is not linked to the card student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/cards/${studentCard.code}`)
         .set('Authorization', `Bearer ${parentToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when STUDENT does not own the card', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/cards/${studentCard.code}`)
         .set('Authorization', `Bearer ${otherStudentToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when SCHOOL_ADMIN tries to access a card from another school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/cards/${card.code}`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when card does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/cards/GF-NONEXISTENT-9999')
         .set('Authorization', `Bearer ${superAdminToken}`);
 

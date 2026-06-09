@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -164,7 +164,7 @@ describe('POST /api/v1/withdrawals/vendor/:vendorId', () => {
 
   describe('Success cases', () => {
     it('should create a withdrawal as VENDOR and debit vendor wallet', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/withdrawals/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ amount: 3000, waveNumber: '+2250701234567' });
@@ -183,7 +183,7 @@ describe('POST /api/v1/withdrawals/vendor/:vendorId', () => {
     });
 
     it('should create a withdrawal as SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/withdrawals/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ amount: 1000, waveNumber: '+2250701234568' });
@@ -200,14 +200,14 @@ describe('POST /api/v1/withdrawals/vendor/:vendorId', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/withdrawals/vendor/${vendor.id}`)
         .send({ amount: 1000, waveNumber: '+2250701234567' });
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SCHOOL_ADMIN calls this endpoint', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/withdrawals/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${schoolAdminToken}`)
         .send({ amount: 1000, waveNumber: '+2250701234567' });
@@ -215,7 +215,7 @@ describe('POST /api/v1/withdrawals/vendor/:vendorId', () => {
     });
 
     it('should return 403 when VENDOR calls for another vendor', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/withdrawals/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${otherVendorToken}`)
         .send({ amount: 1000, waveNumber: '+2250701234567' });
@@ -223,7 +223,7 @@ describe('POST /api/v1/withdrawals/vendor/:vendorId', () => {
     });
 
     it('should return 404 when vendor does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/withdrawals/vendor/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ amount: 1000, waveNumber: '+2250701234567' });
@@ -231,7 +231,7 @@ describe('POST /api/v1/withdrawals/vendor/:vendorId', () => {
     });
 
     it('should return 400 when balance is insufficient', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/withdrawals/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ amount: 999999, waveNumber: '+2250701234567' });

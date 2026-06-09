@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -146,7 +146,7 @@ describe('PUT /api/v1/items/:id', () => {
 
   describe('Success cases', () => {
     it('should update name and price for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ name: 'Riz sauce graine', price: 700 });
@@ -158,7 +158,7 @@ describe('PUT /api/v1/items/:id', () => {
     });
 
     it('should update status for own VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}`)
         .set('Authorization', `Bearer ${ownVendorToken}`)
         .send({ status: ItemStatus.INACTIVE });
@@ -168,7 +168,7 @@ describe('PUT /api/v1/items/:id', () => {
     });
 
     it('should accept partial update', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}`)
         .set('Authorization', `Bearer ${ownVendorToken}`)
         .send({ description: 'Avec légumes frais' });
@@ -180,14 +180,14 @@ describe('PUT /api/v1/items/:id', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}`)
         .send({ name: 'Test' });
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when VENDOR updates another vendor item', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}`)
         .set('Authorization', `Bearer ${otherVendorToken}`)
         .send({ name: 'Hijack' });
@@ -195,7 +195,7 @@ describe('PUT /api/v1/items/:id', () => {
     });
 
     it('should return 404 when item does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/items/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ name: 'Test' });
@@ -203,7 +203,7 @@ describe('PUT /api/v1/items/:id', () => {
     });
 
     it('should return 400 when price is zero', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}`)
         .set('Authorization', `Bearer ${ownVendorToken}`)
         .send({ price: 0 });

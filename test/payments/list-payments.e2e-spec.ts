@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
@@ -194,7 +194,7 @@ describe('GET /api/v1/payments', () => {
 
   describe('Success cases', () => {
     it('should return all payments for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/payments')
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -205,7 +205,7 @@ describe('GET /api/v1/payments', () => {
     });
 
     it('should return payments for own school for SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/payments')
         .set('Authorization', `Bearer ${schoolAdminToken}`);
 
@@ -215,7 +215,7 @@ describe('GET /api/v1/payments', () => {
     });
 
     it('should return empty list for SCHOOL_ADMIN with no payments in their school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/payments')
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
 
@@ -224,7 +224,7 @@ describe('GET /api/v1/payments', () => {
     });
 
     it('should respect pagination', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/payments?page=1&limit=1')
         .set('Authorization', `Bearer ${schoolAdminToken}`);
 
@@ -236,12 +236,12 @@ describe('GET /api/v1/payments', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get('/api/v1/payments');
+      const res = await request(getServer(app)).get('/api/v1/payments');
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when PARENT calls this endpoint', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/payments')
         .set('Authorization', `Bearer ${parentToken}`);
       expect(res.status).toBe(403);

@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -186,7 +186,7 @@ describe('GET /api/v1/withdrawals', () => {
 
   describe('Success cases', () => {
     it('should return all withdrawals as SUPER_ADMIN (3 total)', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/withdrawals')
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -196,7 +196,7 @@ describe('GET /api/v1/withdrawals', () => {
     });
 
     it('should return only own withdrawals as VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/withdrawals')
         .set('Authorization', `Bearer ${vendorToken}`);
 
@@ -209,7 +209,7 @@ describe('GET /api/v1/withdrawals', () => {
     });
 
     it('should return only own withdrawals as other VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/withdrawals')
         .set('Authorization', `Bearer ${otherVendorToken}`);
 
@@ -222,7 +222,7 @@ describe('GET /api/v1/withdrawals', () => {
     });
 
     it('should respect pagination (limit=1)', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/withdrawals?page=1&limit=1')
         .set('Authorization', `Bearer ${vendorToken}`);
 
@@ -235,12 +235,12 @@ describe('GET /api/v1/withdrawals', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get('/api/v1/withdrawals');
+      const res = await request(getServer(app)).get('/api/v1/withdrawals');
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SCHOOL_ADMIN calls this endpoint', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/withdrawals')
         .set('Authorization', `Bearer ${schoolAdminToken}`);
       expect(res.status).toBe(403);

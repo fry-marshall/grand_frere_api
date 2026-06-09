@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
@@ -216,7 +216,7 @@ describe('POST /api/v1/payments/initiate', () => {
 
   describe('Success cases', () => {
     it('should initiate payment for linked PARENT and create wallet if missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/initiate')
         .set('Authorization', `Bearer ${linkedParentToken}`)
         .send({ studentId: student.id, amount: 5000 });
@@ -233,7 +233,7 @@ describe('POST /api/v1/payments/initiate', () => {
     });
 
     it('should initiate payment for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/initiate')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ studentId: student.id, amount: 2000 });
@@ -243,7 +243,7 @@ describe('POST /api/v1/payments/initiate', () => {
     });
 
     it('should initiate payment for own STUDENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/initiate')
         .set('Authorization', `Bearer ${studentToken}`)
         .send({ studentId: student.id, amount: 1000 });
@@ -255,14 +255,14 @@ describe('POST /api/v1/payments/initiate', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/initiate')
         .send({ studentId: student.id, amount: 5000 });
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when VENDOR calls this endpoint', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/initiate')
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ studentId: student.id, amount: 5000 });
@@ -270,7 +270,7 @@ describe('POST /api/v1/payments/initiate', () => {
     });
 
     it('should return 403 when STUDENT initiates for another student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/initiate')
         .set('Authorization', `Bearer ${otherStudentToken}`)
         .send({ studentId: student.id, amount: 5000 });
@@ -278,7 +278,7 @@ describe('POST /api/v1/payments/initiate', () => {
     });
 
     it('should return 403 when PARENT is not linked to student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/initiate')
         .set('Authorization', `Bearer ${unlinkedParentToken}`)
         .send({ studentId: student.id, amount: 5000 });
@@ -286,7 +286,7 @@ describe('POST /api/v1/payments/initiate', () => {
     });
 
     it('should return 404 when student does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/initiate')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
@@ -297,7 +297,7 @@ describe('POST /api/v1/payments/initiate', () => {
     });
 
     it('should return 400 when amount is below minimum', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/initiate')
         .set('Authorization', `Bearer ${linkedParentToken}`)
         .send({ studentId: student.id, amount: 50 });
@@ -305,7 +305,7 @@ describe('POST /api/v1/payments/initiate', () => {
     });
 
     it('should return 400 when studentId is not a UUID', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/initiate')
         .set('Authorization', `Bearer ${linkedParentToken}`)
         .send({ studentId: 'not-a-uuid', amount: 5000 });

@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
@@ -206,7 +206,7 @@ describe('GET /api/v1/students/:id/orders', () => {
 
   describe('Success cases', () => {
     it('should return orders for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/students/${student.id}/orders`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -219,7 +219,7 @@ describe('GET /api/v1/students/:id/orders', () => {
     });
 
     it('should return orders for own SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/students/${student.id}/orders`)
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -228,7 +228,7 @@ describe('GET /api/v1/students/:id/orders', () => {
     });
 
     it('should return own orders for STUDENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/students/${student.id}/orders`)
         .set('Authorization', `Bearer ${ownStudentToken}`);
 
@@ -240,7 +240,7 @@ describe('GET /api/v1/students/:id/orders', () => {
       const otherStudent = await studentRepo.findOne({
         where: { schoolId: otherSchool.id },
       });
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/students/${otherStudent!.id}/orders`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -252,28 +252,28 @@ describe('GET /api/v1/students/:id/orders', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(getServer(app)).get(
         `/api/v1/students/${student.id}/orders`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses another school student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/students/${student.id}/orders`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when STUDENT accesses another student orders', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/students/${student.id}/orders`)
         .set('Authorization', `Bearer ${otherStudentToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when student does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/students/00000000-0000-0000-0000-000000000000/orders')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);

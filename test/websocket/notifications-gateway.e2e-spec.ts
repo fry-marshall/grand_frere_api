@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { io, Socket } from 'socket.io-client';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -70,7 +70,7 @@ describe('NotificationsGateway (WebSocket)', () => {
     const { app: nestApp, moduleRef } = await createTestApp();
     app = nestApp;
     await app.listen(0);
-    const addr = app.getHttpServer().address();
+    const addr = getServer(app).address();
     port = typeof addr === 'object' && addr ? addr.port : 3001;
 
     const ds = moduleRef.get(DataSource);

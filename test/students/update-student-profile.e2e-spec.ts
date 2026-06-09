@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
@@ -92,7 +92,7 @@ describe('PUT /api/v1/students/me', () => {
 
   describe('Success cases', () => {
     it('should update firstName', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/students/me')
         .set('Authorization', `Bearer ${studentToken}`)
         .send({ firstName: 'Updated' });
@@ -102,7 +102,7 @@ describe('PUT /api/v1/students/me', () => {
     });
 
     it('should update lastName', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/students/me')
         .set('Authorization', `Bearer ${studentToken}`)
         .send({ lastName: 'Renamed' });
@@ -112,7 +112,7 @@ describe('PUT /api/v1/students/me', () => {
     });
 
     it('should accept empty body (no-op)', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/students/me')
         .set('Authorization', `Bearer ${studentToken}`)
         .send({});
@@ -121,7 +121,7 @@ describe('PUT /api/v1/students/me', () => {
     });
 
     it('should return correct response shape', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/students/me')
         .set('Authorization', `Bearer ${studentToken}`)
         .send({ firstName: 'Shape' });
@@ -137,7 +137,7 @@ describe('PUT /api/v1/students/me', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/students/me')
         .send({ firstName: 'Updated' });
 
@@ -145,7 +145,7 @@ describe('PUT /api/v1/students/me', () => {
     });
 
     it('should return 403 when role is PARENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/students/me')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ firstName: 'Updated' });
@@ -154,7 +154,7 @@ describe('PUT /api/v1/students/me', () => {
     });
 
     it('should return 400 when firstName is empty string', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/students/me')
         .set('Authorization', `Bearer ${studentToken}`)
         .send({ firstName: '' });

@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -137,7 +137,7 @@ describe('POST /api/v1/items/vendor/:vendorId', () => {
 
   describe('Success cases', () => {
     it('should create item for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/items/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ name: 'Attiéké poisson', price: 1000 });
@@ -150,7 +150,7 @@ describe('POST /api/v1/items/vendor/:vendorId', () => {
     });
 
     it('should create item for own VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/items/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${ownVendorToken}`)
         .send({
@@ -167,14 +167,14 @@ describe('POST /api/v1/items/vendor/:vendorId', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/items/vendor/${vendor.id}`)
         .send({ name: 'Test', price: 100 });
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when VENDOR creates item for another vendor', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/items/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${otherVendorToken}`)
         .send({ name: 'Test', price: 100 });
@@ -182,7 +182,7 @@ describe('POST /api/v1/items/vendor/:vendorId', () => {
     });
 
     it('should return 404 when vendor does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/items/vendor/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ name: 'Test', price: 100 });
@@ -190,7 +190,7 @@ describe('POST /api/v1/items/vendor/:vendorId', () => {
     });
 
     it('should return 400 when name is missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/items/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${ownVendorToken}`)
         .send({ price: 100 });
@@ -198,7 +198,7 @@ describe('POST /api/v1/items/vendor/:vendorId', () => {
     });
 
     it('should return 400 when price is zero or negative', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/items/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${ownVendorToken}`)
         .send({ name: 'Test', price: 0 });

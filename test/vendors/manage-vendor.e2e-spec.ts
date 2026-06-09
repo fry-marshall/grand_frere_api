@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -157,7 +157,7 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
   describe('GET /vendors', () => {
     describe('Success cases', () => {
       it('should return all vendors for SUPER_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get('/api/v1/vendors')
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -167,7 +167,7 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
       });
 
       it('should return only own-school vendors for SCHOOL_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get('/api/v1/vendors')
           .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -179,12 +179,12 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
 
     describe('Failure cases', () => {
       it('should return 401 when no token', async () => {
-        const res = await request(app.getHttpServer()).get('/api/v1/vendors');
+        const res = await request(getServer(app)).get('/api/v1/vendors');
         expect(res.status).toBe(401);
       });
 
       it('should return 403 when user is VENDOR', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get('/api/v1/vendors')
           .set('Authorization', `Bearer ${ownVendorToken}`);
         expect(res.status).toBe(403);
@@ -195,7 +195,7 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
   describe('GET /vendors/:id', () => {
     describe('Success cases', () => {
       it('should return vendor for SUPER_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get(`/api/v1/vendors/${vendor.id}`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -204,7 +204,7 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
       });
 
       it('should return vendor for own SCHOOL_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get(`/api/v1/vendors/${vendor.id}`)
           .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -213,7 +213,7 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
       });
 
       it('should return own vendor for VENDOR', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get(`/api/v1/vendors/${vendor.id}`)
           .set('Authorization', `Bearer ${ownVendorToken}`);
 
@@ -224,21 +224,21 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
 
     describe('Failure cases', () => {
       it('should return 403 when SCHOOL_ADMIN accesses another school vendor', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get(`/api/v1/vendors/${vendor.id}`)
           .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
         expect(res.status).toBe(403);
       });
 
       it('should return 403 when VENDOR accesses another vendor', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get(`/api/v1/vendors/${vendor.id}`)
           .set('Authorization', `Bearer ${otherVendorToken}`);
         expect(res.status).toBe(403);
       });
 
       it('should return 404 when vendor does not exist', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get('/api/v1/vendors/00000000-0000-0000-0000-000000000000')
           .set('Authorization', `Bearer ${superAdminToken}`);
         expect(res.status).toBe(404);
@@ -249,7 +249,7 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
   describe('PUT /vendors/:id', () => {
     describe('Success cases', () => {
       it('should allow SUPER_ADMIN to update vendor', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/vendors/${vendor.id}`)
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({ shopName: 'Kiosque Updated' });
@@ -259,7 +259,7 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
       });
 
       it('should allow own VENDOR to update their shop', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/vendors/${vendor.id}`)
           .set('Authorization', `Bearer ${ownVendorToken}`)
           .send({ waveNumber: '+2250707000099' });
@@ -271,7 +271,7 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
 
     describe('Failure cases', () => {
       it('should return 403 when VENDOR updates another vendor', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/vendors/${vendor.id}`)
           .set('Authorization', `Bearer ${otherVendorToken}`)
           .send({ shopName: 'Hacked' });
@@ -279,7 +279,7 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
       });
 
       it('should return 404 when vendor does not exist', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put('/api/v1/vendors/00000000-0000-0000-0000-000000000000')
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({ shopName: 'Ghost' });
@@ -317,7 +317,7 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
 
     describe('Success cases', () => {
       it('should allow SUPER_ADMIN to delete a vendor', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .delete(`/api/v1/vendors/${deleteVendorId}`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -327,14 +327,14 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
 
     describe('Failure cases', () => {
       it('should return 403 when user is SCHOOL_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .delete(`/api/v1/vendors/${vendor.id}`)
           .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
         expect(res.status).toBe(403);
       });
 
       it('should return 404 when vendor does not exist', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .delete('/api/v1/vendors/00000000-0000-0000-0000-000000000000')
           .set('Authorization', `Bearer ${superAdminToken}`);
         expect(res.status).toBe(404);

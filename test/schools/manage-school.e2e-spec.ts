@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
@@ -113,7 +113,7 @@ describe('GET/PUT /api/v1/schools', () => {
   describe('GET /schools', () => {
     describe('Success cases', () => {
       it('should return list of schools for SUPER_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get('/api/v1/schools')
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -124,12 +124,12 @@ describe('GET/PUT /api/v1/schools', () => {
 
     describe('Failure cases', () => {
       it('should return 401 when no token', async () => {
-        const res = await request(app.getHttpServer()).get('/api/v1/schools');
+        const res = await request(getServer(app)).get('/api/v1/schools');
         expect(res.status).toBe(401);
       });
 
       it('should return 403 when user is SCHOOL_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get('/api/v1/schools')
           .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
         expect(res.status).toBe(403);
@@ -140,7 +140,7 @@ describe('GET/PUT /api/v1/schools', () => {
   describe('GET /schools/:id', () => {
     describe('Success cases', () => {
       it('should return school for SUPER_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get(`/api/v1/schools/${school.id}`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -149,7 +149,7 @@ describe('GET/PUT /api/v1/schools', () => {
       });
 
       it('should return own school for SCHOOL_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get(`/api/v1/schools/${school.id}`)
           .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -160,14 +160,14 @@ describe('GET/PUT /api/v1/schools', () => {
 
     describe('Failure cases', () => {
       it('should return 403 when SCHOOL_ADMIN accesses another school', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get(`/api/v1/schools/${school.id}`)
           .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
         expect(res.status).toBe(403);
       });
 
       it('should return 404 when school does not exist', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .get('/api/v1/schools/00000000-0000-0000-0000-000000000000')
           .set('Authorization', `Bearer ${superAdminToken}`);
         expect(res.status).toBe(404);
@@ -178,7 +178,7 @@ describe('GET/PUT /api/v1/schools', () => {
   describe('PUT /schools/:id', () => {
     describe('Success cases', () => {
       it('should allow SUPER_ADMIN to update school name and address', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/schools/${school.id}`)
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({ name: 'Updated School Name', address: '99 Updated Street' });
@@ -191,7 +191,7 @@ describe('GET/PUT /api/v1/schools', () => {
 
     describe('Failure cases', () => {
       it('should return 403 when user is SCHOOL_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/schools/${school.id}`)
           .set('Authorization', `Bearer ${ownSchoolAdminToken}`)
           .send({ name: 'Hacked Name' });
@@ -199,7 +199,7 @@ describe('GET/PUT /api/v1/schools', () => {
       });
 
       it('should return 404 when school does not exist', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put('/api/v1/schools/00000000-0000-0000-0000-000000000000')
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({ name: 'Ghost School' });
@@ -213,7 +213,7 @@ describe('GET/PUT /api/v1/schools', () => {
       it('should allow SUPER_ADMIN to suspend an active school', async () => {
         await resetSchool(SchoolStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/schools/${school.id}/suspend`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -226,7 +226,7 @@ describe('GET/PUT /api/v1/schools', () => {
       it('should return 403 when user is SCHOOL_ADMIN', async () => {
         await resetSchool(SchoolStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/schools/${school.id}/suspend`)
           .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
         expect(res.status).toBe(403);
@@ -235,7 +235,7 @@ describe('GET/PUT /api/v1/schools', () => {
       it('should return 409 when school is already SUSPENDED', async () => {
         await resetSchool(SchoolStatus.SUSPENDED);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/schools/${school.id}/suspend`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -244,7 +244,7 @@ describe('GET/PUT /api/v1/schools', () => {
       });
 
       it('should return 404 when school does not exist', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put('/api/v1/schools/00000000-0000-0000-0000-000000000000/suspend')
           .set('Authorization', `Bearer ${superAdminToken}`);
         expect(res.status).toBe(404);
@@ -257,7 +257,7 @@ describe('GET/PUT /api/v1/schools', () => {
       it('should allow SUPER_ADMIN to reactivate a suspended school', async () => {
         await resetSchool(SchoolStatus.SUSPENDED);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/schools/${school.id}/activate`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -270,7 +270,7 @@ describe('GET/PUT /api/v1/schools', () => {
       it('should return 403 when user is SCHOOL_ADMIN', async () => {
         await resetSchool(SchoolStatus.SUSPENDED);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/schools/${school.id}/activate`)
           .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
         expect(res.status).toBe(403);
@@ -279,7 +279,7 @@ describe('GET/PUT /api/v1/schools', () => {
       it('should return 409 when school is already ACTIVE', async () => {
         await resetSchool(SchoolStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/schools/${school.id}/activate`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -288,7 +288,7 @@ describe('GET/PUT /api/v1/schools', () => {
       });
 
       it('should return 404 when school does not exist', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put('/api/v1/schools/00000000-0000-0000-0000-000000000000/activate')
           .set('Authorization', `Bearer ${superAdminToken}`);
         expect(res.status).toBe(404);

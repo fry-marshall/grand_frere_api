@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -152,7 +152,7 @@ describe('PUT /api/v1/withdrawals/:id/process', () => {
 
   describe('Success cases', () => {
     it('should mark a PENDING withdrawal as IN_PROGRESS as SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/withdrawals/${pendingWithdrawal.id}/process`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -170,7 +170,7 @@ describe('PUT /api/v1/withdrawals/:id/process', () => {
         status: WithdrawalStatus.PENDING,
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(
           `/api/v1/withdrawals/${newPending.id}/process?paystackRef=PSK-REF-123`,
         )
@@ -184,35 +184,35 @@ describe('PUT /api/v1/withdrawals/:id/process', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).put(
+      const res = await request(getServer(app)).put(
         `/api/v1/withdrawals/${pendingWithdrawal.id}/process`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when VENDOR calls this endpoint', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/withdrawals/${pendingWithdrawal.id}/process`)
         .set('Authorization', `Bearer ${vendorToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when SCHOOL_ADMIN calls this endpoint', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/withdrawals/${pendingWithdrawal.id}/process`)
         .set('Authorization', `Bearer ${schoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when withdrawal does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/withdrawals/00000000-0000-0000-0000-000000000000/process')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);
     });
 
     it('should return 400 when withdrawal is not PENDING', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/withdrawals/${inProgressWithdrawal.id}/process`)
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(400);

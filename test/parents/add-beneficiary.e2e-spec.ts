@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Parent } from '../../src/modules/parents/entities/parent.entity';
@@ -225,7 +225,7 @@ describe('POST /api/v1/parents/me/students', () => {
 
   describe('Success cases', () => {
     it('should link an existing student to the parent', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ cardCode: cardWithStudent.code });
@@ -237,7 +237,7 @@ describe('POST /api/v1/parents/me/students', () => {
     });
 
     it('should create a new student when card is UNASSIGNED', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({
@@ -276,7 +276,7 @@ describe('POST /api/v1/parents/me/students', () => {
       });
       await walletRepo.save({ studentId: extraStudent.id });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ cardCode: extraCard.code });
@@ -293,7 +293,7 @@ describe('POST /api/v1/parents/me/students', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .send({ cardCode: cardWithStudent.code });
 
@@ -301,7 +301,7 @@ describe('POST /api/v1/parents/me/students', () => {
     });
 
     it('should return 403 when role is STUDENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${studentToken}`)
         .send({ cardCode: cardWithStudent.code });
@@ -310,7 +310,7 @@ describe('POST /api/v1/parents/me/students', () => {
     });
 
     it('should return 404 when card does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ cardCode: 'DOES-NOT-EXIST' });
@@ -319,7 +319,7 @@ describe('POST /api/v1/parents/me/students', () => {
     });
 
     it('should return 400 when card is UNASSIGNED and firstName/lastName are missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ cardCode: cardUnassignedNoFields.code });
@@ -328,7 +328,7 @@ describe('POST /api/v1/parents/me/students', () => {
     });
 
     it('should return 409 when student already has 2 parents', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ cardCode: cardWithTwoParents.code });
@@ -337,7 +337,7 @@ describe('POST /api/v1/parents/me/students', () => {
     });
 
     it('should return 409 when parent is already linked to this student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ cardCode: alreadyLinkedCard.code });
@@ -346,7 +346,7 @@ describe('POST /api/v1/parents/me/students', () => {
     });
 
     it('should return 400 when cardCode is missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({});

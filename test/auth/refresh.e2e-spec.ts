@@ -3,7 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { RefreshToken } from '../../src/modules/refresh-tokens/entities/refresh-token.entity';
 import { UserRole } from '../../src/modules/users/user.types';
@@ -63,7 +63,7 @@ describe('POST /api/v1/auth/refresh', () => {
     it('should return a new token pair and revoke the old refresh token', async () => {
       const oldToken = await seedToken({});
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/refresh')
         .send({ refreshToken: oldToken });
 
@@ -83,7 +83,7 @@ describe('POST /api/v1/auth/refresh', () => {
 
   describe('Failure cases', () => {
     it('should return 400 when refreshToken field is missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/refresh')
         .send({});
 
@@ -91,7 +91,7 @@ describe('POST /api/v1/auth/refresh', () => {
     });
 
     it('should return 401 when refresh token does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/refresh')
         .send({ refreshToken: 'totally-fake-token' });
 
@@ -102,7 +102,7 @@ describe('POST /api/v1/auth/refresh', () => {
     it('should return 401 when refresh token is already revoked', async () => {
       const revokedToken = await seedToken({ isRevoked: true });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/refresh')
         .send({ refreshToken: revokedToken });
 
@@ -115,7 +115,7 @@ describe('POST /api/v1/auth/refresh', () => {
         expiresAt: new Date(Date.now() - 1000),
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/refresh')
         .send({ refreshToken: expiredToken });
 

@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
 import * as bcrypt from 'bcrypt';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { UserRole } from '../../src/modules/users/user.types';
 import { ErrorMessages } from '../../src/common/swagger/error-messages';
@@ -40,7 +40,7 @@ describe('POST /api/v1/auth/signin', () => {
 
   describe('Success cases', () => {
     it('should return tokens for valid credentials', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signin')
         .send({ phone: PHONE, password: PASSWORD });
 
@@ -52,7 +52,7 @@ describe('POST /api/v1/auth/signin', () => {
 
   describe('Failure cases', () => {
     it('should return 400 when required fields are missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signin')
         .send({ phone: PHONE });
 
@@ -60,7 +60,7 @@ describe('POST /api/v1/auth/signin', () => {
     });
 
     it('should return 400 when phone format is invalid', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signin')
         .send({ phone: '+33612345678', password: PASSWORD });
 
@@ -68,7 +68,7 @@ describe('POST /api/v1/auth/signin', () => {
     });
 
     it('should return 401 when phone does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signin')
         .send({ phone: '+2250100000099', password: PASSWORD });
 
@@ -77,7 +77,7 @@ describe('POST /api/v1/auth/signin', () => {
     });
 
     it('should return 401 when password is wrong', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signin')
         .send({ phone: PHONE, password: 'WrongPass123' });
 

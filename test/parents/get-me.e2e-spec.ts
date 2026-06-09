@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Parent } from '../../src/modules/parents/entities/parent.entity';
@@ -115,7 +115,7 @@ describe('GET /api/v1/parents/me', () => {
 
   describe('Success cases', () => {
     it('should return own profile for PARENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/parents/me')
         .set('Authorization', `Bearer ${parentToken}`);
 
@@ -128,19 +128,19 @@ describe('GET /api/v1/parents/me', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get('/api/v1/parents/me');
+      const res = await request(getServer(app)).get('/api/v1/parents/me');
       expect(res.status).toBe(401);
     });
 
     it('should return 403 for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/parents/me')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 for SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/parents/me')
         .set('Authorization', `Bearer ${schoolAdminToken}`);
       expect(res.status).toBe(403);

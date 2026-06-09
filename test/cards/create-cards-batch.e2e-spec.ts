@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
@@ -82,7 +82,7 @@ describe('POST /api/v1/cards', () => {
 
   describe('Success cases', () => {
     it('should generate the requested number of cards with QR codes', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/cards')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ schoolId: school.id, count: 5 });
@@ -106,12 +106,12 @@ describe('POST /api/v1/cards', () => {
     });
 
     it('should generate cards with unique codes across multiple batches', async () => {
-      const res1 = await request(app.getHttpServer())
+      const res1 = await request(getServer(app))
         .post('/api/v1/cards')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ schoolId: school.id, count: 3 });
 
-      const res2 = await request(app.getHttpServer())
+      const res2 = await request(getServer(app))
         .post('/api/v1/cards')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ schoolId: school.id, count: 3 });
@@ -129,7 +129,7 @@ describe('POST /api/v1/cards', () => {
 
   describe('Failure cases', () => {
     it('should return 400 when count is missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/cards')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ schoolId: school.id });
@@ -138,7 +138,7 @@ describe('POST /api/v1/cards', () => {
     });
 
     it('should return 400 when count exceeds 100', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/cards')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ schoolId: school.id, count: 101 });
@@ -147,7 +147,7 @@ describe('POST /api/v1/cards', () => {
     });
 
     it('should return 400 when schoolId is not a valid UUID', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/cards')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ schoolId: 'not-a-uuid', count: 5 });
@@ -156,7 +156,7 @@ describe('POST /api/v1/cards', () => {
     });
 
     it('should return 401 when no token is provided', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/cards')
         .send({ schoolId: school.id, count: 5 });
 
@@ -164,7 +164,7 @@ describe('POST /api/v1/cards', () => {
     });
 
     it('should return 403 when user is not SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/cards')
         .set('Authorization', `Bearer ${schoolAdminToken}`)
         .send({ schoolId: school.id, count: 5 });
@@ -173,7 +173,7 @@ describe('POST /api/v1/cards', () => {
     });
 
     it('should return 404 when school does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/cards')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ schoolId: '00000000-0000-0000-0000-000000000000', count: 5 });

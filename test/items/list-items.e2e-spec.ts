@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -183,7 +183,7 @@ describe('GET /api/v1/items', () => {
 
   describe('Success cases', () => {
     it('should return all items for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/items')
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -194,7 +194,7 @@ describe('GET /api/v1/items', () => {
     });
 
     it('should return only own school items for SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/items')
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -205,7 +205,7 @@ describe('GET /api/v1/items', () => {
     });
 
     it('should return empty list for SCHOOL_ADMIN with no vendors', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/items')
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
 
@@ -215,7 +215,7 @@ describe('GET /api/v1/items', () => {
     });
 
     it('should return only own items for VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/items')
         .set('Authorization', `Bearer ${ownVendorToken}`);
 
@@ -224,7 +224,7 @@ describe('GET /api/v1/items', () => {
     });
 
     it('should return empty list for VENDOR with no items', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/items')
         .set('Authorization', `Bearer ${otherVendorToken}`);
 
@@ -233,7 +233,7 @@ describe('GET /api/v1/items', () => {
     });
 
     it('should support pagination', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/items?page=1&limit=1')
         .set('Authorization', `Bearer ${ownVendorToken}`);
 
@@ -245,7 +245,7 @@ describe('GET /api/v1/items', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get('/api/v1/items');
+      const res = await request(getServer(app)).get('/api/v1/items');
       expect(res.status).toBe(401);
     });
 
@@ -261,7 +261,7 @@ describe('GET /api/v1/items', () => {
         sub: studentUser.id,
         role: UserRole.STUDENT,
       });
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/items')
         .set('Authorization', `Bearer ${token}`);
       await userRepo.delete({ id: studentUser.id });

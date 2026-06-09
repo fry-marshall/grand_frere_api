@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
@@ -200,7 +200,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should allow SUPER_ADMIN to suspend an active card', async () => {
         await resetCard(CardStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/suspend`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -211,7 +211,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should allow SCHOOL_ADMIN to suspend a card in their school', async () => {
         await resetCard(CardStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/suspend`)
           .set('Authorization', `Bearer ${schoolAdminToken}`);
 
@@ -222,7 +222,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should allow the linked PARENT to suspend their student card', async () => {
         await resetCard(CardStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/suspend`)
           .set('Authorization', `Bearer ${ownerParentToken}`);
 
@@ -233,7 +233,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should allow the linked STUDENT to suspend their own card', async () => {
         await resetCard(CardStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/suspend`)
           .set('Authorization', `Bearer ${ownerStudentToken}`);
 
@@ -244,14 +244,14 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
 
     describe('Failure cases', () => {
       it('should return 401 when no token is provided', async () => {
-        const res = await request(app.getHttpServer()).put(
+        const res = await request(getServer(app)).put(
           `/api/v1/cards/${activeCard.code}/suspend`,
         );
         expect(res.status).toBe(401);
       });
 
       it('should return 403 when user is VENDOR', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/suspend`)
           .set('Authorization', `Bearer ${vendorToken}`);
         expect(res.status).toBe(403);
@@ -260,7 +260,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should return 403 when PARENT is not linked to the student', async () => {
         await resetCard(CardStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/suspend`)
           .set('Authorization', `Bearer ${unlinkedParentToken}`);
         expect(res.status).toBe(403);
@@ -269,14 +269,14 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should return 403 when STUDENT is not the card owner', async () => {
         await resetCard(CardStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/suspend`)
           .set('Authorization', `Bearer ${unlinkedStudentToken}`);
         expect(res.status).toBe(403);
       });
 
       it('should return 404 when card does not exist', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put('/api/v1/cards/GF-NONEXISTENT-9999/suspend')
           .set('Authorization', `Bearer ${superAdminToken}`);
         expect(res.status).toBe(404);
@@ -285,7 +285,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should return 409 when card is not ACTIVE', async () => {
         await resetCard(CardStatus.SUSPENDED);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/suspend`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -300,7 +300,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should allow SUPER_ADMIN to reactivate a suspended card', async () => {
         await resetCard(CardStatus.SUSPENDED);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/activate`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -311,7 +311,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should allow the linked PARENT to reactivate their student card', async () => {
         await resetCard(CardStatus.SUSPENDED);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/activate`)
           .set('Authorization', `Bearer ${ownerParentToken}`);
 
@@ -322,7 +322,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should allow the linked STUDENT to reactivate their own card', async () => {
         await resetCard(CardStatus.SUSPENDED);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/activate`)
           .set('Authorization', `Bearer ${ownerStudentToken}`);
 
@@ -335,7 +335,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should return 403 when PARENT is not linked to the student', async () => {
         await resetCard(CardStatus.SUSPENDED);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/activate`)
           .set('Authorization', `Bearer ${unlinkedParentToken}`);
         expect(res.status).toBe(403);
@@ -344,7 +344,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should return 403 when STUDENT is not the card owner', async () => {
         await resetCard(CardStatus.SUSPENDED);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/activate`)
           .set('Authorization', `Bearer ${unlinkedStudentToken}`);
         expect(res.status).toBe(403);
@@ -353,7 +353,7 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
       it('should return 409 when card is not SUSPENDED', async () => {
         await resetCard(CardStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/activate`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 

@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { UserRole } from '../../src/modules/users/user.types';
 
@@ -41,7 +41,7 @@ describe('PUT /api/v1/auth/fcm-token', () => {
 
   describe('Success cases', () => {
     it('should register a FCM token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/auth/fcm-token')
         .set('Authorization', `Bearer ${userToken}`)
         .send({ fcmToken: 'fcm-device-token-abc123' });
@@ -53,7 +53,7 @@ describe('PUT /api/v1/auth/fcm-token', () => {
     });
 
     it('should clear the FCM token when null is sent', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/auth/fcm-token')
         .set('Authorization', `Bearer ${userToken}`)
         .send({ fcmToken: null });
@@ -76,7 +76,7 @@ describe('PUT /api/v1/auth/fcm-token', () => {
         role: vendorUser.role,
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/auth/fcm-token')
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ fcmToken: 'vendor-fcm-token' });
@@ -92,7 +92,7 @@ describe('PUT /api/v1/auth/fcm-token', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/auth/fcm-token')
         .send({ fcmToken: 'some-token' });
       expect(res.status).toBe(401);

@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -152,7 +152,7 @@ describe('PUT /api/v1/items/:id/image', () => {
 
   describe('Success cases', () => {
     it('should upload image for own VENDOR and return imageUrl', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}/image`)
         .set('Authorization', `Bearer ${ownVendorToken}`)
         .attach('file', pngBuffer, {
@@ -167,7 +167,7 @@ describe('PUT /api/v1/items/:id/image', () => {
     });
 
     it('should upload image for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}/image`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .attach('file', pngBuffer, {
@@ -182,7 +182,7 @@ describe('PUT /api/v1/items/:id/image', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}/image`)
         .attach('file', pngBuffer, {
           filename: 'dish.png',
@@ -192,7 +192,7 @@ describe('PUT /api/v1/items/:id/image', () => {
     });
 
     it('should return 403 when VENDOR uploads for another vendor item', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}/image`)
         .set('Authorization', `Bearer ${otherVendorToken}`)
         .attach('file', pngBuffer, {
@@ -203,14 +203,14 @@ describe('PUT /api/v1/items/:id/image', () => {
     });
 
     it('should return 400 when no file attached', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}/image`)
         .set('Authorization', `Bearer ${ownVendorToken}`);
       expect(res.status).toBe(400);
     });
 
     it('should return 400 when file type is not an image', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}/image`)
         .set('Authorization', `Bearer ${ownVendorToken}`)
         .attach('file', Buffer.from('fake pdf content'), {
@@ -221,7 +221,7 @@ describe('PUT /api/v1/items/:id/image', () => {
     });
 
     it('should return 404 when item does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/items/00000000-0000-0000-0000-000000000000/image')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .attach('file', pngBuffer, {

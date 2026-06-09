@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -174,7 +174,7 @@ describe('GET /api/v1/vendors/:id/balance', () => {
 
   describe('Success cases', () => {
     it('should return balance for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/balance`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -186,7 +186,7 @@ describe('GET /api/v1/vendors/:id/balance', () => {
     });
 
     it('should return balance for own SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/balance`)
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -195,7 +195,7 @@ describe('GET /api/v1/vendors/:id/balance', () => {
     });
 
     it('should return balance for own VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/balance`)
         .set('Authorization', `Bearer ${ownVendorToken}`);
 
@@ -206,28 +206,28 @@ describe('GET /api/v1/vendors/:id/balance', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(getServer(app)).get(
         `/api/v1/vendors/${vendor.id}/balance`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses another school vendor', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/balance`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when VENDOR accesses another vendor balance', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/balance`)
         .set('Authorization', `Bearer ${otherVendorToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when vendor does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/vendors/00000000-0000-0000-0000-000000000000/balance')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);

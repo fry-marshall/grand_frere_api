@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
@@ -80,7 +80,7 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
   describe('POST /schools', () => {
     describe('Success cases', () => {
       it('should allow SUPER_ADMIN to create a school', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post('/api/v1/schools')
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({
@@ -97,14 +97,14 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
 
     describe('Failure cases', () => {
       it('should return 401 when no token is provided', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post('/api/v1/schools')
           .send({ name: 'Test', sigle: 'TST', address: '1 Test Street' });
         expect(res.status).toBe(401);
       });
 
       it('should return 403 when user is SCHOOL_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post('/api/v1/schools')
           .set('Authorization', `Bearer ${schoolAdminToken}`)
           .send({ name: 'Test', sigle: 'TST', address: '1 Test Street' });
@@ -112,7 +112,7 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
       });
 
       it('should return 400 when name is missing', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post('/api/v1/schools')
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({ sigle: 'TST', address: '1 Test Street' });
@@ -120,7 +120,7 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
       });
 
       it('should return 400 when sigle format is invalid', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post('/api/v1/schools')
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({
@@ -139,7 +139,7 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
           status: SchoolStatus.ACTIVE,
         });
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post('/api/v1/schools')
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({
@@ -166,7 +166,7 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
 
     describe('Success cases', () => {
       it('should allow SUPER_ADMIN to create a school admin', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post(`/api/v1/schools/${schoolId}/admin`)
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({
@@ -185,7 +185,7 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
 
     describe('Failure cases', () => {
       it('should return 403 when user is SCHOOL_ADMIN', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post(`/api/v1/schools/${schoolId}/admin`)
           .set('Authorization', `Bearer ${schoolAdminToken}`)
           .send({
@@ -198,7 +198,7 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
       });
 
       it('should return 404 when school does not exist', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post('/api/v1/schools/00000000-0000-0000-0000-000000000000/admin')
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({
@@ -211,7 +211,7 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
       });
 
       it('should return 400 when password is too short', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post(`/api/v1/schools/${schoolId}/admin`)
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({
@@ -224,7 +224,7 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
       });
 
       it('should return 409 when phone already exists', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post(`/api/v1/schools/${schoolId}/admin`)
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({

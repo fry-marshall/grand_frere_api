@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
@@ -83,7 +83,7 @@ describe('POST /api/v1/auth/scan-card', () => {
 
   describe('Success cases', () => {
     it('should return UNASSIGNED status with no student when card is unassigned', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/scan-card')
         .send({ code: unassignedCard.code });
 
@@ -97,7 +97,7 @@ describe('POST /api/v1/auth/scan-card', () => {
     });
 
     it('should return ACTIVE status with student true and no parents', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/scan-card')
         .send({ code: cardWithStudent.code });
 
@@ -113,7 +113,7 @@ describe('POST /api/v1/auth/scan-card', () => {
 
   describe('Failure cases', () => {
     it('should return 400 when code is missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/scan-card')
         .send({});
 
@@ -121,7 +121,7 @@ describe('POST /api/v1/auth/scan-card', () => {
     });
 
     it('should return 400 when code is not a string', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/scan-card')
         .send({ code: 123 });
 
@@ -129,7 +129,7 @@ describe('POST /api/v1/auth/scan-card', () => {
     });
 
     it('should return 404 when card does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/scan-card')
         .send({ code: 'DOES-NOT-EXIST' });
 

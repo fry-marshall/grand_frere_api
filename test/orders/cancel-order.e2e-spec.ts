@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -289,7 +289,7 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
         where: { id: wallet.id },
       }))!.reserved;
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/cancel`)
         .set('Authorization', `Bearer ${vendorToken}`);
 
@@ -305,7 +305,7 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
 
     it('should cancel an order as SUPER_ADMIN', async () => {
       const order = await makeOrder();
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/cancel`)
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(200);
@@ -314,7 +314,7 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
 
     it('should cancel an order as SCHOOL_ADMIN for own school student', async () => {
       const order = await makeOrder();
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/cancel`)
         .set('Authorization', `Bearer ${schoolAdminToken}`);
       expect(res.status).toBe(200);
@@ -323,7 +323,7 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
 
     it('should cancel an order as PARENT for linked student', async () => {
       const order = await makeOrder();
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/cancel`)
         .set('Authorization', `Bearer ${parentToken}`);
       expect(res.status).toBe(200);
@@ -332,7 +332,7 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
 
     it('should cancel an order as STUDENT for own order', async () => {
       const order = await makeOrder();
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/cancel`)
         .set('Authorization', `Bearer ${studentToken}`);
       expect(res.status).toBe(200);
@@ -343,7 +343,7 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
       const order = await makeOrder();
-      const res = await request(app.getHttpServer()).put(
+      const res = await request(getServer(app)).put(
         `/api/v1/orders/${order.id}/cancel`,
       );
       expect(res.status).toBe(401);
@@ -351,7 +351,7 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
 
     it('should return 403 when SCHOOL_ADMIN cancels order from another school', async () => {
       const order = await makeOrder();
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/cancel`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
@@ -359,7 +359,7 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
 
     it('should return 403 when VENDOR cancels another vendor order', async () => {
       const order = await makeOrder();
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/cancel`)
         .set('Authorization', `Bearer ${otherVendorToken}`);
       expect(res.status).toBe(403);
@@ -367,14 +367,14 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
 
     it('should return 403 when STUDENT cancels another student order', async () => {
       const order = await makeOrder();
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/cancel`)
         .set('Authorization', `Bearer ${otherStudentToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when order does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/orders/00000000-0000-0000-0000-000000000000/cancel')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);
@@ -382,7 +382,7 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
 
     it('should return 400 when order is not pending', async () => {
       const order = await makeOrder(OrderStatus.VALIDATED);
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/cancel`)
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(400);

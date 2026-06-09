@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
@@ -151,7 +151,7 @@ describe('POST /api/v1/auth/signup/student', () => {
 
   describe('Success cases', () => {
     it('should create student account, wallet, activate card, and return tokens', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/student')
         .send({
           cardCode: unassignedCard.code,
@@ -185,7 +185,7 @@ describe('POST /api/v1/auth/signup/student', () => {
     });
 
     it('should claim shell student account when parent registered first', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/student')
         .send({
           cardCode: shellCard.code,
@@ -221,7 +221,7 @@ describe('POST /api/v1/auth/signup/student', () => {
     });
 
     it('should set pinHash on card when pin is provided', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/student')
         .send({
           cardCode: unassignedCard3.code,
@@ -244,7 +244,7 @@ describe('POST /api/v1/auth/signup/student', () => {
 
   describe('Failure cases', () => {
     it('should return 400 when required fields are missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/student')
         .send({ firstName: 'Kouassi' });
 
@@ -252,7 +252,7 @@ describe('POST /api/v1/auth/signup/student', () => {
     });
 
     it('should return 400 when password is too short', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/student')
         .send({
           cardCode: unassignedCard.code,
@@ -266,7 +266,7 @@ describe('POST /api/v1/auth/signup/student', () => {
     });
 
     it('should return 404 when card does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/student')
         .send({
           cardCode: 'NONEXISTENT',
@@ -280,7 +280,7 @@ describe('POST /api/v1/auth/signup/student', () => {
     });
 
     it('should return 409 when card is ACTIVE and student already has credentials', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/student')
         .send({
           cardCode: activeCard.code,
@@ -295,7 +295,7 @@ describe('POST /api/v1/auth/signup/student', () => {
     });
 
     it('should return 409 when phone already exists', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/student')
         .send({
           cardCode: unassignedCard2.code,

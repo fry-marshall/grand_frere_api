@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -110,7 +110,7 @@ describe('POST /api/v1/vendors/:id/approve and /reject', () => {
       it('should allow SUPER_ADMIN to approve a pending vendor', async () => {
         await resetVendor(VendorStatus.PENDING);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post(`/api/v1/vendors/${vendor.id}/approve`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -125,7 +125,7 @@ describe('POST /api/v1/vendors/:id/approve and /reject', () => {
       it('should return 409 when vendor is already ACTIVE', async () => {
         await resetVendor(VendorStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post(`/api/v1/vendors/${vendor.id}/approve`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -136,7 +136,7 @@ describe('POST /api/v1/vendors/:id/approve and /reject', () => {
       it('should return 403 when user is SCHOOL_ADMIN', async () => {
         await resetVendor(VendorStatus.PENDING);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post(`/api/v1/vendors/${vendor.id}/approve`)
           .set('Authorization', `Bearer ${schoolAdminToken}`);
 
@@ -144,14 +144,14 @@ describe('POST /api/v1/vendors/:id/approve and /reject', () => {
       });
 
       it('should return 401 when no token', async () => {
-        const res = await request(app.getHttpServer()).post(
+        const res = await request(getServer(app)).post(
           `/api/v1/vendors/${vendor.id}/approve`,
         );
         expect(res.status).toBe(401);
       });
 
       it('should return 404 when vendor does not exist', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post('/api/v1/vendors/00000000-0000-0000-0000-000000000000/approve')
           .set('Authorization', `Bearer ${superAdminToken}`);
         expect(res.status).toBe(404);
@@ -164,7 +164,7 @@ describe('POST /api/v1/vendors/:id/approve and /reject', () => {
       it('should allow SUPER_ADMIN to reject a pending vendor', async () => {
         await resetVendor(VendorStatus.PENDING);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post(`/api/v1/vendors/${vendor.id}/reject`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -177,7 +177,7 @@ describe('POST /api/v1/vendors/:id/approve and /reject', () => {
       it('should return 409 when vendor is already REJECTED', async () => {
         await resetVendor(VendorStatus.REJECTED);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post(`/api/v1/vendors/${vendor.id}/reject`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -188,7 +188,7 @@ describe('POST /api/v1/vendors/:id/approve and /reject', () => {
       it('should return 409 when vendor is already ACTIVE', async () => {
         await resetVendor(VendorStatus.ACTIVE);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post(`/api/v1/vendors/${vendor.id}/reject`)
           .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -198,7 +198,7 @@ describe('POST /api/v1/vendors/:id/approve and /reject', () => {
       it('should return 403 when user is SCHOOL_ADMIN', async () => {
         await resetVendor(VendorStatus.PENDING);
 
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post(`/api/v1/vendors/${vendor.id}/reject`)
           .set('Authorization', `Bearer ${schoolAdminToken}`);
 
@@ -206,14 +206,14 @@ describe('POST /api/v1/vendors/:id/approve and /reject', () => {
       });
 
       it('should return 401 when no token', async () => {
-        const res = await request(app.getHttpServer()).post(
+        const res = await request(getServer(app)).post(
           `/api/v1/vendors/${vendor.id}/reject`,
         );
         expect(res.status).toBe(401);
       });
 
       it('should return 404 when vendor does not exist', async () => {
-        const res = await request(app.getHttpServer())
+        const res = await request(getServer(app))
           .post('/api/v1/vendors/00000000-0000-0000-0000-000000000000/reject')
           .set('Authorization', `Bearer ${superAdminToken}`);
         expect(res.status).toBe(404);

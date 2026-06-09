@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
@@ -196,7 +196,7 @@ describe('GET /api/v1/parents', () => {
 
   describe('Success cases', () => {
     it('should return all parents for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/parents')
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -207,7 +207,7 @@ describe('GET /api/v1/parents', () => {
     });
 
     it('should return only parents linked to own school for SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/parents')
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -217,7 +217,7 @@ describe('GET /api/v1/parents', () => {
     });
 
     it('should return only parents linked to other school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/parents')
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
 
@@ -227,7 +227,7 @@ describe('GET /api/v1/parents', () => {
     });
 
     it('should include user field in response', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/parents')
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -238,7 +238,7 @@ describe('GET /api/v1/parents', () => {
     });
 
     it('should support pagination', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/parents?page=1&limit=1')
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -250,7 +250,7 @@ describe('GET /api/v1/parents', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get('/api/v1/parents');
+      const res = await request(getServer(app)).get('/api/v1/parents');
       expect(res.status).toBe(401);
     });
 
@@ -262,7 +262,7 @@ describe('GET /api/v1/parents', () => {
         sub: parentUser!.id,
         role: UserRole.PARENT,
       });
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/parents')
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(403);

@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Notification } from '../../src/modules/notifications/entities/notification.entity';
 import { UserRole } from '../../src/modules/users/user.types';
@@ -131,7 +131,7 @@ describe('GET /api/v1/notifications', () => {
 
   describe('Success cases', () => {
     it('should return own notifications as PARENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/notifications')
         .set('Authorization', `Bearer ${parentToken}`);
 
@@ -145,7 +145,7 @@ describe('GET /api/v1/notifications', () => {
     });
 
     it('should return own notifications as VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/notifications')
         .set('Authorization', `Bearer ${vendorToken}`);
 
@@ -155,7 +155,7 @@ describe('GET /api/v1/notifications', () => {
     });
 
     it('should respect pagination (limit=1)', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/notifications?page=1&limit=1')
         .set('Authorization', `Bearer ${parentToken}`);
 
@@ -167,21 +167,19 @@ describe('GET /api/v1/notifications', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get(
-        '/api/v1/notifications',
-      );
+      const res = await request(getServer(app)).get('/api/v1/notifications');
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SUPER_ADMIN calls this endpoint', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/notifications')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when SCHOOL_ADMIN calls this endpoint', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/notifications')
         .set('Authorization', `Bearer ${schoolAdminToken}`);
       expect(res.status).toBe(403);

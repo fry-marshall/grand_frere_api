@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Otp } from '../../src/modules/otp/entities/otp.entity';
 import { OtpType } from '../../src/modules/otp/otp.types';
@@ -42,7 +42,7 @@ describe('POST /api/v1/auth/forgot-password', () => {
   });
 
   it('should return an OTP code for a known phone', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(getServer(app))
       .post('/api/v1/auth/forgot-password')
       .send({ phone: PHONE });
 
@@ -56,11 +56,11 @@ describe('POST /api/v1/auth/forgot-password', () => {
   });
 
   it('should invalidate previous OTP when a new one is requested', async () => {
-    const first = await request(app.getHttpServer())
+    const first = await request(getServer(app))
       .post('/api/v1/auth/forgot-password')
       .send({ phone: PHONE });
 
-    const second = await request(app.getHttpServer())
+    const second = await request(getServer(app))
       .post('/api/v1/auth/forgot-password')
       .send({ phone: PHONE });
 
@@ -75,7 +75,7 @@ describe('POST /api/v1/auth/forgot-password', () => {
   });
 
   it('should return 404 for unknown phone', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(getServer(app))
       .post('/api/v1/auth/forgot-password')
       .send({ phone: '+2250199999999' });
 
@@ -84,7 +84,7 @@ describe('POST /api/v1/auth/forgot-password', () => {
   });
 
   it('should return 400 for invalid phone format', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(getServer(app))
       .post('/api/v1/auth/forgot-password')
       .send({ phone: '0000' });
 

@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -176,7 +176,7 @@ describe('GET /api/v1/items/:id', () => {
 
   describe('Success cases', () => {
     it('should return item for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/items/${item.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -188,7 +188,7 @@ describe('GET /api/v1/items/:id', () => {
     });
 
     it('should return item for own SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/items/${item.id}`)
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -197,7 +197,7 @@ describe('GET /api/v1/items/:id', () => {
     });
 
     it('should return item for own VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/items/${item.id}`)
         .set('Authorization', `Bearer ${ownVendorToken}`);
 
@@ -208,28 +208,26 @@ describe('GET /api/v1/items/:id', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get(
-        `/api/v1/items/${item.id}`,
-      );
+      const res = await request(getServer(app)).get(`/api/v1/items/${item.id}`);
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses item from another school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/items/${item.id}`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when VENDOR accesses another vendor item', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/items/${item.id}`)
         .set('Authorization', `Bearer ${otherVendorToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when item does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/items/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);

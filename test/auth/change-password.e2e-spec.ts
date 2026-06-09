@@ -3,7 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { UserRole } from '../../src/modules/users/user.types';
 
@@ -69,7 +69,7 @@ describe('PUT /api/v1/auth/change-password', () => {
 
   describe('Success cases', () => {
     it('should change password for a PARENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/auth/change-password')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({
@@ -89,7 +89,7 @@ describe('PUT /api/v1/auth/change-password', () => {
     });
 
     it('should change password for a STUDENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/auth/change-password')
         .set('Authorization', `Bearer ${studentToken}`)
         .send({
@@ -107,7 +107,7 @@ describe('PUT /api/v1/auth/change-password', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/auth/change-password')
         .send({
           currentPassword: CURRENT_PASSWORD,
@@ -118,7 +118,7 @@ describe('PUT /api/v1/auth/change-password', () => {
     });
 
     it('should return 401 when currentPassword is wrong', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/auth/change-password')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ currentPassword: 'WrongPass!', newPassword: 'NewPass456!' });
@@ -127,7 +127,7 @@ describe('PUT /api/v1/auth/change-password', () => {
     });
 
     it('should return 400 when newPassword is too short', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/auth/change-password')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ currentPassword: CURRENT_PASSWORD, newPassword: 'short' });
@@ -136,7 +136,7 @@ describe('PUT /api/v1/auth/change-password', () => {
     });
 
     it('should return 400 when body is missing fields', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/auth/change-password')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ currentPassword: CURRENT_PASSWORD });

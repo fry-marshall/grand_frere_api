@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -290,7 +290,7 @@ describe('GET /api/v1/orders/:id', () => {
 
   describe('Success cases', () => {
     it('should return order details for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/orders/${order.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -304,7 +304,7 @@ describe('GET /api/v1/orders/:id', () => {
     });
 
     it('should return order details for own SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/orders/${order.id}`)
         .set('Authorization', `Bearer ${schoolAdminToken}`);
 
@@ -314,7 +314,7 @@ describe('GET /api/v1/orders/:id', () => {
     });
 
     it('should return order details for own VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/orders/${order.id}`)
         .set('Authorization', `Bearer ${vendorToken}`);
 
@@ -323,7 +323,7 @@ describe('GET /api/v1/orders/:id', () => {
     });
 
     it('should return order details for PARENT of linked student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/orders/${order.id}`)
         .set('Authorization', `Bearer ${parentToken}`);
 
@@ -332,7 +332,7 @@ describe('GET /api/v1/orders/:id', () => {
     });
 
     it('should return order details for own STUDENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/orders/${order.id}`)
         .set('Authorization', `Bearer ${studentToken}`);
 
@@ -343,35 +343,35 @@ describe('GET /api/v1/orders/:id', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(getServer(app)).get(
         `/api/v1/orders/${order.id}`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 404 when order does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/orders/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses order from another school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/orders/${order.id}`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when VENDOR accesses another vendor order', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/orders/${order.id}`)
         .set('Authorization', `Bearer ${otherVendorToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when STUDENT accesses another student order', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/orders/${order.id}`)
         .set('Authorization', `Bearer ${otherStudentToken}`);
       expect(res.status).toBe(403);

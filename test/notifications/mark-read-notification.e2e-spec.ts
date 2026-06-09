@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Notification } from '../../src/modules/notifications/entities/notification.entity';
 import { UserRole } from '../../src/modules/users/user.types';
@@ -98,7 +98,7 @@ describe('PUT /api/v1/notifications/:id/read', () => {
 
   describe('Success cases', () => {
     it('should mark a notification as read', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/notifications/${unreadNotification.id}/read`)
         .set('Authorization', `Bearer ${parentToken}`);
 
@@ -110,28 +110,28 @@ describe('PUT /api/v1/notifications/:id/read', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).put(
+      const res = await request(getServer(app)).put(
         `/api/v1/notifications/${unreadNotification.id}/read`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SUPER_ADMIN calls this endpoint', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/notifications/${unreadNotification.id}/read`)
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when notification belongs to another user', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/notifications/${unreadNotification.id}/read`)
         .set('Authorization', `Bearer ${otherToken}`);
       expect(res.status).toBe(404);
     });
 
     it('should return 404 when notification does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/notifications/00000000-0000-0000-0000-000000000000/read')
         .set('Authorization', `Bearer ${parentToken}`);
       expect(res.status).toBe(404);

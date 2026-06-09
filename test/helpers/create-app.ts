@@ -4,6 +4,7 @@ import {
   VersioningType,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Server } from 'http';
 import { AppModule } from '../../src/app.module';
 import { ResponseInterceptor } from '../../src/common/interceptors/response.interceptor';
 
@@ -29,4 +30,8 @@ export async function createTestApp(): Promise<{
   await app.init();
 
   return { app, moduleRef };
+}
+
+export function getServer(app: INestApplication): Server {
+  return app.getHttpServer() as Server;
 }

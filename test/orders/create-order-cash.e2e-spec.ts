@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -167,7 +167,7 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
 
   describe('Success cases', () => {
     it('should create a CASH order even with empty wallet balance', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${studentToken}`)
         .send({
@@ -222,7 +222,7 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
         role: studentUser2.role,
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${token2}`)
         .send({
@@ -249,7 +249,7 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
         where: { vendorId: vendor.id },
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${cashOrder!.id}/validate`)
         .set('Authorization', `Bearer ${vendorToken}`);
 
@@ -269,7 +269,7 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
     });
 
     it('should cancel a CASH order without creating a RELEASE transaction', async () => {
-      const createRes = await request(app.getHttpServer())
+      const createRes = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${studentToken}`)
         .send({
@@ -284,7 +284,7 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
         where: { studentId: student.id },
       });
 
-      const cancelRes = await request(app.getHttpServer())
+      const cancelRes = await request(getServer(app))
         .put(`/api/v1/orders/${orderId}/cancel`)
         .set('Authorization', `Bearer ${vendorToken}`);
 
@@ -306,7 +306,7 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
 
   describe('Failure cases', () => {
     it('should return 400 when paymentMethod is invalid', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${studentToken}`)
         .send({
@@ -319,7 +319,7 @@ describe('POST /api/v1/orders/vendor/:id (CASH payment)', () => {
     });
 
     it('should return 400 for WALLET order when balance is insufficient', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${studentToken}`)
         .send({

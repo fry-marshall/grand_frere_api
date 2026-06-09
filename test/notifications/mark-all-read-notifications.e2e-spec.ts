@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Notification } from '../../src/modules/notifications/entities/notification.entity';
 import { UserRole } from '../../src/modules/users/user.types';
@@ -85,7 +85,7 @@ describe('PUT /api/v1/notifications/read-all', () => {
 
   describe('Success cases', () => {
     it('should mark all own notifications as read', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/notifications/read-all')
         .set('Authorization', `Bearer ${parentToken}`);
 
@@ -100,14 +100,14 @@ describe('PUT /api/v1/notifications/read-all', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).put(
+      const res = await request(getServer(app)).put(
         '/api/v1/notifications/read-all',
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SUPER_ADMIN calls this endpoint', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/notifications/read-all')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(403);

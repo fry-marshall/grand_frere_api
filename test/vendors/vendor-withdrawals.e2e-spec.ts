@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -179,7 +179,7 @@ describe('GET /api/v1/vendors/:id/withdrawals', () => {
 
   describe('Success cases', () => {
     it('should return withdrawals for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/withdrawals`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -193,7 +193,7 @@ describe('GET /api/v1/vendors/:id/withdrawals', () => {
     });
 
     it('should return withdrawals for own SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/withdrawals`)
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -202,7 +202,7 @@ describe('GET /api/v1/vendors/:id/withdrawals', () => {
     });
 
     it('should return withdrawals for own VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/withdrawals`)
         .set('Authorization', `Bearer ${ownVendorToken}`);
 
@@ -214,7 +214,7 @@ describe('GET /api/v1/vendors/:id/withdrawals', () => {
       const emptyVendor = await vendorRepo.findOne({
         where: { schoolId: otherSchool.id },
       });
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${emptyVendor!.id}/withdrawals`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -226,28 +226,28 @@ describe('GET /api/v1/vendors/:id/withdrawals', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(getServer(app)).get(
         `/api/v1/vendors/${vendor.id}/withdrawals`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses another school vendor', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/withdrawals`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when VENDOR accesses another vendor withdrawals', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/withdrawals`)
         .set('Authorization', `Bearer ${otherVendorToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when vendor does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/vendors/00000000-0000-0000-0000-000000000000/withdrawals')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);

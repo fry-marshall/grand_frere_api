@@ -2,7 +2,7 @@ import { createHmac } from 'crypto';
 import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
@@ -153,7 +153,7 @@ describe('POST /api/v1/payments/webhook', () => {
         },
       };
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/webhook')
         .set('x-paystack-signature', sign(body))
         .send(body);
@@ -188,7 +188,7 @@ describe('POST /api/v1/payments/webhook', () => {
         },
       };
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/webhook')
         .set('x-paystack-signature', sign(body))
         .send(body);
@@ -204,7 +204,7 @@ describe('POST /api/v1/payments/webhook', () => {
     it('should return 200 and ignore unknown events', async () => {
       const body = { event: 'transfer.success', data: {} };
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/webhook')
         .set('x-paystack-signature', sign(body))
         .send(body);
@@ -218,7 +218,7 @@ describe('POST /api/v1/payments/webhook', () => {
         data: { reference: 'UNKNOWN-REF-999', amount: 5000 },
       };
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/webhook')
         .set('x-paystack-signature', sign(body))
         .send(body);
@@ -237,7 +237,7 @@ describe('POST /api/v1/payments/webhook', () => {
         },
       };
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/webhook')
         .send(body);
 
@@ -253,7 +253,7 @@ describe('POST /api/v1/payments/webhook', () => {
         },
       };
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/payments/webhook')
         .set('x-paystack-signature', 'invalid-signature')
         .send(body);

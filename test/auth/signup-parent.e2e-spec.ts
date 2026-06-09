@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
@@ -194,7 +194,7 @@ describe('POST /api/v1/auth/signup/parent', () => {
 
   describe('Success cases', () => {
     it('should link parent to existing student when card is ACTIVE', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/parent')
         .send({
           ...BASE_PAYLOAD,
@@ -208,7 +208,7 @@ describe('POST /api/v1/auth/signup/parent', () => {
     });
 
     it('should create student + wallet + activate card and return tokens when card is UNASSIGNED', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/parent')
         .send({
           ...BASE_PAYLOAD,
@@ -249,7 +249,7 @@ describe('POST /api/v1/auth/signup/parent', () => {
 
   describe('Failure cases', () => {
     it('should return 400 when required fields are missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/parent')
         .send({ firstName: 'Aminata' });
 
@@ -257,7 +257,7 @@ describe('POST /api/v1/auth/signup/parent', () => {
     });
 
     it('should return 404 when card does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/parent')
         .send({
           ...BASE_PAYLOAD,
@@ -269,7 +269,7 @@ describe('POST /api/v1/auth/signup/parent', () => {
     });
 
     it('should return 400 when card is UNASSIGNED and student fields are missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/parent')
         .send({
           cardCode: unassignedCardNoStudent.code,
@@ -284,7 +284,7 @@ describe('POST /api/v1/auth/signup/parent', () => {
     });
 
     it('should return 409 when card is SUSPENDED', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/parent')
         .send({
           ...BASE_PAYLOAD,
@@ -297,7 +297,7 @@ describe('POST /api/v1/auth/signup/parent', () => {
     });
 
     it('should return 409 when phone already exists', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/parent')
         .send({
           ...BASE_PAYLOAD,
@@ -310,7 +310,7 @@ describe('POST /api/v1/auth/signup/parent', () => {
     });
 
     it('should return 409 when student already has 2 parents', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/parent')
         .send({
           ...BASE_PAYLOAD,

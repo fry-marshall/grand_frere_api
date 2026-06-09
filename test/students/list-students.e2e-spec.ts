@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
@@ -143,7 +143,7 @@ describe('GET /api/v1/students', () => {
 
   describe('Success cases', () => {
     it('should return all students for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/students')
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -154,7 +154,7 @@ describe('GET /api/v1/students', () => {
     });
 
     it('should return only own school students for SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/students')
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -165,7 +165,7 @@ describe('GET /api/v1/students', () => {
     });
 
     it('should return only other school students for other SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/students')
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
 
@@ -176,7 +176,7 @@ describe('GET /api/v1/students', () => {
     });
 
     it('should include user and card fields in response', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/students')
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -193,7 +193,7 @@ describe('GET /api/v1/students', () => {
     });
 
     it('should support pagination', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/students?page=1&limit=1')
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -205,7 +205,7 @@ describe('GET /api/v1/students', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get('/api/v1/students');
+      const res = await request(getServer(app)).get('/api/v1/students');
       expect(res.status).toBe(401);
     });
 
@@ -217,7 +217,7 @@ describe('GET /api/v1/students', () => {
         sub: studentUser!.id,
         role: UserRole.STUDENT,
       });
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/students')
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(403);

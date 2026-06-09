@@ -3,7 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
@@ -126,7 +126,7 @@ describe('POST /api/v1/cards/:code/verify-pin', () => {
     it('should return 200 and reset pinAttempts when PIN is correct', async () => {
       await resetCard(CardStatus.ACTIVE, 1);
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/cards/${card.code}/verify-pin`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ pin: CORRECT_PIN });
@@ -141,14 +141,14 @@ describe('POST /api/v1/cards/:code/verify-pin', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token is provided', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/cards/${card.code}/verify-pin`)
         .send({ pin: CORRECT_PIN });
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when user is not VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/cards/${card.code}/verify-pin`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ pin: CORRECT_PIN });
@@ -156,7 +156,7 @@ describe('POST /api/v1/cards/:code/verify-pin', () => {
     });
 
     it('should return 400 when PIN format is invalid', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/cards/${card.code}/verify-pin`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ pin: 'abc' });
@@ -164,7 +164,7 @@ describe('POST /api/v1/cards/:code/verify-pin', () => {
     });
 
     it('should return 404 when card does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/cards/GF-NONEXISTENT-9999/verify-pin')
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ pin: CORRECT_PIN });
@@ -174,7 +174,7 @@ describe('POST /api/v1/cards/:code/verify-pin', () => {
     it('should return 409 when card PIN is not set', async () => {
       await cardRepo.update(card.id, { pinHash: null as unknown as string });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/cards/${card.code}/verify-pin`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ pin: CORRECT_PIN });
@@ -189,7 +189,7 @@ describe('POST /api/v1/cards/:code/verify-pin', () => {
     it('should return 401 and increment pinAttempts on wrong PIN', async () => {
       await resetCard(CardStatus.ACTIVE, 0);
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/cards/${card.code}/verify-pin`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ pin: '9999' });
@@ -204,7 +204,7 @@ describe('POST /api/v1/cards/:code/verify-pin', () => {
     it('should return 403 and block the card on the 3rd wrong PIN', async () => {
       await resetCard(CardStatus.ACTIVE, 2);
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/cards/${card.code}/verify-pin`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ pin: '9999' });
@@ -219,7 +219,7 @@ describe('POST /api/v1/cards/:code/verify-pin', () => {
     it('should return 403 when card is already BLOCKED', async () => {
       await resetCard(CardStatus.BLOCKED, 3);
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/cards/${card.code}/verify-pin`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ pin: CORRECT_PIN });
@@ -231,7 +231,7 @@ describe('POST /api/v1/cards/:code/verify-pin', () => {
     it('should return 409 when card is SUSPENDED', async () => {
       await resetCard(CardStatus.SUSPENDED, 0);
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/cards/${card.code}/verify-pin`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ pin: CORRECT_PIN });

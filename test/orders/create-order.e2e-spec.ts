@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -284,7 +284,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
 
   describe('Success cases', () => {
     it('should create an order as VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({
@@ -310,7 +310,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     });
 
     it('should create an order as SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
@@ -323,7 +323,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     });
 
     it('should create an order as PARENT for linked student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${parentToken}`)
         .send({
@@ -336,7 +336,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     });
 
     it('should create an order as STUDENT for own student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${studentToken}`)
         .send({
@@ -351,7 +351,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .send({
           studentId: student.id,
@@ -361,7 +361,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     });
 
     it('should return 403 when SCHOOL_ADMIN calls this endpoint', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${schoolAdminToken}`)
         .send({
@@ -372,7 +372,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     });
 
     it('should return 403 when VENDOR calls with another vendor id', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${otherVendorToken}`)
         .send({
@@ -383,7 +383,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     });
 
     it('should return 403 when PARENT creates order for unlinked student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${parentToken}`)
         .send({
@@ -394,7 +394,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     });
 
     it('should return 403 when STUDENT creates order for another student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${studentToken}`)
         .send({
@@ -405,7 +405,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     });
 
     it('should return 404 when vendor does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/orders/vendor/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({
@@ -416,7 +416,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     });
 
     it('should return 404 when student does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({
@@ -434,7 +434,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
         status: ItemStatus.ACTIVE,
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({
@@ -449,7 +449,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     it('should return 400 when wallet balance is insufficient', async () => {
       await walletRepo.update(wallet.id, { balance: 0, reserved: 0 });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({
@@ -470,7 +470,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
         dailyLimit: 5000,
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({
@@ -491,7 +491,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
         dailyLimit: 5000,
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post(`/api/v1/orders/vendor/${vendor.id}`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({

@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -70,7 +70,7 @@ describe('POST /api/v1/auth/signup/vendor', () => {
 
   describe('Success cases', () => {
     it('should create vendor account with wallet and return tokens', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/vendor')
         .send({
           firstName: 'Konan',
@@ -105,7 +105,7 @@ describe('POST /api/v1/auth/signup/vendor', () => {
       const tempPhone = '+2250700000099';
       await userRepo.delete({ phone: tempPhone });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/vendor')
         .send({
           firstName: 'Konan',
@@ -129,7 +129,7 @@ describe('POST /api/v1/auth/signup/vendor', () => {
 
   describe('Failure cases', () => {
     it('should return 400 when required fields are missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/vendor')
         .send({ firstName: 'Konan' });
 
@@ -137,7 +137,7 @@ describe('POST /api/v1/auth/signup/vendor', () => {
     });
 
     it('should return 400 when password is too short', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/vendor')
         .send({
           firstName: 'Konan',
@@ -152,7 +152,7 @@ describe('POST /api/v1/auth/signup/vendor', () => {
     });
 
     it('should return 400 when phone format is invalid', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/vendor')
         .send({
           firstName: 'Konan',
@@ -167,7 +167,7 @@ describe('POST /api/v1/auth/signup/vendor', () => {
     });
 
     it('should return 400 when schoolId is not a valid UUID', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/vendor')
         .send({
           firstName: 'Konan',
@@ -182,7 +182,7 @@ describe('POST /api/v1/auth/signup/vendor', () => {
     });
 
     it('should return 404 when school does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/vendor')
         .send({
           firstName: 'Konan',
@@ -198,7 +198,7 @@ describe('POST /api/v1/auth/signup/vendor', () => {
     });
 
     it('should return 409 when phone already exists', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signup/vendor')
         .send({
           firstName: 'Konan',

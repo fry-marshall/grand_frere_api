@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -258,7 +258,7 @@ describe('GET /api/v1/schools/:id/vendors', () => {
 
   describe('Success cases', () => {
     it('should return vendors list for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/vendors`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -269,7 +269,7 @@ describe('GET /api/v1/schools/:id/vendors', () => {
     });
 
     it('should return vendors list for own SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/vendors`)
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -278,7 +278,7 @@ describe('GET /api/v1/schools/:id/vendors', () => {
     });
 
     it('should return only ACTIVE vendors for STUDENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/vendors`)
         .set('Authorization', `Bearer ${studentToken}`);
 
@@ -289,7 +289,7 @@ describe('GET /api/v1/schools/:id/vendors', () => {
     });
 
     it('should return only ACTIVE vendors for PARENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/vendors`)
         .set('Authorization', `Bearer ${parentToken}`);
 
@@ -299,7 +299,7 @@ describe('GET /api/v1/schools/:id/vendors', () => {
     });
 
     it('should return empty list for school with no vendors', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${otherSchool.id}/vendors`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -309,7 +309,7 @@ describe('GET /api/v1/schools/:id/vendors', () => {
     });
 
     it('should respect pagination params', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/vendors?page=1&limit=5`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -321,42 +321,42 @@ describe('GET /api/v1/schools/:id/vendors', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(getServer(app)).get(
         `/api/v1/schools/${school.id}/vendors`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses another school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/vendors`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when STUDENT accesses another school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/vendors`)
         .set('Authorization', `Bearer ${foreignStudentToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when PARENT has no child in the school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/vendors`)
         .set('Authorization', `Bearer ${foreignParentToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when school does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/schools/00000000-0000-0000-0000-000000000000/vendors')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);
     });
 
     it('should return 400 when pagination params are invalid', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/vendors?page=0`)
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(400);

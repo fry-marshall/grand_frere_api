@@ -3,7 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { RefreshToken } from '../../src/modules/refresh-tokens/entities/refresh-token.entity';
 import { UserRole } from '../../src/modules/users/user.types';
@@ -58,7 +58,7 @@ describe('POST /api/v1/auth/signout', () => {
     it('should revoke a valid refresh token and return 200', async () => {
       const token = await seedToken();
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signout')
         .send({ refreshToken: token });
 
@@ -75,7 +75,7 @@ describe('POST /api/v1/auth/signout', () => {
     it('should return 200 when token is already revoked (idempotent)', async () => {
       const token = await seedToken(true);
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signout')
         .send({ refreshToken: token });
 
@@ -83,7 +83,7 @@ describe('POST /api/v1/auth/signout', () => {
     });
 
     it('should return 200 when token does not exist (idempotent)', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signout')
         .send({ refreshToken: 'totally-fake-token' });
 
@@ -93,7 +93,7 @@ describe('POST /api/v1/auth/signout', () => {
 
   describe('Failure cases', () => {
     it('should return 400 when refreshToken field is missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .post('/api/v1/auth/signout')
         .send({});
 

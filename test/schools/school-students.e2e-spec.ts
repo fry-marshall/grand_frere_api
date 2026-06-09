@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
@@ -127,7 +127,7 @@ describe('GET /api/v1/schools/:id/students', () => {
 
   describe('Success cases', () => {
     it('should return students list for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/students`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -140,7 +140,7 @@ describe('GET /api/v1/schools/:id/students', () => {
     });
 
     it('should return students list for own SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/students`)
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -149,7 +149,7 @@ describe('GET /api/v1/schools/:id/students', () => {
     });
 
     it('should return empty list for school with no students', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${otherSchool.id}/students`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -159,7 +159,7 @@ describe('GET /api/v1/schools/:id/students', () => {
     });
 
     it('should respect pagination params', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/students?page=1&limit=10`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -171,28 +171,28 @@ describe('GET /api/v1/schools/:id/students', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(getServer(app)).get(
         `/api/v1/schools/${school.id}/students`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses another school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/students`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when school does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/schools/00000000-0000-0000-0000-000000000000/students')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);
     });
 
     it('should return 400 when pagination params are invalid', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/students?limit=0`)
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(400);

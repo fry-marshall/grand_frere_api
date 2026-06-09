@@ -3,7 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
@@ -182,7 +182,7 @@ describe('PUT /api/v1/cards/:code/reset-pin', () => {
         pinAttempts: 0,
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/reset-pin`)
         .set('Authorization', `Bearer ${ownerStudentToken}`)
         .send({ password: PASSWORD, newPin: '5678' });
@@ -200,7 +200,7 @@ describe('PUT /api/v1/cards/:code/reset-pin', () => {
         pinAttempts: 0,
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/reset-pin`)
         .set('Authorization', `Bearer ${ownerParentToken}`)
         .send({ password: PASSWORD, newPin: '4321' });
@@ -218,7 +218,7 @@ describe('PUT /api/v1/cards/:code/reset-pin', () => {
         pinAttempts: 3,
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/reset-pin`)
         .set('Authorization', `Bearer ${ownerStudentToken}`)
         .send({ password: PASSWORD, newPin: '9999' });
@@ -236,7 +236,7 @@ describe('PUT /api/v1/cards/:code/reset-pin', () => {
         pinAttempts: 3,
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/reset-pin`)
         .set('Authorization', `Bearer ${ownerParentToken}`)
         .send({ password: PASSWORD, newPin: '1111' });
@@ -251,14 +251,14 @@ describe('PUT /api/v1/cards/:code/reset-pin', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token is provided', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/reset-pin`)
         .send({ password: PASSWORD, newPin: '1234' });
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when user is VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/reset-pin`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ password: PASSWORD, newPin: '1234' });
@@ -266,7 +266,7 @@ describe('PUT /api/v1/cards/:code/reset-pin', () => {
     });
 
     it('should return 403 when STUDENT is not the card owner', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/reset-pin`)
         .set('Authorization', `Bearer ${unlinkedStudentToken}`)
         .send({ password: PASSWORD, newPin: '1234' });
@@ -274,7 +274,7 @@ describe('PUT /api/v1/cards/:code/reset-pin', () => {
     });
 
     it('should return 403 when PARENT is not linked to the student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/reset-pin`)
         .set('Authorization', `Bearer ${unlinkedParentToken}`)
         .send({ password: PASSWORD, newPin: '1234' });
@@ -284,7 +284,7 @@ describe('PUT /api/v1/cards/:code/reset-pin', () => {
     it('should return 401 when password is wrong', async () => {
       await cardRepo.update(card.id, { status: CardStatus.ACTIVE });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/reset-pin`)
         .set('Authorization', `Bearer ${ownerStudentToken}`)
         .send({ password: 'WrongPassword!', newPin: '1234' });
@@ -294,7 +294,7 @@ describe('PUT /api/v1/cards/:code/reset-pin', () => {
     });
 
     it('should return 400 when newPin format is invalid', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/reset-pin`)
         .set('Authorization', `Bearer ${ownerStudentToken}`)
         .send({ password: PASSWORD, newPin: 'abc' });
@@ -302,7 +302,7 @@ describe('PUT /api/v1/cards/:code/reset-pin', () => {
     });
 
     it('should return 400 when newPin is missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/reset-pin`)
         .set('Authorization', `Bearer ${ownerStudentToken}`)
         .send({ password: PASSWORD });
@@ -310,7 +310,7 @@ describe('PUT /api/v1/cards/:code/reset-pin', () => {
     });
 
     it('should return 404 when card does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/cards/GF-NONEXISTENT-9999/reset-pin')
         .set('Authorization', `Bearer ${ownerStudentToken}`)
         .send({ password: PASSWORD, newPin: '1234' });

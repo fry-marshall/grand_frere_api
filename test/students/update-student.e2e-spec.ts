@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
@@ -196,7 +196,7 @@ describe('PUT /api/v1/students/:id', () => {
 
   describe('Success cases', () => {
     it('should update student for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ firstName: 'UpdatedBySuperAdmin' });
@@ -206,7 +206,7 @@ describe('PUT /api/v1/students/:id', () => {
     });
 
     it('should update student for own SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`)
         .send({ lastName: 'UpdatedByAdmin' });
@@ -216,7 +216,7 @@ describe('PUT /api/v1/students/:id', () => {
     });
 
     it('should update student for linked PARENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
         .set('Authorization', `Bearer ${linkedParentToken}`)
         .send({ firstName: 'UpdatedByParent' });
@@ -226,7 +226,7 @@ describe('PUT /api/v1/students/:id', () => {
     });
 
     it('should accept empty body (no-op)', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({});
@@ -237,7 +237,7 @@ describe('PUT /api/v1/students/:id', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
         .send({ firstName: 'Updated' });
 
@@ -245,7 +245,7 @@ describe('PUT /api/v1/students/:id', () => {
     });
 
     it('should return 403 for STUDENT role', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
         .set('Authorization', `Bearer ${studentToken}`)
         .send({ firstName: 'Updated' });
@@ -254,7 +254,7 @@ describe('PUT /api/v1/students/:id', () => {
     });
 
     it('should return 403 for SCHOOL_ADMIN of another school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`)
         .send({ firstName: 'Updated' });
@@ -263,7 +263,7 @@ describe('PUT /api/v1/students/:id', () => {
     });
 
     it('should return 403 for unlinked PARENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
         .set('Authorization', `Bearer ${unlinkedParentToken}`)
         .send({ firstName: 'Updated' });
@@ -272,7 +272,7 @@ describe('PUT /api/v1/students/:id', () => {
     });
 
     it('should return 404 when student does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/students/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ firstName: 'Updated' });
@@ -281,7 +281,7 @@ describe('PUT /api/v1/students/:id', () => {
     });
 
     it('should return 400 when firstName is empty string', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ firstName: '' });

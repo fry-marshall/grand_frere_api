@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Otp } from '../../src/modules/otp/entities/otp.entity';
 import { OtpType } from '../../src/modules/otp/otp.types';
@@ -43,18 +43,18 @@ describe('POST /api/v1/auth/reset-password', () => {
   });
 
   it('should reset password with a valid OTP', async () => {
-    const forgotRes = await request(app.getHttpServer())
+    const forgotRes = await request(getServer(app))
       .post('/api/v1/auth/forgot-password')
       .send({ phone: PHONE });
     const { code } = forgotRes.body.data;
 
-    const res = await request(app.getHttpServer())
+    const res = await request(getServer(app))
       .post('/api/v1/auth/reset-password')
       .send({ phone: PHONE, code, newPassword: 'NewSecurePass123' });
 
     expect(res.status).toBe(200);
 
-    const signinRes = await request(app.getHttpServer())
+    const signinRes = await request(getServer(app))
       .post('/api/v1/auth/signin')
       .send({ phone: PHONE, password: 'NewSecurePass123' });
     expect(signinRes.status).toBe(200);
@@ -66,7 +66,7 @@ describe('POST /api/v1/auth/reset-password', () => {
   });
 
   it('should return 401 for wrong OTP code', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(getServer(app))
       .post('/api/v1/auth/reset-password')
       .send({ phone: PHONE, code: '000000', newPassword: 'NewSecurePass123' });
 
@@ -75,16 +75,16 @@ describe('POST /api/v1/auth/reset-password', () => {
   });
 
   it('should return 401 when OTP is already used', async () => {
-    const forgotRes = await request(app.getHttpServer())
+    const forgotRes = await request(getServer(app))
       .post('/api/v1/auth/forgot-password')
       .send({ phone: PHONE });
     const { code } = forgotRes.body.data;
 
-    await request(app.getHttpServer())
+    await request(getServer(app))
       .post('/api/v1/auth/reset-password')
       .send({ phone: PHONE, code, newPassword: 'AnotherPass123' });
 
-    const res = await request(app.getHttpServer())
+    const res = await request(getServer(app))
       .post('/api/v1/auth/reset-password')
       .send({ phone: PHONE, code, newPassword: 'YetAnotherPass123' });
 
@@ -93,7 +93,7 @@ describe('POST /api/v1/auth/reset-password', () => {
   });
 
   it('should return 400 for invalid OTP format', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(getServer(app))
       .post('/api/v1/auth/reset-password')
       .send({ phone: PHONE, code: 'abc', newPassword: 'NewSecurePass123' });
 

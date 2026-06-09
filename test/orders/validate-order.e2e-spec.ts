@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -210,7 +210,7 @@ describe('PUT /api/v1/orders/:id/validate', () => {
     it('should validate an order as VENDOR and credit vendor wallet', async () => {
       const order = await makeOrder();
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/validate`)
         .set('Authorization', `Bearer ${vendorToken}`);
 
@@ -238,7 +238,7 @@ describe('PUT /api/v1/orders/:id/validate', () => {
     it('should validate an order as SUPER_ADMIN', async () => {
       const order = await makeOrder();
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/validate`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -250,7 +250,7 @@ describe('PUT /api/v1/orders/:id/validate', () => {
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
       const order = await makeOrder();
-      const res = await request(app.getHttpServer()).put(
+      const res = await request(getServer(app)).put(
         `/api/v1/orders/${order.id}/validate`,
       );
       expect(res.status).toBe(401);
@@ -258,7 +258,7 @@ describe('PUT /api/v1/orders/:id/validate', () => {
 
     it('should return 403 when PARENT calls this endpoint', async () => {
       const order = await makeOrder();
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/validate`)
         .set('Authorization', `Bearer ${parentToken}`);
       expect(res.status).toBe(403);
@@ -266,14 +266,14 @@ describe('PUT /api/v1/orders/:id/validate', () => {
 
     it('should return 403 when VENDOR calls for another vendor order', async () => {
       const order = await makeOrder();
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/validate`)
         .set('Authorization', `Bearer ${otherVendorToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when order does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/orders/00000000-0000-0000-0000-000000000000/validate')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);
@@ -281,7 +281,7 @@ describe('PUT /api/v1/orders/:id/validate', () => {
 
     it('should return 400 when order is already validated', async () => {
       const order = await makeOrder(OrderStatus.VALIDATED);
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/validate`)
         .set('Authorization', `Bearer ${vendorToken}`);
       expect(res.status).toBe(400);

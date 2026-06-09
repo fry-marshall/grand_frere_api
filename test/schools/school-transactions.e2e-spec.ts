@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
@@ -163,7 +163,7 @@ describe('GET /api/v1/schools/:id/transactions', () => {
 
   describe('Success cases', () => {
     it('should return transactions and stats for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/transactions`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -181,7 +181,7 @@ describe('GET /api/v1/schools/:id/transactions', () => {
     });
 
     it('should return transactions for own SCHOOL_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/transactions`)
         .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
 
@@ -190,7 +190,7 @@ describe('GET /api/v1/schools/:id/transactions', () => {
     });
 
     it('should return empty for school with no transactions', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${otherSchool.id}/transactions`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -202,7 +202,7 @@ describe('GET /api/v1/schools/:id/transactions', () => {
     });
 
     it('should filter by date range', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(
           `/api/v1/schools/${school.id}/transactions?from=2020-01-01T00:00:00Z&to=2099-12-31T23:59:59Z`,
         )
@@ -213,7 +213,7 @@ describe('GET /api/v1/schools/:id/transactions', () => {
     });
 
     it('should return empty when date range excludes all transactions', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(
           `/api/v1/schools/${school.id}/transactions?from=2000-01-01T00:00:00Z&to=2000-12-31T23:59:59Z`,
         )
@@ -224,7 +224,7 @@ describe('GET /api/v1/schools/:id/transactions', () => {
     });
 
     it('should respect pagination params', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/transactions?page=1&limit=1`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -237,21 +237,21 @@ describe('GET /api/v1/schools/:id/transactions', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(getServer(app)).get(
         `/api/v1/schools/${school.id}/transactions`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses another school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/transactions`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when school does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(
           '/api/v1/schools/00000000-0000-0000-0000-000000000000/transactions',
         )
@@ -260,7 +260,7 @@ describe('GET /api/v1/schools/:id/transactions', () => {
     });
 
     it('should return 400 when date format is invalid', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/schools/${school.id}/transactions?from=not-a-date`)
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(400);

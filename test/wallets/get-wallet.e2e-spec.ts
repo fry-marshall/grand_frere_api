@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
@@ -236,7 +236,7 @@ describe('GET /api/v1/wallets/student/:studentId', () => {
 
   describe('Success cases', () => {
     it('should return wallet for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/wallets/student/${student.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -247,7 +247,7 @@ describe('GET /api/v1/wallets/student/:studentId', () => {
     });
 
     it('should return wallet for SCHOOL_ADMIN of same school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/wallets/student/${student.id}`)
         .set('Authorization', `Bearer ${schoolAdminToken}`);
 
@@ -256,7 +256,7 @@ describe('GET /api/v1/wallets/student/:studentId', () => {
     });
 
     it('should return wallet for linked PARENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/wallets/student/${student.id}`)
         .set('Authorization', `Bearer ${parentToken}`);
 
@@ -265,7 +265,7 @@ describe('GET /api/v1/wallets/student/:studentId', () => {
     });
 
     it('should return wallet for own STUDENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/wallets/student/${student.id}`)
         .set('Authorization', `Bearer ${studentToken}`);
 
@@ -276,35 +276,35 @@ describe('GET /api/v1/wallets/student/:studentId', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(getServer(app)).get(
         `/api/v1/wallets/student/${student.id}`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 for SCHOOL_ADMIN of another school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/wallets/student/${student.id}`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 for unlinked PARENT', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/wallets/student/${student.id}`)
         .set('Authorization', `Bearer ${unlinkedParentToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 for STUDENT accessing another student wallet', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/wallets/student/${student.id}`)
         .set('Authorization', `Bearer ${otherStudentToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when student does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/wallets/student/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);
@@ -322,7 +322,7 @@ describe('GET /api/v1/wallets/student/:studentId', () => {
         userId: noWalletStudentUser.id,
         schoolId: school.id,
       });
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/wallets/student/${noWalletStudent.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`);
       await studentRepo.delete({ id: noWalletStudent.id });

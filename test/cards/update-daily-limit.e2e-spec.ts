@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
@@ -179,7 +179,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
 
   describe('Success cases', () => {
     it('should allow the linked PARENT to update the daily limit', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .set('Authorization', `Bearer ${ownerParentToken}`)
         .send({ dailyLimit: 3000 });
@@ -189,7 +189,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
     });
 
     it('should allow the linked STUDENT to update their own card daily limit', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .set('Authorization', `Bearer ${ownerStudentToken}`)
         .send({ dailyLimit: 2500 });
@@ -199,7 +199,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
     });
 
     it('should persist the updated daily limit in the database', async () => {
-      await request(app.getHttpServer())
+      await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .set('Authorization', `Bearer ${ownerParentToken}`)
         .send({ dailyLimit: 5000 });
@@ -211,7 +211,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token is provided', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .send({ dailyLimit: 2000 });
 
@@ -219,7 +219,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
     });
 
     it('should return 403 when user is SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ dailyLimit: 2000 });
@@ -228,7 +228,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
     });
 
     it('should return 403 when user is VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .set('Authorization', `Bearer ${vendorToken}`)
         .send({ dailyLimit: 2000 });
@@ -237,7 +237,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
     });
 
     it('should return 403 when PARENT is not linked to the student', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .set('Authorization', `Bearer ${unlinkedParentToken}`)
         .send({ dailyLimit: 2000 });
@@ -246,7 +246,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
     });
 
     it('should return 403 when STUDENT is not the card owner', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .set('Authorization', `Bearer ${unlinkedStudentToken}`)
         .send({ dailyLimit: 2000 });
@@ -255,7 +255,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
     });
 
     it('should return 404 when card does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put('/api/v1/cards/GF-NONEXISTENT-9999/daily-limit')
         .set('Authorization', `Bearer ${ownerParentToken}`)
         .send({ dailyLimit: 2000 });
@@ -264,7 +264,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
     });
 
     it('should return 400 when dailyLimit is below minimum (100)', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .set('Authorization', `Bearer ${ownerParentToken}`)
         .send({ dailyLimit: 50 });
@@ -273,7 +273,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
     });
 
     it('should return 400 when dailyLimit exceeds maximum (100000)', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .set('Authorization', `Bearer ${ownerParentToken}`)
         .send({ dailyLimit: 200000 });
@@ -282,7 +282,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
     });
 
     it('should return 400 when dailyLimit is not an integer', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .set('Authorization', `Bearer ${ownerParentToken}`)
         .send({ dailyLimit: 1500.5 });
@@ -291,7 +291,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
     });
 
     it('should return 400 when dailyLimit is missing', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
         .set('Authorization', `Bearer ${ownerParentToken}`)
         .send({});
@@ -306,7 +306,7 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
         schoolId: school.id,
       });
 
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .put(`/api/v1/cards/${unassigned.code}/daily-limit`)
         .set('Authorization', `Bearer ${ownerParentToken}`)
         .send({ dailyLimit: 2000 });

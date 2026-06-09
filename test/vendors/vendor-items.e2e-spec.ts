@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
-import { createTestApp } from '../helpers/create-app';
+import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
@@ -312,7 +312,7 @@ describe('GET /api/v1/vendors/:id/items', () => {
 
   describe('Success cases', () => {
     it('should return only ACTIVE items for STUDENT in same school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${studentToken}`);
 
@@ -325,7 +325,7 @@ describe('GET /api/v1/vendors/:id/items', () => {
     });
 
     it('should return only ACTIVE items for PARENT with child in same school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${parentToken}`);
 
@@ -337,7 +337,7 @@ describe('GET /api/v1/vendors/:id/items', () => {
     });
 
     it('should return items with correct shape', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${studentToken}`);
 
@@ -354,7 +354,7 @@ describe('GET /api/v1/vendors/:id/items', () => {
     });
 
     it('should return own items for VENDOR', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${vendorToken}`);
 
@@ -363,7 +363,7 @@ describe('GET /api/v1/vendors/:id/items', () => {
     });
 
     it('should return items for SCHOOL_ADMIN of same school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${schoolAdminToken}`);
 
@@ -372,7 +372,7 @@ describe('GET /api/v1/vendors/:id/items', () => {
     });
 
     it('should return items for SUPER_ADMIN', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -381,7 +381,7 @@ describe('GET /api/v1/vendors/:id/items', () => {
     });
 
     it('should return empty list when vendor has no active items', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${otherVendor.id}/items`)
         .set('Authorization', `Bearer ${superAdminToken}`);
 
@@ -392,42 +392,42 @@ describe('GET /api/v1/vendors/:id/items', () => {
 
   describe('Failure cases', () => {
     it('should return 401 when no token', async () => {
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(getServer(app)).get(
         `/api/v1/vendors/${vendor.id}/items`,
       );
       expect(res.status).toBe(401);
     });
 
     it('should return 403 when STUDENT is from another school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${foreignStudentToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when PARENT has no child in the vendor school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${foreignParentToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when VENDOR accesses another vendor items', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${otherVendorToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses vendor from another school', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 
     it('should return 404 when vendor does not exist', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(getServer(app))
         .get('/api/v1/vendors/00000000-0000-0000-0000-000000000000/items')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);
