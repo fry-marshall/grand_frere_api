@@ -19,7 +19,7 @@ export class PaystackService implements IPaystackService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        amount: params.amount,
+        amount: params.amount * 100,
         email: params.email,
         reference: params.reference,
         currency: params.currency,
