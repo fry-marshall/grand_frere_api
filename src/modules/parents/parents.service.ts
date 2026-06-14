@@ -262,7 +262,7 @@ export class ParentsService {
           class: dto.class,
         });
 
-        const pinHash = await bcrypt.hash(dto.pin, 10);
+        const pinHash = await bcrypt.hash(dto.pin!, 10);
         await manager.update(Card, card.id, {
           status: CardStatus.ACTIVE,
           studentId: newStudent.id,
