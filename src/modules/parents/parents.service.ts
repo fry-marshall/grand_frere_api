@@ -4,9 +4,11 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { Parent } from './entities/parent.entity';
 import { User } from '../users/entities/user.entity';
 import { Student } from '../students/entities/student.entity';
@@ -14,6 +16,7 @@ import { Card } from '../cards/entities/card.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import { UserRole } from '../users/user.types';
+import { CardStatus } from '../cards/card.types';
 import { ParentResponseDto } from './dto/parent-response.dto';
 import { UpdateParentProfileDto } from './dto/update-parent-profile.dto';
 import { AddBeneficiaryDto } from './dto/add-beneficiary.dto';
@@ -221,6 +224,13 @@ export class ParentsService {
     const card = await this.cardRepo.findOne({ where: { code: dto.cardCode } });
     if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
 
+    if (
+      card.status !== CardStatus.ACTIVE &&
+      card.status !== CardStatus.UNASSIGNED
+    ) {
+      throw new ConflictException(ErrorMessages.AUTH.CARD_NOT_ACTIVE);
+    }
+
     const existingStudent = await this.studentRepo.findOne({
       where: { cardId: card.id },
       relations: ['user'],
@@ -249,7 +259,13 @@ export class ParentsService {
           class: dto.class,
         });
 
-        await manager.update(Card, card.id, { studentId: newStudent.id });
+        const pinHash = await bcrypt.hash(dto.pin, 10);
+        await manager.update(Card, card.id, {
+          status: CardStatus.ACTIVE,
+          studentId: newStudent.id,
+          pinHash,
+        });
+
         await manager.save(Wallet, { studentId: newStudent.id });
         await manager.save(StudentParent, {
           parentId: parent.id,
@@ -269,6 +285,14 @@ export class ParentsService {
           lastName: student.user.lastName,
         },
       };
+    }
+
+    if (!card.pinHash) {
+      throw new ConflictException(ErrorMessages.CARDS.PIN_NOT_SET);
+    }
+    const isValid = await bcrypt.compare(dto.pin, card.pinHash);
+    if (!isValid) {
+      throw new UnauthorizedException(ErrorMessages.CARDS.PIN_INVALID);
     }
 
     const alreadyLinked = await this.studentParentRepo.findOne({

@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
 import request from 'supertest';
 import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
@@ -112,6 +113,7 @@ describe('POST /api/v1/parents/me/students', () => {
       code: 'AB-CARD-001',
       schoolId: school.id,
       status: CardStatus.ACTIVE,
+      pinHash: await bcrypt.hash('1234', 10),
     });
     const stuUser1 = await userRepo.save({
       firstName: 'Stu1',
@@ -146,6 +148,7 @@ describe('POST /api/v1/parents/me/students', () => {
       code: 'AB-CARD-003',
       schoolId: school.id,
       status: CardStatus.ACTIVE,
+      pinHash: await bcrypt.hash('1234', 10),
     });
     const stuUser2 = await userRepo.save({
       firstName: 'Stu2',
@@ -177,6 +180,7 @@ describe('POST /api/v1/parents/me/students', () => {
       code: 'AB-CARD-004',
       schoolId: school.id,
       status: CardStatus.ACTIVE,
+      pinHash: await bcrypt.hash('1234', 10),
     });
     const stuUser3 = await userRepo.save({
       firstName: 'Stu3',
@@ -228,7 +232,7 @@ describe('POST /api/v1/parents/me/students', () => {
       const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
-        .send({ cardCode: cardWithStudent.code });
+        .send({ cardCode: cardWithStudent.code, pin: '1234' });
 
       expect(res.status).toBe(201);
       expect(res.body.data).toHaveProperty('id');
@@ -245,6 +249,7 @@ describe('POST /api/v1/parents/me/students', () => {
           firstName: 'Nouveau',
           lastName: 'Eleve',
           class: 'CE2',
+          pin: '1234',
         });
 
       expect(res.status).toBe(201);
@@ -255,12 +260,11 @@ describe('POST /api/v1/parents/me/students', () => {
     });
 
     it('should allow a parent to add more than 2 students', async () => {
-      // Parent already has stu3 (alreadyLinked) + stu1 (cardWithStudent) + the one from UNASSIGNED
-      // Adding a 4th card should succeed
       const extraCard = await cardRepo.save({
         code: 'AB-CARD-EXTRA',
         schoolId: school.id,
         status: CardStatus.ACTIVE,
+        pinHash: await bcrypt.hash('1234', 10),
       });
       const extraUser = await userRepo.save({
         firstName: 'Extra',
@@ -274,12 +278,13 @@ describe('POST /api/v1/parents/me/students', () => {
         cardId: extraCard.id,
         schoolId: school.id,
       });
+      await cardRepo.update(extraCard.id, { studentId: extraStudent.id });
       await walletRepo.save({ studentId: extraStudent.id });
 
       const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
-        .send({ cardCode: extraCard.code });
+        .send({ cardCode: extraCard.code, pin: '1234' });
 
       expect(res.status).toBe(201);
 
@@ -322,16 +327,25 @@ describe('POST /api/v1/parents/me/students', () => {
       const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
-        .send({ cardCode: cardUnassignedNoFields.code });
+        .send({ cardCode: cardUnassignedNoFields.code, pin: '1234' });
 
       expect(res.status).toBe(400);
+    });
+
+    it('should return 401 when PIN is invalid for ACTIVE card', async () => {
+      const res = await request(getServer(app))
+        .post('/api/v1/parents/me/students')
+        .set('Authorization', `Bearer ${parentToken}`)
+        .send({ cardCode: cardWithTwoParents.code, pin: '0000' });
+
+      expect(res.status).toBe(401);
     });
 
     it('should return 409 when student already has 2 parents', async () => {
       const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
-        .send({ cardCode: cardWithTwoParents.code });
+        .send({ cardCode: cardWithTwoParents.code, pin: '1234' });
 
       expect(res.status).toBe(409);
     });
@@ -340,7 +354,7 @@ describe('POST /api/v1/parents/me/students', () => {
       const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
-        .send({ cardCode: alreadyLinkedCard.code });
+        .send({ cardCode: alreadyLinkedCard.code, pin: '1234' });
 
       expect(res.status).toBe(409);
     });
