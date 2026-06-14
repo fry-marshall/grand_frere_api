@@ -379,6 +379,8 @@ export class VendorsService {
       id: vendor.id,
       shopName: vendor.shopName,
       waveNumber: vendor.waveNumber,
+      openingTime: vendor.openingTime,
+      closingTime: vendor.closingTime,
       status: vendor.status,
       schoolId: vendor.schoolId,
       createdAt: vendor.createdAt,

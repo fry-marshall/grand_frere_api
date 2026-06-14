@@ -261,6 +261,19 @@ export class OrdersService {
       0,
     );
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().slice(0, 10);
+
+    const scheduledFor = dto.scheduledFor ?? todayStr;
+    const scheduledDate = new Date(scheduledFor);
+    const dayOfWeek = scheduledDate.getUTCDay();
+    if (scheduledDate < today || dayOfWeek === 0 || dayOfWeek === 6) {
+      throw new BadRequestException(
+        ErrorMessages.ORDERS.INVALID_SCHEDULED_DATE,
+      );
+    }
+
     if (paymentMethod === PaymentMethod.WALLET) {
       const available = wallet.balance - wallet.reserved;
       if (available < totalAmount) {
@@ -279,8 +292,6 @@ export class OrdersService {
         ) {
           throw new BadRequestException(ErrorMessages.CARDS.NOT_ACTIVE);
         }
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
 
         const row = await this.orderRepo
           .createQueryBuilder('o')
@@ -289,11 +300,11 @@ export class OrdersService {
           .andWhere('o.status IN (:...statuses)', {
             statuses: [OrderStatus.PENDING, OrderStatus.VALIDATED],
           })
-          .andWhere('o.createdAt >= :todayStart', { todayStart })
+          .andWhere('o.scheduledFor = :scheduledFor', { scheduledFor })
           .getRawOne<{ total: string }>();
 
-        const spentToday = parseInt(row?.total ?? '0', 10);
-        if (spentToday + totalAmount > card.dailyLimit) {
+        const spentOnDay = parseInt(row?.total ?? '0', 10);
+        if (spentOnDay + totalAmount > card.dailyLimit) {
           throw new BadRequestException(
             ErrorMessages.ORDERS.DAILY_LIMIT_EXCEEDED,
           );
@@ -311,6 +322,7 @@ export class OrdersService {
         paymentMethod,
         totalAmount,
         expiresAt,
+        scheduledFor,
       });
 
       for (const line of dto.items) {
@@ -544,6 +556,7 @@ export class OrdersService {
       paymentMethod: order.paymentMethod,
       totalAmount: order.totalAmount,
       expiresAt: order.expiresAt,
+      scheduledFor: order.scheduledFor,
       createdAt: order.createdAt,
     };
   }

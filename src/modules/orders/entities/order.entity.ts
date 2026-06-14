@@ -50,6 +50,9 @@ export class Order {
   @Column({ type: 'timestamptz' })
   expiresAt: Date;
 
+  @Column({ type: 'date' })
+  scheduledFor: string;
+
   @OneToMany(() => OrderItem, (item) => item.order)
   items: OrderItem[];
 

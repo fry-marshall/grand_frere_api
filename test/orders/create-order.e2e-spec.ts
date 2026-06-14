@@ -347,6 +347,26 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
       expect(res.status).toBe(201);
       expect(res.body.data.totalAmount).toBe(500);
     });
+
+    it('should create an order with a future weekday scheduledFor', async () => {
+      const nextMonday = new Date();
+      nextMonday.setDate(
+        nextMonday.getDate() + ((8 - nextMonday.getDay()) % 7 || 7),
+      );
+      const scheduledFor = nextMonday.toISOString().slice(0, 10);
+
+      const res = await request(getServer(app))
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${vendorToken}`)
+        .send({
+          studentId: student.id,
+          items: [{ itemId: item2.id, quantity: 1 }],
+          scheduledFor,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.scheduledFor).toBe(scheduledFor);
+    });
   });
 
   describe('Failure cases', () => {
@@ -480,6 +500,40 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
       expect(res.status).toBe(400);
 
       await cardRepo.delete({ id: card.id });
+    });
+
+    it('should return 400 when scheduledFor is a weekend', async () => {
+      const nextSunday = new Date();
+      nextSunday.setDate(
+        nextSunday.getDate() + ((7 - nextSunday.getDay()) % 7 || 7),
+      );
+      const scheduledFor = nextSunday.toISOString().slice(0, 10);
+
+      const res = await request(getServer(app))
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${vendorToken}`)
+        .send({
+          studentId: student.id,
+          items: [{ itemId: item1.id, quantity: 1 }],
+          scheduledFor,
+        });
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 400 when scheduledFor is in the past', async () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const scheduledFor = yesterday.toISOString().slice(0, 10);
+
+      const res = await request(getServer(app))
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${vendorToken}`)
+        .send({
+          studentId: student.id,
+          items: [{ itemId: item1.id, quantity: 1 }],
+          scheduledFor,
+        });
+      expect(res.status).toBe(400);
     });
 
     it('should return 400 when card is BLOCKED', async () => {

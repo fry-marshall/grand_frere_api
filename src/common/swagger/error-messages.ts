@@ -59,6 +59,8 @@ export const ErrorMessages = {
     DAILY_LIMIT_EXCEEDED: 'Daily spending limit exceeded',
     INVALID_ITEMS: 'One or more items are invalid or unavailable',
     NOT_PENDING: 'Order is not in pending status',
+    INVALID_SCHEDULED_DATE:
+      'scheduledFor must be a weekday (Mon–Fri) and cannot be in the past',
   },
   WITHDRAWALS: {
     NOT_FOUND: 'Withdrawal not found',

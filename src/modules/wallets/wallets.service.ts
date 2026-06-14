@@ -75,8 +75,7 @@ export class WalletsService {
   }
 
   private async computeSpentToday(studentId: string): Promise<number> {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const todayStr = new Date().toISOString().slice(0, 10);
 
     const result = await this.orderRepo
       .createQueryBuilder('o')
@@ -85,7 +84,7 @@ export class WalletsService {
       .andWhere('o.status IN (:...statuses)', {
         statuses: [OrderStatus.PENDING, OrderStatus.VALIDATED],
       })
-      .andWhere('o.createdAt >= :todayStart', { todayStart })
+      .andWhere('o.scheduledFor = :today', { today: todayStr })
       .getRawOne<{ total: string }>();
 
     return parseInt(result?.total ?? '0', 10);

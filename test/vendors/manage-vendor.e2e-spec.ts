@@ -267,6 +267,17 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
         expect(res.status).toBe(200);
         expect(res.body.data.waveNumber).toBe('+2250707000099');
       });
+
+      it('should update opening and closing hours', async () => {
+        const res = await request(getServer(app))
+          .put(`/api/v1/vendors/${vendor.id}`)
+          .set('Authorization', `Bearer ${ownVendorToken}`)
+          .send({ openingTime: '08:00', closingTime: '17:00' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.openingTime).toBe('08:00');
+        expect(res.body.data.closingTime).toBe('17:00');
+      });
     });
 
     describe('Failure cases', () => {
@@ -284,6 +295,22 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({ shopName: 'Ghost' });
         expect(res.status).toBe(404);
+      });
+
+      it('should return 400 when openingTime format is invalid', async () => {
+        const res = await request(getServer(app))
+          .put(`/api/v1/vendors/${vendor.id}`)
+          .set('Authorization', `Bearer ${ownVendorToken}`)
+          .send({ openingTime: '8h00' });
+        expect(res.status).toBe(400);
+      });
+
+      it('should return 400 when closingTime format is invalid', async () => {
+        const res = await request(getServer(app))
+          .put(`/api/v1/vendors/${vendor.id}`)
+          .set('Authorization', `Bearer ${ownVendorToken}`)
+          .send({ closingTime: '17:00:00' });
+        expect(res.status).toBe(400);
       });
     });
   });

@@ -285,8 +285,10 @@ export class StudentsService {
 
     if (dto.firstName !== undefined) student.user.firstName = dto.firstName;
     if (dto.lastName !== undefined) student.user.lastName = dto.lastName;
+    if (dto.class !== undefined) student.class = dto.class;
 
     await this.userRepo.save(student.user);
+    await this.studentRepo.save(student);
     return this.toDto(student);
   }
 

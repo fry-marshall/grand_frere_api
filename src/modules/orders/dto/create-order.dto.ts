@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsDateString,
   IsEnum,
   IsOptional,
   IsUUID,
@@ -31,4 +32,12 @@ export class CreateOrderDto {
   @IsOptional()
   @IsEnum(PaymentMethod)
   paymentMethod?: PaymentMethod;
+
+  @ApiPropertyOptional({
+    example: '2026-06-16',
+    description: 'Scheduled date for the order (Mon–Fri). Defaults to today.',
+  })
+  @IsOptional()
+  @IsDateString()
+  scheduledFor?: string;
 }

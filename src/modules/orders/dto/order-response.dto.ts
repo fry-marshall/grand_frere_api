@@ -8,5 +8,6 @@ export class OrderResponseDto {
   paymentMethod: PaymentMethod;
   totalAmount: number;
   expiresAt: Date;
+  scheduledFor: string;
   createdAt: Date;
 }

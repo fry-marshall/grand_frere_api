@@ -225,6 +225,16 @@ describe('PUT /api/v1/students/:id', () => {
       expect(res.body.data.user.firstName).toBe('UpdatedByParent');
     });
 
+    it('should update student class', async () => {
+      const res = await request(getServer(app))
+        .put(`/api/v1/students/${student.id}`)
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({ class: 'CM2' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.class).toBe('CM2');
+    });
+
     it('should accept empty body (no-op)', async () => {
       const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
@@ -285,6 +295,15 @@ describe('PUT /api/v1/students/:id', () => {
         .put(`/api/v1/students/${student.id}`)
         .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ firstName: '' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 400 when class is empty string', async () => {
+      const res = await request(getServer(app))
+        .put(`/api/v1/students/${student.id}`)
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({ class: '' });
 
       expect(res.status).toBe(400);
     });

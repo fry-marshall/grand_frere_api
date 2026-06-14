@@ -13,4 +13,10 @@ export class UpdateStudentProfileDto {
   @IsString()
   @IsNotEmpty()
   lastName?: string;
+
+  @ApiPropertyOptional({ example: 'CM1' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  class?: string;
 }

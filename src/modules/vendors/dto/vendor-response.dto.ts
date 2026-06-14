@@ -11,6 +11,12 @@ export class VendorResponseDto {
   @ApiProperty({ nullable: true })
   waveNumber: string;
 
+  @ApiProperty({ nullable: true })
+  openingTime: string;
+
+  @ApiProperty({ nullable: true })
+  closingTime: string;
+
   @ApiProperty({ enum: VendorStatus })
   status: VendorStatus;
 

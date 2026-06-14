@@ -36,6 +36,12 @@ export class Vendor {
   @Column({ nullable: true })
   waveNumber: string;
 
+  @Column({ nullable: true })
+  openingTime: string;
+
+  @Column({ nullable: true })
+  closingTime: string;
+
   @Column({ type: 'enum', enum: VendorStatus, default: VendorStatus.PENDING })
   status: VendorStatus;
 
