@@ -46,6 +46,7 @@ describe('PUT /api/v1/orders/:id/validate', () => {
       status,
       totalAmount: 1000,
       expiresAt: new Date(Date.now() + 900000),
+      scheduledFor: new Date().toISOString().slice(0, 10),
     });
 
   beforeAll(async () => {

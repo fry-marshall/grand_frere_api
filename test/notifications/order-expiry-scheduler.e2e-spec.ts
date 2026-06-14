@@ -128,6 +128,7 @@ describe('OrderExpiryScheduler', () => {
         status: OrderStatus.PENDING,
         totalAmount: 2000,
         expiresAt: pastDate,
+        scheduledFor: new Date().toISOString().slice(0, 10),
       });
 
       await scheduler.expireOrders();
@@ -154,6 +155,7 @@ describe('OrderExpiryScheduler', () => {
         status: OrderStatus.PENDING,
         totalAmount: 1000,
         expiresAt: pastDate,
+        scheduledFor: new Date().toISOString().slice(0, 10),
       });
 
       await scheduler.expireOrders();
@@ -174,6 +176,7 @@ describe('OrderExpiryScheduler', () => {
         status: OrderStatus.PENDING,
         totalAmount: 500,
         expiresAt: futureDate,
+        scheduledFor: new Date().toISOString().slice(0, 10),
       });
 
       await scheduler.expireOrders();
@@ -193,6 +196,7 @@ describe('OrderExpiryScheduler', () => {
         status: OrderStatus.EXPIRED,
         totalAmount: 1000,
         expiresAt: pastDate,
+        scheduledFor: new Date().toISOString().slice(0, 10),
       });
 
       const walletBefore = await walletRepo.findOne({

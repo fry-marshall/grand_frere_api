@@ -247,6 +247,7 @@ describe('GET /api/v1/orders/:id', () => {
       status: OrderStatus.PENDING,
       totalAmount: 1000,
       expiresAt: new Date(Date.now() + 900000),
+      scheduledFor: new Date().toISOString().slice(0, 10),
     });
     await orderItemRepo.save({
       orderId: order.id,

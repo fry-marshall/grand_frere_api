@@ -160,6 +160,7 @@ describe('GET /api/v1/vendors/:id/orders', () => {
       status: OrderStatus.VALIDATED,
       totalAmount: 1500,
       expiresAt: new Date(Date.now() + 3600000),
+      scheduledFor: new Date().toISOString().slice(0, 10),
     });
 
     // Cleanup unused otherVendor variable

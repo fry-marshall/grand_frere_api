@@ -263,9 +263,15 @@ export class OrdersService {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().slice(0, 10);
 
-    const scheduledFor = dto.scheduledFor ?? todayStr;
+    const defaultDate = new Date(today);
+    if (defaultDate.getUTCDay() === 6)
+      defaultDate.setUTCDate(defaultDate.getUTCDate() + 2);
+    else if (defaultDate.getUTCDay() === 0)
+      defaultDate.setUTCDate(defaultDate.getUTCDate() + 1);
+    const defaultDateStr = defaultDate.toISOString().slice(0, 10);
+
+    const scheduledFor = dto.scheduledFor ?? defaultDateStr;
     const scheduledDate = new Date(scheduledFor);
     const dayOfWeek = scheduledDate.getUTCDay();
     if (scheduledDate < today || dayOfWeek === 0 || dayOfWeek === 6) {

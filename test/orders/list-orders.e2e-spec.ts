@@ -214,6 +214,7 @@ describe('GET /api/v1/orders', () => {
       status: OrderStatus.PENDING,
       totalAmount: 500,
       expiresAt: new Date(Date.now() + 900000),
+      scheduledFor: new Date().toISOString().slice(0, 10),
     });
     await orderRepo.save({
       vendorId: vendor.id,
@@ -221,6 +222,7 @@ describe('GET /api/v1/orders', () => {
       status: OrderStatus.VALIDATED,
       totalAmount: 300,
       expiresAt: new Date(Date.now() + 900000),
+      scheduledFor: new Date().toISOString().slice(0, 10),
     });
   });
 

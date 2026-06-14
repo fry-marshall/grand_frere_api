@@ -179,6 +179,7 @@ describe('GET /api/v1/students/:id/orders', () => {
       status: OrderStatus.VALIDATED,
       totalAmount: 750,
       expiresAt: new Date(Date.now() + 3600000),
+      scheduledFor: new Date().toISOString().slice(0, 10),
     });
   });
 

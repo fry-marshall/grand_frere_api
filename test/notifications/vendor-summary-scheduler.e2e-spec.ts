@@ -131,6 +131,7 @@ describe('VendorSummaryScheduler', () => {
       status: OrderStatus.PENDING,
       totalAmount: 3000,
       expiresAt: tomorrow,
+      scheduledFor: new Date().toISOString().slice(0, 10),
     });
     await orderItemRepo.save({
       orderId: order.id,

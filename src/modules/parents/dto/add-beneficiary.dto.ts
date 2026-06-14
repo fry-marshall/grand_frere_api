@@ -1,16 +1,20 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 
 export class AddBeneficiaryDto {
-  @ApiProperty({ example: 'GF-2024-001' })
+  @ApiPropertyOptional({ example: 'GF-2024-001' })
   @IsString()
   @IsNotEmpty()
   cardCode: string;
 
-  @ApiProperty({ description: '4-digit card PIN', example: '1234' })
+  @ApiPropertyOptional({
+    description: '4-digit card PIN (required for UNASSIGNED cards)',
+    example: '1234',
+  })
+  @IsOptional()
   @IsString()
   @Matches(/^\d{4}$/, { message: 'PIN must be exactly 4 digits' })
-  pin: string;
+  pin?: string;
 
   @ApiPropertyOptional({ example: 'Akissi' })
   @IsOptional()

@@ -228,6 +228,7 @@ describe('NotificationsGateway (WebSocket)', () => {
         status: OrderStatus.PENDING,
         totalAmount: 500,
         expiresAt: new Date(Date.now() + 900_000),
+        scheduledFor: new Date().toISOString().slice(0, 10),
       });
       await orderItemRepo.save({
         orderId: savedOrder.id,
@@ -273,6 +274,7 @@ describe('NotificationsGateway (WebSocket)', () => {
         status: OrderStatus.VALIDATED,
         totalAmount: 500,
         expiresAt: new Date(Date.now() + 900_000),
+        scheduledFor: new Date().toISOString().slice(0, 10),
       });
 
       const gateway = app.get(NotificationsGateway);

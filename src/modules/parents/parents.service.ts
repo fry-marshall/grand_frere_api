@@ -242,6 +242,9 @@ export class ParentsService {
           ErrorMessages.AUTH.STUDENT_FIELDS_REQUIRED,
         );
       }
+      if (!dto.pin) {
+        throw new BadRequestException(ErrorMessages.CARDS.PIN_NOT_SET);
+      }
 
       const student = await this.dataSource.transaction(async (manager) => {
         const newUser = await manager.save(User, {
@@ -287,12 +290,12 @@ export class ParentsService {
       };
     }
 
-    if (!card.pinHash) {
-      throw new ConflictException(ErrorMessages.CARDS.PIN_NOT_SET);
-    }
-    const isValid = await bcrypt.compare(dto.pin, card.pinHash);
-    if (!isValid) {
-      throw new UnauthorizedException(ErrorMessages.CARDS.PIN_INVALID);
+    if (card.pinHash) {
+      if (!dto.pin)
+        throw new UnauthorizedException(ErrorMessages.CARDS.PIN_INVALID);
+      const isValid = await bcrypt.compare(dto.pin, card.pinHash);
+      if (!isValid)
+        throw new UnauthorizedException(ErrorMessages.CARDS.PIN_INVALID);
     }
 
     const alreadyLinked = await this.studentParentRepo.findOne({

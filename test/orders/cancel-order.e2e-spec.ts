@@ -54,6 +54,7 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
       status,
       totalAmount: 500,
       expiresAt: new Date(Date.now() + 900000),
+      scheduledFor: new Date().toISOString().slice(0, 10),
     });
 
   beforeAll(async () => {
