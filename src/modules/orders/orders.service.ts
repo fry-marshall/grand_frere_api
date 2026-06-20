@@ -318,7 +318,8 @@ export class OrdersService {
       }
     }
 
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const expiresAt = new Date(scheduledFor);
+    expiresAt.setHours(23, 59, 59, 999);
 
     const order = await this.dataSource.transaction(async (manager) => {
       const newOrder = await manager.save(Order, {
