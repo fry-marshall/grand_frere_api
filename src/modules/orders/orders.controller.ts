@@ -104,6 +104,30 @@ export class OrdersController {
     return this.ordersService.validate(id, currentUser);
   }
 
+  @Put(':id/complete')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.VENDOR, UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary: 'Complete a validated order (cashin / delivery confirmation)',
+  })
+  @ApiSuccessResponse(OrderResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.ORDERS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiBadRequestResponse({
+    description: ErrorMessages.ORDERS.NOT_VALIDATED,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  complete(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.ordersService.complete(id, currentUser);
+  }
+
   @Put(':id/cancel')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)

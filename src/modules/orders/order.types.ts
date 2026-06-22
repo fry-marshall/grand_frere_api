@@ -1,6 +1,7 @@
 export enum OrderStatus {
   PENDING = 'PENDING',
   VALIDATED = 'VALIDATED',
+  COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
   EXPIRED = 'EXPIRED',
 }

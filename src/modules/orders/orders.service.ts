@@ -513,6 +513,37 @@ export class OrdersService {
     return dto;
   }
 
+  async complete(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<OrderResponseDto> {
+    const order = await this.orderRepo.findOne({ where: { id } });
+    if (!order) throw new NotFoundException(ErrorMessages.ORDERS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.VENDOR) {
+      const vendor = await this.vendorRepo.findOne({
+        where: { userId: currentUser.id },
+      });
+      if (!vendor || order.vendorId !== vendor.id)
+        throw new ForbiddenException();
+    }
+
+    if (order.status !== OrderStatus.VALIDATED) {
+      throw new BadRequestException(ErrorMessages.ORDERS.NOT_VALIDATED);
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(Order, order.id, { status: OrderStatus.COMPLETED });
+    });
+
+    const dto = this.toDto({ ...order, status: OrderStatus.COMPLETED });
+    this.emitOrderUpdatedToAffectedUsers(order.studentId, dto).catch((err) =>
+      this.logger.error(`WS emit failed for order ${order.id}`, err.stack),
+    );
+
+    return dto;
+  }
+
   private async emitOrderUpdatedToAffectedUsers(
     studentId: string,
     order: OrderResponseDto,
@@ -534,22 +565,29 @@ export class OrdersService {
 
     this.gateway.emitOrderUpdated(userIds, order);
 
-    const isValidated = order.status === OrderStatus.VALIDATED;
-    const notificationType = isValidated
-      ? NotificationType.ORDER_VALIDATED
-      : NotificationType.ORDER_CANCELLED;
-    const notificationData = {
-      title: isValidated ? 'Commande validée' : 'Commande annulée',
-      body: isValidated
-        ? `Votre commande de ${order.totalAmount} FCFA a été validée.`
-        : `Votre commande de ${order.totalAmount} FCFA a été annulée.`,
-    };
+    let notificationType: NotificationType;
+    let title: string;
+    let body: string;
+
+    if (order.status === OrderStatus.VALIDATED) {
+      notificationType = NotificationType.ORDER_VALIDATED;
+      title = 'Commande validée';
+      body = `Votre commande de ${order.totalAmount} FCFA a été validée.`;
+    } else if (order.status === OrderStatus.COMPLETED) {
+      notificationType = NotificationType.ORDER_COMPLETED;
+      title = 'Commande encaissée';
+      body = `Votre commande de ${order.totalAmount} FCFA a été encaissée.`;
+    } else {
+      notificationType = NotificationType.ORDER_CANCELLED;
+      title = 'Commande annulée';
+      body = `Votre commande de ${order.totalAmount} FCFA a été annulée.`;
+    }
 
     for (const userId of userIds) {
       await this.notificationsService.createNotification(
         notificationType,
         userId,
-        notificationData,
+        { title, body },
       );
     }
   }
