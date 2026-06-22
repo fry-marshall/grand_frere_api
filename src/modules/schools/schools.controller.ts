@@ -83,9 +83,7 @@ export class SchoolsController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'List all schools' })
+  @ApiOperation({ summary: 'List all schools (public)' })
   @ApiSuccessResponse(SchoolResponseDto)
   findAll() {
     return this.schoolsService.findAll();
