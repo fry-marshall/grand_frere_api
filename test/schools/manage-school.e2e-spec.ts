@@ -122,17 +122,18 @@ describe('GET/PUT /api/v1/schools', () => {
       });
     });
 
-    describe('Failure cases', () => {
-      it('should return 401 when no token', async () => {
+    describe('Success cases (public endpoint)', () => {
+      it('should return 200 without token', async () => {
         const res = await request(getServer(app)).get('/api/v1/schools');
-        expect(res.status).toBe(401);
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body.data)).toBe(true);
       });
 
-      it('should return 403 when user is SCHOOL_ADMIN', async () => {
+      it('should return 200 for SCHOOL_ADMIN', async () => {
         const res = await request(getServer(app))
           .get('/api/v1/schools')
           .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-        expect(res.status).toBe(403);
+        expect(res.status).toBe(200);
       });
     });
   });
