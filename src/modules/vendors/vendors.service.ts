@@ -157,7 +157,7 @@ export class VendorsService {
     const { page, limit } = query;
     const [orders, total] = await this.orderRepo.findAndCount({
       where: { vendorId: id },
-      relations: ['student', 'student.user'],
+      relations: ['student', 'student.user', 'items', 'items.item'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
@@ -167,9 +167,16 @@ export class VendorsService {
       data: orders.map((o) => ({
         id: o.id,
         status: o.status,
+        paymentMethod: o.paymentMethod,
         totalAmount: o.totalAmount,
+        scheduledFor: o.scheduledFor,
         expiresAt: o.expiresAt,
         createdAt: o.createdAt,
+        items: o.items.map((i) => ({
+          name: i.item?.name ?? '',
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
         student: {
           id: o.student.id,
           class: o.student.class,

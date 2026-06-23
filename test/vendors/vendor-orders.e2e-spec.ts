@@ -11,7 +11,10 @@ import { Order } from '../../src/modules/orders/entities/order.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
 import { UserRole } from '../../src/modules/users/user.types';
 import { VendorStatus } from '../../src/modules/vendors/vendor.types';
-import { OrderStatus } from '../../src/modules/orders/order.types';
+import {
+  OrderStatus,
+  PaymentMethod,
+} from '../../src/modules/orders/order.types';
 
 describe('GET /api/v1/vendors/:id/orders', () => {
   let app: INestApplication;
@@ -190,7 +193,7 @@ describe('GET /api/v1/vendors/:id/orders', () => {
   });
 
   describe('Success cases', () => {
-    it('should return orders for SUPER_ADMIN', async () => {
+    it('should return orders for SUPER_ADMIN with items, paymentMethod and scheduledFor', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/orders`)
         .set('Authorization', `Bearer ${superAdminToken}`);
@@ -198,8 +201,12 @@ describe('GET /api/v1/vendors/:id/orders', () => {
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.data.data)).toBe(true);
       expect(res.body.data.data.length).toBe(1);
-      expect(res.body.data.data[0].totalAmount).toBe(1500);
-      expect(res.body.data.data[0].student).toBeDefined();
+      const order = res.body.data.data[0];
+      expect(order.totalAmount).toBe(1500);
+      expect(order.student).toBeDefined();
+      expect(order.paymentMethod).toBe(PaymentMethod.WALLET);
+      expect(order.scheduledFor).toBeDefined();
+      expect(Array.isArray(order.items)).toBe(true);
       expect(res.body.data.meta.total).toBe(1);
     });
 
