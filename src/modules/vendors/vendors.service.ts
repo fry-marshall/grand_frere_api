@@ -16,12 +16,14 @@ import { Item } from '../items/entities/item.entity';
 import { Student } from '../students/entities/student.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { VendorStatus } from './vendor.types';
+import { OrderStatus, PaymentMethod } from '../orders/order.types';
 import { ItemStatus } from '../items/item.types';
 import { UserRole } from '../users/user.types';
 import { VendorResponseDto } from './dto/vendor-response.dto';
 import { VendorOrderResponseDto } from './dto/vendor-order-response.dto';
 import { VendorWithdrawalResponseDto } from './dto/vendor-withdrawal-response.dto';
 import { VendorBalanceResponseDto } from './dto/vendor-balance-response.dto';
+import { VendorStatsResponseDto } from './dto/vendor-stats-response.dto';
 import { ItemResponseDto } from '../items/dto/item-response.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
@@ -328,6 +330,62 @@ export class VendorsService {
       status: i.status,
       createdAt: i.createdAt,
     }));
+  }
+
+  async findStats(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<VendorStatsResponseDto> {
+    const vendor = await this.vendorRepo.findOne({ where: { id } });
+    if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
+
+    if (
+      currentUser.role === UserRole.VENDOR &&
+      vendor.userId !== currentUser.id
+    )
+      throw new ForbiddenException();
+
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (admin?.schoolId !== vendor.schoolId) throw new ForbiddenException();
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    const countRow = await this.orderRepo
+      .createQueryBuilder('o')
+      .select('COUNT(*)', 'count')
+      .where('o.vendorId = :id', { id })
+      .andWhere('o.scheduledFor = :today', { today })
+      .andWhere('o.status NOT IN (:...excluded)', {
+        excluded: [OrderStatus.CANCELLED, OrderStatus.EXPIRED],
+      })
+      .getRawOne<{ count: string }>();
+
+    const revenueRow = await this.orderRepo
+      .createQueryBuilder('o')
+      .select('COALESCE(SUM(o.totalAmount), 0)', 'sum')
+      .where('o.vendorId = :id', { id })
+      .andWhere('o.scheduledFor = :today', { today })
+      .andWhere('o.status = :status', { status: OrderStatus.COMPLETED })
+      .getRawOne<{ sum: string }>();
+
+    const cashRow = await this.orderRepo
+      .createQueryBuilder('o')
+      .select('COALESCE(SUM(o.totalAmount), 0)', 'sum')
+      .where('o.vendorId = :id', { id })
+      .andWhere('o.scheduledFor = :today', { today })
+      .andWhere('o.status = :status', { status: OrderStatus.VALIDATED })
+      .andWhere('o.paymentMethod = :method', { method: PaymentMethod.CASH })
+      .getRawOne<{ sum: string }>();
+
+    return {
+      todayOrderCount: parseInt(countRow?.count ?? '0', 10),
+      todayRevenue: parseInt(revenueRow?.sum ?? '0', 10),
+      cashToCollect: parseInt(cashRow?.sum ?? '0', 10),
+    };
   }
 
   async approve(id: string): Promise<VendorResponseDto> {
