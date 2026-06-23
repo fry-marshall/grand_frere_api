@@ -56,6 +56,27 @@ export class OrdersController {
     return this.ordersService.findAll(currentUser, query);
   }
 
+  @Get('by-card')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.VENDOR)
+  @ApiOperation({
+    summary:
+      'Find the VALIDATED order for a student by card code (cashin scan)',
+  })
+  @ApiSuccessResponse(OrderDetailResponseDto)
+  @ApiNotFoundResponse({
+    description: `${ErrorMessages.CARDS.NOT_FOUND} | ${ErrorMessages.STUDENTS.NOT_FOUND} | ${ErrorMessages.ORDERS.NOT_FOUND}`,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findByCard(
+    @Query('cardCode') cardCode: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.ordersService.findByCard(cardCode, currentUser);
+  }
+
   @Get(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)

@@ -611,6 +611,69 @@ export class OrdersService {
     };
   }
 
+  async findByCard(
+    cardCode: string,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<OrderDetailResponseDto> {
+    const vendor = await this.vendorRepo.findOne({
+      where: { userId: currentUser.id },
+    });
+    if (!vendor) throw new ForbiddenException();
+
+    const card = await this.cardRepo.findOne({ where: { code: cardCode } });
+    if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
+
+    const student = await this.studentRepo.findOne({
+      where: { cardId: card.id },
+    });
+    if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
+
+    const order = await this.orderRepo.findOne({
+      where: {
+        studentId: student.id,
+        vendorId: vendor.id,
+        status: OrderStatus.VALIDATED,
+      },
+      relations: ['items', 'items.item', 'vendor', 'student', 'student.user'],
+      order: { createdAt: 'DESC' },
+    });
+    if (!order) throw new NotFoundException(ErrorMessages.ORDERS.NOT_FOUND);
+
+    return {
+      id: order.id,
+      studentId: order.studentId,
+      vendorId: order.vendorId,
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      totalAmount: order.totalAmount,
+      shortCode: order.shortCode ?? null,
+      expiresAt: order.expiresAt,
+      createdAt: order.createdAt,
+      vendor: order.vendor
+        ? {
+            id: order.vendor.id,
+            shopName: order.vendor.shopName,
+            waveNumber: order.vendor.waveNumber,
+          }
+        : undefined,
+      student: order.student?.user
+        ? {
+            user: {
+              firstName: order.student.user.firstName,
+              lastName: order.student.user.lastName,
+            },
+          }
+        : undefined,
+      items: order.items.map((i) => ({
+        id: i.id,
+        itemId: i.itemId,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        item: i.item ? { name: i.item.name } : undefined,
+      })),
+    };
+  }
+
   private async generateShortCode(
     vendorId: string,
     scheduledFor: string,
