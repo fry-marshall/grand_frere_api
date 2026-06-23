@@ -7,6 +7,7 @@ export class OrderResponseDto {
   status: OrderStatus;
   paymentMethod: PaymentMethod;
   totalAmount: number;
+  shortCode: string | null;
   expiresAt: Date;
   scheduledFor: string;
   createdAt: Date;

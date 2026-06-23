@@ -15,6 +15,7 @@ export class OrderDetailResponseDto {
   status: OrderStatus;
   paymentMethod: PaymentMethod;
   totalAmount: number;
+  shortCode: string | null;
   expiresAt: Date;
   createdAt: Date;
   vendor?: { id: string; shopName: string; waveNumber: string };

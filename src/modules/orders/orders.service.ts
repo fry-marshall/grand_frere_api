@@ -175,6 +175,7 @@ export class OrdersService {
       status: order.status,
       paymentMethod: order.paymentMethod,
       totalAmount: order.totalAmount,
+      shortCode: order.shortCode ?? null,
       expiresAt: order.expiresAt,
       createdAt: order.createdAt,
       vendor: order.vendor
@@ -321,6 +322,8 @@ export class OrdersService {
     const expiresAt = new Date(scheduledFor);
     expiresAt.setHours(23, 59, 59, 999);
 
+    const shortCode = await this.generateShortCode(vendorId, scheduledFor);
+
     const order = await this.dataSource.transaction(async (manager) => {
       const newOrder = await manager.save(Order, {
         vendorId,
@@ -328,6 +331,7 @@ export class OrdersService {
         status: OrderStatus.PENDING,
         paymentMethod,
         totalAmount,
+        shortCode,
         expiresAt,
         scheduledFor,
       });
@@ -600,9 +604,24 @@ export class OrdersService {
       status: order.status,
       paymentMethod: order.paymentMethod,
       totalAmount: order.totalAmount,
+      shortCode: order.shortCode ?? null,
       expiresAt: order.expiresAt,
       scheduledFor: order.scheduledFor,
       createdAt: order.createdAt,
     };
+  }
+
+  private async generateShortCode(
+    vendorId: string,
+    scheduledFor: string,
+  ): Promise<string> {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const code = String(Math.floor(1000 + Math.random() * 9000));
+      const existing = await this.orderRepo.findOne({
+        where: { vendorId, scheduledFor, shortCode: code },
+      });
+      if (!existing) return code;
+    }
+    return String(Date.now() % 10000).padStart(4, '0');
   }
 }

@@ -25,6 +25,9 @@ export class VendorOrderResponseDto {
   @ApiProperty()
   totalAmount: number;
 
+  @ApiProperty({ nullable: true })
+  shortCode: string | null;
+
   @ApiProperty()
   scheduledFor: string;
 

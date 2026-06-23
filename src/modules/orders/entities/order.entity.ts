@@ -37,6 +37,9 @@ export class Order {
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;
 
+  @Column({ type: 'char', length: 4, nullable: true })
+  shortCode: string | null;
+
   @Column({
     type: 'enum',
     enum: PaymentMethod,

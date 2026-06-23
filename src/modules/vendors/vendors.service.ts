@@ -172,6 +172,7 @@ export class VendorsService {
         scheduledFor: o.scheduledFor,
         expiresAt: o.expiresAt,
         createdAt: o.createdAt,
+        shortCode: o.shortCode ?? null,
         items: o.items.map((i) => ({
           name: i.item?.name ?? '',
           quantity: i.quantity,
