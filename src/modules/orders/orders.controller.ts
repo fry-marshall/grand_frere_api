@@ -77,6 +77,27 @@ export class OrdersController {
     return this.ordersService.findByCard(cardCode, currentUser);
   }
 
+  @Get('by-code')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.VENDOR)
+  @ApiOperation({
+    summary:
+      'Find the VALIDATED order by 4-digit short code (cashin manual entry)',
+  })
+  @ApiSuccessResponse(OrderDetailResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.ORDERS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findByCode(
+    @Query('code') code: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.ordersService.findByCode(code, currentUser);
+  }
+
   @Get(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
