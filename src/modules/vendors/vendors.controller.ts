@@ -55,6 +55,19 @@ export class VendorsController {
     return this.vendorsService.findAll(currentUser, query);
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.VENDOR)
+  @ApiOperation({ summary: 'Get current vendor profile' })
+  @ApiSuccessResponse(VendorResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.VENDORS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  getMe(@CurrentUser() currentUser: { id: string; role: UserRole }) {
+    return this.vendorsService.findMe(currentUser.id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.VENDOR)

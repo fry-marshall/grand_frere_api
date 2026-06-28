@@ -80,6 +80,15 @@ export class VendorsService {
     };
   }
 
+  async findMe(userId: string): Promise<VendorResponseDto> {
+    const vendor = await this.vendorRepo.findOne({
+      where: { userId },
+      relations: ['user'],
+    });
+    if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
+    return this.toDto(vendor);
+  }
+
   async findOne(
     id: string,
     currentUser: { id: string; role: UserRole },

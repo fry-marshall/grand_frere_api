@@ -192,6 +192,40 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
     });
   });
 
+  describe('GET /vendors/me', () => {
+    describe('Success cases', () => {
+      it('should return own vendor profile for VENDOR', async () => {
+        const res = await request(getServer(app))
+          .get('/api/v1/vendors/me')
+          .set('Authorization', `Bearer ${ownVendorToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.id).toBe(vendor.id);
+      });
+    });
+
+    describe('Failure cases', () => {
+      it('should return 401 when no token', async () => {
+        const res = await request(getServer(app)).get('/api/v1/vendors/me');
+        expect(res.status).toBe(401);
+      });
+
+      it('should return 403 when user is SUPER_ADMIN', async () => {
+        const res = await request(getServer(app))
+          .get('/api/v1/vendors/me')
+          .set('Authorization', `Bearer ${superAdminToken}`);
+        expect(res.status).toBe(403);
+      });
+
+      it('should return 403 when user is SCHOOL_ADMIN', async () => {
+        const res = await request(getServer(app))
+          .get('/api/v1/vendors/me')
+          .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+        expect(res.status).toBe(403);
+      });
+    });
+  });
+
   describe('GET /vendors/:id', () => {
     describe('Success cases', () => {
       it('should return vendor for SUPER_ADMIN', async () => {
