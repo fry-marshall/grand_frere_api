@@ -8,11 +8,17 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
+  UseFilters,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiConflictResponse,
+  ApiConsumes,
   ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -29,6 +35,12 @@ import { VendorStatsResponseDto } from './dto/vendor-stats-response.dto';
 import { ItemResponseDto } from '../items/dto/item-response.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import {
+  FILE_CONFIGS,
+  createMulterOptions,
+} from '../../common/multer/multer.config';
+import { FileValidationPipe } from '../../common/multer/file-validation.pipe';
+import { MulterExceptionFilter } from '../../common/multer/multer-exception.filter';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/decorators/role.decorator';
@@ -101,6 +113,37 @@ export class VendorsController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.vendorsService.update(id, dto, currentUser);
+  }
+
+  @Put(':id/photo')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.VENDOR)
+  @UseInterceptors(
+    FileInterceptor('file', createMulterOptions(FILE_CONFIGS.VENDOR_PHOTO)),
+  )
+  @UseFilters(MulterExceptionFilter)
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: "Upload or replace vendor's profile photo" })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
+  @ApiSuccessResponse(VendorResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.VENDORS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  updatePhoto(
+    @Param('id') id: string,
+    @UploadedFile(new FileValidationPipe({ required: true }))
+    file: Express.Multer.File,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.vendorsService.updatePhoto(id, file, currentUser);
   }
 
   @Delete(':id')

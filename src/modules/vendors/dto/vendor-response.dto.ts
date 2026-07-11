@@ -17,6 +17,9 @@ export class VendorResponseDto {
   @ApiProperty({ nullable: true })
   closingTime: string;
 
+  @ApiProperty({ nullable: true })
+  photoUrl: string;
+
   @ApiProperty({ enum: VendorStatus })
   status: VendorStatus;
 

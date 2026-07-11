@@ -1,12 +1,15 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import type { IStorageService } from '../../common/storage/storage.interface';
+import { STORAGE_SERVICE } from '../../common/storage/storage.interface';
 import { User } from '../users/entities/user.entity';
 import { Vendor } from './entities/vendor.entity';
 import { Order } from '../orders/entities/order.entity';
@@ -49,6 +52,8 @@ export class VendorsService {
     @InjectRepository(Parent)
     private readonly parentRepo: Repository<Parent>,
     private readonly notificationsService: NotificationsService,
+    @Inject(STORAGE_SERVICE)
+    private readonly storageService: IStorageService,
   ) {}
 
   async findAll(
@@ -397,6 +402,41 @@ export class VendorsService {
     };
   }
 
+  async updatePhoto(
+    id: string,
+    file: Express.Multer.File,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<VendorResponseDto> {
+    const vendor = await this.vendorRepo.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+    if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
+
+    if (
+      currentUser.role === UserRole.VENDOR &&
+      vendor.userId !== currentUser.id
+    ) {
+      throw new ForbiddenException();
+    }
+
+    if (vendor.photoUrl) {
+      const oldKey = vendor.photoUrl.split('/').slice(-2).join('/');
+      await this.storageService.deleteFile(oldKey).catch(() => undefined);
+    }
+
+    const ext = file.mimetype.split('/')[1];
+    const key = `vendors/${id}/${Date.now()}.${ext}`;
+    const photoUrl = await this.storageService.uploadBuffer(
+      file.buffer,
+      key,
+      file.mimetype,
+    );
+
+    await this.vendorRepo.update(id, { photoUrl });
+    return this.toDto({ ...vendor, photoUrl });
+  }
+
   async approve(id: string): Promise<VendorResponseDto> {
     const vendor = await this.vendorRepo.findOne({
       where: { id },
@@ -456,6 +496,7 @@ export class VendorsService {
       waveNumber: vendor.waveNumber,
       openingTime: vendor.openingTime,
       closingTime: vendor.closingTime,
+      photoUrl: vendor.photoUrl,
       status: vendor.status,
       schoolId: vendor.schoolId,
       createdAt: vendor.createdAt,

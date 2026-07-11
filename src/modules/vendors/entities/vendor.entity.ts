@@ -42,6 +42,9 @@ export class Vendor {
   @Column({ nullable: true })
   closingTime: string;
 
+  @Column({ nullable: true })
+  photoUrl: string;
+
   @Column({ type: 'enum', enum: VendorStatus, default: VendorStatus.PENDING })
   status: VendorStatus;
 
