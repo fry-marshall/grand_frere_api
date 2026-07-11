@@ -7,6 +7,7 @@ export class NotificationResponseDto {
   body: string;
   type: NotificationType;
   data: Record<string, unknown> | null;
+  orderId: string | null;
   isRead: boolean;
   createdAt: Date;
 }

@@ -35,6 +35,10 @@ export class Notification {
   @Column({ type: 'jsonb', nullable: true })
   data: Record<string, any>;
 
+  @Index()
+  @Column({ nullable: true })
+  orderId: string;
+
   @Column({ default: false })
   isRead: boolean;
 

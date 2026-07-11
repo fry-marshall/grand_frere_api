@@ -95,6 +95,7 @@ export class OrderExpiryScheduler {
     const data = {
       title: 'Commande expirée',
       body: `Votre commande de ${order.totalAmount} FCFA n'a pas été récupérée.`,
+      orderId: order.id,
     };
 
     await this.notificationsService.createNotification(

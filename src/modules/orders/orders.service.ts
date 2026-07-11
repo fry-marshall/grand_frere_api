@@ -370,7 +370,7 @@ export class OrdersService {
       .createNotification(NotificationType.ORDER_RECEIVED, vendor.userId, {
         title: 'Nouvelle commande',
         body: `Vous avez reçu une nouvelle commande de ${order.totalAmount} FCFA.`,
-        data: { orderId: order.id },
+        orderId: order.id,
       })
       .catch((err) =>
         this.logger.error(
@@ -606,7 +606,7 @@ export class OrdersService {
       await this.notificationsService.createNotification(
         notificationType,
         userId,
-        { title, body },
+        { title, body, orderId: order.id },
       );
     }
   }

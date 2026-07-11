@@ -35,6 +35,7 @@ export class NotificationsService {
         body: data.body,
         type,
         data: data.data ?? undefined,
+        orderId: data.orderId ?? undefined,
       });
       await this.sender.sendNotification(userId, data, type);
     } catch (error) {
@@ -90,6 +91,7 @@ export class NotificationsService {
       body: n.body,
       type: n.type,
       data: n.data ?? null,
+      orderId: n.orderId ?? null,
       isRead: n.isRead,
       createdAt: n.createdAt,
     };

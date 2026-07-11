@@ -394,7 +394,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
           },
         });
         notification = notifications.find(
-          (n) => n.data?.orderId === res.body.data.id,
+          (n) => n.orderId === res.body.data.id,
         );
         if (!notification) await new Promise((r) => setTimeout(r, 100));
       }

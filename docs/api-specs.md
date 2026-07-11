@@ -2474,7 +2474,8 @@ Liste les notifications de l'utilisateur connecté.
         "title": "Commande encaissée",
         "body": "Votre commande de 3500 FCFA a été encaissée.",
         "type": "ORDER_COMPLETED",
-        "data": { "orderId": "uuid" },
+        "data": null,
+        "orderId": "uuid",
         "isRead": false,
         "createdAt": "2026-06-23T10:00:00.000Z"
       }
