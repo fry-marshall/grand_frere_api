@@ -204,6 +204,7 @@ Exemples valides : `+22501XXXXXXXX`, `+22505XXXXXXXX`, `+22507XXXXXXXX`
 
 | Valeur | Description |
 |---|---|
+| `ORDER_RECEIVED` | Nouvelle commande reçue (vendeur) |
 | `ORDER_VALIDATED` | Commande validée par le vendeur |
 | `ORDER_COMPLETED` | Commande encaissée / livrée |
 | `ORDER_CANCELLED` | Commande annulée |
@@ -2049,6 +2050,7 @@ Crée une commande pour un élève.
 - Un `shortCode` à 4 chiffres (1000–9999) est généré, unique par vendeur + jour (`scheduledFor`).
 - Si `paymentMethod = WALLET` : `wallet.reserved` est incrémenté du montant total et une transaction `RESERVE` est créée.
 - Un event WebSocket `order.created` est émis aux sockets du vendeur.
+- Une notification `ORDER_RECEIVED` est créée pour le vendeur.
 
 **Edge cases détaillés**
 
@@ -2062,7 +2064,7 @@ Crée une commande pour un élève.
 
 #### `PUT /orders/:id/validate`
 
-Valide une commande en attente et crédite le wallet vendeur.
+Valide une commande en attente.
 
 **Rôles** : `VENDOR` (vendeur de la commande), `SUPER_ADMIN`  
 **Params** : `id`
@@ -2084,9 +2086,10 @@ Valide une commande en attente et crédite le wallet vendeur.
   - `wallet.balance` décrédité du montant total
   - `wallet.reserved` décrémenté du montant total
   - Transaction `DEBIT` créée sur le wallet élève
-  - `vendorWallet.balance` crédité du montant total (ou wallet vendeur créé si inexistant)
 - Events WebSocket `order.updated` émis aux userId de l'élève et de ses parents
 - Notifications `ORDER_VALIDATED` créées pour l'élève et ses parents
+
+> Le `vendorWallet` n'est **pas** encore crédité à cette étape — le crédit n'intervient qu'à l'encaissement (`PUT /orders/:id/complete`), pour ne pas rémunérer le vendeur avant la remise effective de la commande.
 
 ---
 
@@ -2107,9 +2110,10 @@ Confirme la livraison / encaissement d'une commande validée. État terminal pos
 | `403` | Access denied |
 | `404` | `Order not found` |
 
-**Side effects**
+**Side effects (dans une transaction DB atomique)**
 
-- Le statut `COMPLETED` est écrit dans une transaction DB.
+- Le statut `COMPLETED` est écrit.
+- Si `paymentMethod = WALLET` : `vendorWallet.balance` crédité du montant total (ou wallet vendeur créé si inexistant).
 - Events WebSocket `order.updated` émis aux userId de l'élève et de ses parents.
 - Notifications `ORDER_COMPLETED` créées pour l'élève et ses parents.
 

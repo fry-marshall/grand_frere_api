@@ -14,12 +14,14 @@ import { Wallet } from '../../src/modules/wallets/entities/wallet.entity';
 import { Order } from '../../src/modules/orders/entities/order.entity';
 import { Transaction } from '../../src/modules/wallets/entities/transaction.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
+import { Notification } from '../../src/modules/notifications/entities/notification.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
 import { UserRole } from '../../src/modules/users/user.types';
 import { VendorStatus } from '../../src/modules/vendors/vendor.types';
 import { ItemStatus } from '../../src/modules/items/item.types';
 import { CardStatus } from '../../src/modules/cards/card.types';
 import { OrderStatus } from '../../src/modules/orders/order.types';
+import { NotificationType } from '../../src/modules/notifications/notification.types';
 
 describe('POST /api/v1/orders/vendor/:vendorId', () => {
   let app: INestApplication;
@@ -34,6 +36,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
   let orderRepo: Repository<Order>;
   let transactionRepo: Repository<Transaction>;
   let cardRepo: Repository<Card>;
+  let notificationRepo: Repository<Notification>;
   let jwtService: JwtService;
 
   let school: School;
@@ -68,6 +71,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
     orderRepo = ds.getRepository(Order);
     transactionRepo = ds.getRepository(Transaction);
     cardRepo = ds.getRepository(Card);
+    notificationRepo = ds.getRepository(Notification);
     jwtService = moduleRef.get(JwtService, { strict: false });
 
     for (const sigle of ['TS-ORD', 'TS-ORD2']) {
@@ -251,6 +255,7 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
   });
 
   afterAll(async () => {
+    await notificationRepo.delete({ userId: vendor.userId });
     await transactionRepo.delete({ walletId: wallet.id });
     await orderRepo.delete({ studentId: student.id });
     await orderRepo.delete({ studentId: unlinkedStudent.id });
@@ -366,6 +371,23 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
 
       expect(res.status).toBe(201);
       expect(res.body.data.scheduledFor).toBe(scheduledFor);
+    });
+
+    it('should create an ORDER_RECEIVED notification for the vendor', async () => {
+      const res = await request(getServer(app))
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${vendorToken}`)
+        .send({
+          studentId: student.id,
+          items: [{ itemId: item1.id, quantity: 1 }],
+        });
+
+      expect(res.status).toBe(201);
+
+      const notifications = await notificationRepo.find({
+        where: { userId: vendor.userId, type: NotificationType.ORDER_RECEIVED },
+      });
+      expect(notifications.length).toBeGreaterThanOrEqual(1);
     });
   });
 

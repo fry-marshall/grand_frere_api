@@ -366,6 +366,18 @@ export class OrdersService {
 
     this.gateway.emitOrderCreated(vendorId, this.toDto(order));
 
+    this.notificationsService
+      .createNotification(NotificationType.ORDER_RECEIVED, vendor.userId, {
+        title: 'Nouvelle commande',
+        body: `Vous avez reçu une nouvelle commande de ${order.totalAmount} FCFA.`,
+      })
+      .catch((err) =>
+        this.logger.error(
+          `Notification failed for order ${order.id}`,
+          err.stack,
+        ),
+      );
+
     return this.toDto(order);
   }
 
