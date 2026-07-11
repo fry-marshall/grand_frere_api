@@ -1437,6 +1437,44 @@ Liste les vendeurs avec pagination.
 
 ---
 
+#### `GET /vendors/me`
+
+Profil du vendeur connecté.
+
+**Rôles** : `VENDOR`
+
+**Réponse 200**
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "shopName": "Kiosque Amara",
+    "waveNumber": "+2250700000000",
+    "openingTime": "08:00",
+    "closingTime": "17:00",
+    "status": "ACTIVE",
+    "schoolId": "uuid",
+    "createdAt": "2026-06-28T10:00:00.000Z",
+    "user": {
+      "id": "uuid",
+      "firstName": "Amara",
+      "lastName": "Touré",
+      "phone": "+22501000000"
+    }
+  },
+  "statusCode": 200
+}
+```
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `404` | `Vendor not found` |
+
+---
+
 #### `GET /vendors/:id`
 
 Récupère un vendeur par son id.
@@ -2676,6 +2714,17 @@ solde disponible = wallet.balance - wallet.reserved
 - **Push notification (FCM)** : envoyée en arrière-plan, indépendante de la connexion
 - Les deux canaux sont utilisés en parallèle pour `ORDER_VALIDATED`, `ORDER_COMPLETED` et `ORDER_CANCELLED`
 - Les side effects de notification n'utilisent jamais `await` dans le chemin critique (fire-and-forget avec `.catch(logger.error)`)
+
+**Payload du message FCM** : en plus de `notification: { title, body }`, un bloc `data` (toutes les valeurs en `string`, contrainte FCM) est envoyé :
+
+```json
+{
+  "type": "ORDER_RECEIVED",
+  "orderId": "uuid"
+}
+```
+
+`orderId` est omis si la notification n'est pas liée à une commande (ex. `VENDOR_APPROVED`).
 
 ### Pagination
 

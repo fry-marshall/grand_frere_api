@@ -34,7 +34,12 @@ export class NotificationFirebase implements OnModuleInit {
     });
   }
 
-  async send(userId: string, title: string, body: string): Promise<void> {
+  async send(
+    userId: string,
+    title: string,
+    body: string,
+    data?: Record<string, string>,
+  ): Promise<void> {
     if (!this.firebaseApp) return;
 
     const user = await this.userRepo.findOne({ where: { id: userId } });
@@ -44,6 +49,7 @@ export class NotificationFirebase implements OnModuleInit {
       await this.firebaseApp.messaging().send({
         token: user.fcmToken,
         notification: { title, body },
+        data,
       });
     } catch (err) {
       const code = (err as { code?: string }).code;

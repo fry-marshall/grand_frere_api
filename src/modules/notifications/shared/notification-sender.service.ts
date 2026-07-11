@@ -13,8 +13,11 @@ export class NotificationSenderService implements INotificationSender {
   async sendNotification(
     userId: string,
     data: NotificationData,
-    _type: NotificationType,
+    type: NotificationType,
   ): Promise<void> {
-    await this.firebase.send(userId, data.title, data.body);
+    await this.firebase.send(userId, data.title, data.body, {
+      type,
+      ...(data.orderId ? { orderId: data.orderId } : {}),
+    });
   }
 }
