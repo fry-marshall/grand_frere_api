@@ -384,10 +384,21 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
 
       expect(res.status).toBe(201);
 
-      const notifications = await notificationRepo.find({
-        where: { userId: vendor.userId, type: NotificationType.ORDER_RECEIVED },
-      });
-      expect(notifications.length).toBeGreaterThanOrEqual(1);
+      // Notification creation is fire-and-forget, poll briefly for it to land.
+      let notification: Notification | undefined;
+      for (let i = 0; i < 10 && !notification; i++) {
+        const notifications = await notificationRepo.find({
+          where: {
+            userId: vendor.userId,
+            type: NotificationType.ORDER_RECEIVED,
+          },
+        });
+        notification = notifications.find(
+          (n) => n.data?.orderId === res.body.data.id,
+        );
+        if (!notification) await new Promise((r) => setTimeout(r, 100));
+      }
+      expect(notification).toBeDefined();
     });
   });
 

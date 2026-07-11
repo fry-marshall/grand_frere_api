@@ -34,6 +34,7 @@ export class NotificationsService {
         title: data.title,
         body: data.body,
         type,
+        data: data.data ?? undefined,
       });
       await this.sender.sendNotification(userId, data, type);
     } catch (error) {
