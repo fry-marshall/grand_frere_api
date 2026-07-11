@@ -208,7 +208,7 @@ describe('PUT /api/v1/orders/:id/complete', () => {
   });
 
   describe('Success cases', () => {
-    it('should complete a validated order as VENDOR', async () => {
+    it('should complete a validated order as VENDOR and credit vendor wallet', async () => {
       const order = await makeOrder(OrderStatus.VALIDATED);
 
       const res = await request(getServer(app))
@@ -217,6 +217,11 @@ describe('PUT /api/v1/orders/:id/complete', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe(OrderStatus.COMPLETED);
+
+      const vendorWallet = await vendorWalletRepo.findOne({
+        where: { vendorId: vendor.id },
+      });
+      expect(vendorWallet!.balance).toBe(1000);
     });
 
     it('should complete a validated order as SUPER_ADMIN', async () => {

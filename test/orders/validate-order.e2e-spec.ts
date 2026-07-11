@@ -208,7 +208,7 @@ describe('PUT /api/v1/orders/:id/validate', () => {
   });
 
   describe('Success cases', () => {
-    it('should validate an order as VENDOR and credit vendor wallet', async () => {
+    it('should validate an order as VENDOR and debit student wallet without crediting vendor wallet yet', async () => {
       const order = await makeOrder();
 
       const res = await request(getServer(app))
@@ -227,7 +227,7 @@ describe('PUT /api/v1/orders/:id/validate', () => {
       const vendorWallet = await vendorWalletRepo.findOne({
         where: { vendorId: vendor.id },
       });
-      expect(vendorWallet!.balance).toBe(1000);
+      expect(vendorWallet).toBeNull();
 
       const tx = await transactionRepo.findOne({
         where: { orderId: order.id },

@@ -393,10 +393,6 @@ export class OrdersService {
     });
     if (!wallet) throw new NotFoundException(ErrorMessages.WALLETS.NOT_FOUND);
 
-    let vendorWallet = await this.vendorWalletRepo.findOne({
-      where: { vendorId: order.vendorId },
-    });
-
     const updated = await this.dataSource.transaction(async (manager) => {
       await manager.update(Order, order.id, { status: OrderStatus.VALIDATED });
 
@@ -417,17 +413,6 @@ export class OrdersService {
           balanceAfter,
           orderId: order.id,
         });
-
-        if (vendorWallet) {
-          await manager.update(VendorWallet, vendorWallet.id, {
-            balance: vendorWallet.balance + order.totalAmount,
-          });
-        } else {
-          vendorWallet = await manager.save(VendorWallet, {
-            vendorId: order.vendorId,
-            balance: order.totalAmount,
-          });
-        }
       }
 
       return { ...order, status: OrderStatus.VALIDATED };
@@ -536,8 +521,25 @@ export class OrdersService {
       throw new BadRequestException(ErrorMessages.ORDERS.NOT_VALIDATED);
     }
 
+    let vendorWallet = await this.vendorWalletRepo.findOne({
+      where: { vendorId: order.vendorId },
+    });
+
     await this.dataSource.transaction(async (manager) => {
       await manager.update(Order, order.id, { status: OrderStatus.COMPLETED });
+
+      if (order.paymentMethod === PaymentMethod.WALLET) {
+        if (vendorWallet) {
+          await manager.update(VendorWallet, vendorWallet.id, {
+            balance: vendorWallet.balance + order.totalAmount,
+          });
+        } else {
+          vendorWallet = await manager.save(VendorWallet, {
+            vendorId: order.vendorId,
+            balance: order.totalAmount,
+          });
+        }
+      }
     });
 
     const dto = this.toDto({ ...order, status: OrderStatus.COMPLETED });
