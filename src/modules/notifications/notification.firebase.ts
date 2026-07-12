@@ -22,19 +22,17 @@ export class NotificationFirebase implements OnModuleInit {
       return;
     }
 
-    const projectId = this.configService.get<string>('FIREBASE_PROJECT_ID');
-    const privateKey = this.configService.get<string>('FIREBASE_PRIVATE_KEY');
-    const clientEmail = this.configService.get<string>('FIREBASE_CLIENT_EMAIL');
-
-    this.logger.log(
-      `Firebase env check — FIREBASE_PROJECT_ID: ${projectId ? 'set' : 'MISSING'}, ` +
-        `FIREBASE_PRIVATE_KEY: ${privateKey ? 'set' : 'MISSING'}, ` +
-        `FIREBASE_CLIENT_EMAIL: ${clientEmail ? 'set' : 'MISSING'}`,
+    const serviceAccountJson = this.configService.get<string>(
+      'FIREBASE_SERVICE_ACCOUNT',
     );
 
-    if (!projectId || !privateKey || !clientEmail) {
+    this.logger.log(
+      `Firebase env check — FIREBASE_SERVICE_ACCOUNT: ${serviceAccountJson ? 'set' : 'MISSING'}`,
+    );
+
+    if (!serviceAccountJson) {
       this.logger.error(
-        'One or more FIREBASE_* env vars are missing — push notifications will not work',
+        'FIREBASE_SERVICE_ACCOUNT env var is missing — push notifications will not work',
       );
     }
 
@@ -45,14 +43,11 @@ export class NotificationFirebase implements OnModuleInit {
     }
 
     try {
+      const serviceAccount = JSON.parse(
+        this.configService.getOrThrow<string>('FIREBASE_SERVICE_ACCOUNT'),
+      ) as admin.ServiceAccount;
       this.firebaseApp = admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: this.configService.getOrThrow('FIREBASE_PROJECT_ID'),
-          privateKey: this.configService
-            .getOrThrow<string>('FIREBASE_PRIVATE_KEY')
-            .replace(/\\n/g, '\n'),
-          clientEmail: this.configService.getOrThrow('FIREBASE_CLIENT_EMAIL'),
-        }),
+        credential: admin.credential.cert(serviceAccount),
       });
       this.logger.log('Firebase app initialized successfully');
     } catch (err) {
