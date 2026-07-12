@@ -46,6 +46,9 @@ export class NotificationFirebase implements OnModuleInit {
       const serviceAccount = JSON.parse(
         this.configService.getOrThrow<string>('FIREBASE_SERVICE_ACCOUNT'),
       ) as admin.ServiceAccount;
+      console.log(serviceAccount);
+      this.logger.log('serviceAccount', serviceAccount);
+
       this.firebaseApp = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
