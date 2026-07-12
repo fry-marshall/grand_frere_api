@@ -23,13 +23,7 @@ export const envValidationSchema = Joi.object({
   DO_SPACES_SECRET: prodRequired,
   DO_SPACES_BUCKET: prodRequired,
 
-  FIREBASE_PROJECT_ID: prodRequired,
-  FIREBASE_PRIVATE_KEY: prodRequired,
-  FIREBASE_CLIENT_EMAIL: Joi.string().email().allow('').when('NODE_ENV', {
-    is: 'prod',
-    then: Joi.required(),
-    otherwise: optionalString,
-  }),
+  FIREBASE_SERVICE_ACCOUNT: prodRequired,
 
   MAIL_HOST: optionalString,
   MAIL_PORT: Joi.number().default(587),
