@@ -11,6 +11,9 @@ export class SchoolVendorResponseDto {
   @ApiProperty({ nullable: true })
   waveNumber: string;
 
+  @ApiProperty({ nullable: true })
+  photoUrl: string;
+
   @ApiProperty({ enum: VendorStatus })
   status: VendorStatus;
 

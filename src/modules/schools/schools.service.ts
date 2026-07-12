@@ -199,6 +199,7 @@ export class SchoolsService {
         id: v.id,
         shopName: v.shopName,
         waveNumber: v.waveNumber,
+        photoUrl: v.photoUrl,
         status: v.status,
         createdAt: v.createdAt,
         user: {
