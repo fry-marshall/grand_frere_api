@@ -277,6 +277,17 @@ describe('GET /api/v1/orders', () => {
       expect(res.body.data.meta.total).toBe(2);
     });
 
+    it('should include the vendor shopName on each order', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/orders')
+        .set('Authorization', `Bearer ${schoolAdminToken}`);
+
+      expect(res.status).toBe(200);
+      for (const order of res.body.data.data) {
+        expect(order.vendor).toEqual({ id: vendor.id, shopName: 'Snack OL' });
+      }
+    });
+
     it('should return empty list for SCHOOL_ADMIN with no orders in their school', async () => {
       const res = await request(getServer(app))
         .get('/api/v1/orders')

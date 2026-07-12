@@ -76,6 +76,7 @@ export class OrdersService {
 
     const qb = this.orderRepo
       .createQueryBuilder('o')
+      .leftJoinAndSelect('o.vendor', 'vendor')
       .orderBy('o.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
@@ -623,6 +624,9 @@ export class OrdersService {
       expiresAt: order.expiresAt,
       scheduledFor: order.scheduledFor,
       createdAt: order.createdAt,
+      vendor: order.vendor
+        ? { id: order.vendor.id, shopName: order.vendor.shopName }
+        : undefined,
     };
   }
 

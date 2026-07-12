@@ -11,4 +11,5 @@ export class OrderResponseDto {
   expiresAt: Date;
   scheduledFor: string;
   createdAt: Date;
+  vendor?: { id: string; shopName: string };
 }
