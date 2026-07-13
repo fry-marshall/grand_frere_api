@@ -131,6 +131,31 @@ describe('PUT/DELETE /api/v1/school-activities/:id', () => {
         expect(res.body.data.title).toBe('Updated title');
         expect(res.body.data.description).toBe('Original description');
       });
+
+      it('should replace the existing photo set when new photos are sent', async () => {
+        await activityRepo.update(activity.id, {
+          photoUrls: ['old-photo.jpg'],
+        });
+
+        const res = await request(getServer(app))
+          .put(`/api/v1/school-activities/${activity.id}`)
+          .set('Authorization', `Bearer ${schoolAdminToken}`)
+          .attach('photos[]', Buffer.from('new-photo-content'), {
+            filename: 'new-photo.jpg',
+            contentType: 'image/jpeg',
+          });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.photoUrls).toHaveLength(1);
+        expect(res.body.data.photoUrls[0]).not.toContain('old-photo.jpg');
+
+        const dbActivity = await activityRepo.findOne({
+          where: { id: activity.id },
+        });
+        expect(dbActivity?.photoUrls).toHaveLength(1);
+        expect(dbActivity?.photoUrls[0]).not.toBe('old-photo.jpg');
+        expect(dbActivity?.photoUrls[0]).not.toContain('/');
+      });
     });
 
     describe('Failure cases', () => {

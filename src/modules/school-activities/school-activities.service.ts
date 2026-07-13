@@ -63,7 +63,7 @@ export class SchoolActivitiesService {
 
     let photoUrls = activity.photoUrls;
     if (photos?.length) {
-      await this.deletePhotos(activity.photoUrls);
+      await this.deletePhotos(activity.photoUrls, activity.id);
       photoUrls = await this.uploadPhotos(photos, activity.id);
     }
 
@@ -81,7 +81,7 @@ export class SchoolActivitiesService {
     currentUser: { id: string; role: UserRole },
   ): Promise<void> {
     const activity = await this.findActivityScoped(id, currentUser);
-    await this.deletePhotos(activity.photoUrls);
+    await this.deletePhotos(activity.photoUrls, activity.id);
     await this.activityRepo.delete(id);
   }
 
@@ -221,37 +221,44 @@ export class SchoolActivitiesService {
     photos: Express.Multer.File[],
     activityId: string,
   ): Promise<string[]> {
-    const urls: string[] = [];
+    const filenames: string[] = [];
     const batchSize = 3;
 
     try {
       for (let i = 0; i < photos.length; i += batchSize) {
         const batch = photos.slice(i, i + batchSize);
-        const batchUrls = await Promise.all(
+        const batchFilenames = await Promise.all(
           batch.map((file, idx) => {
             const ext = file.mimetype.split('/')[1];
-            const key = `school-activities/${activityId}/${Date.now()}-${i + idx}.${ext}`;
-            return this.storageService.uploadBuffer(
-              file.buffer,
-              key,
-              file.mimetype,
-            );
+            const filename = `${Date.now()}-${i + idx}.${ext}`;
+            return this.storageService
+              .uploadBuffer(
+                file.buffer,
+                `school-activities/${activityId}/${filename}`,
+                file.mimetype,
+              )
+              .then(() => filename);
           }),
         );
-        urls.push(...batchUrls);
+        filenames.push(...batchFilenames);
       }
-      return urls;
+      return filenames;
     } catch (error) {
-      await this.deletePhotos(urls);
+      await this.deletePhotos(filenames, activityId);
       throw error;
     }
   }
 
-  private async deletePhotos(urls: string[] | null | undefined): Promise<void> {
-    if (!urls?.length) return;
+  private async deletePhotos(
+    filenames: string[] | null | undefined,
+    activityId: string,
+  ): Promise<void> {
+    if (!filenames?.length) return;
     await Promise.allSettled(
-      urls.map((url) =>
-        this.storageService.deleteFile(url.split('/').slice(-2).join('/')),
+      filenames.map((filename) =>
+        this.storageService.deleteFile(
+          `school-activities/${activityId}/${filename}`,
+        ),
       ),
     );
   }
@@ -262,7 +269,11 @@ export class SchoolActivitiesService {
       schoolId: activity.schoolId,
       title: activity.title,
       description: activity.description,
-      photoUrls: activity.photoUrls ?? [],
+      photoUrls: (activity.photoUrls ?? []).map((filename) =>
+        this.storageService.getPublicUrl(
+          `school-activities/${activity.id}/${filename}`,
+        ),
+      ),
       isVisible: activity.isVisible,
       createdAt: activity.createdAt,
       school: activity.school

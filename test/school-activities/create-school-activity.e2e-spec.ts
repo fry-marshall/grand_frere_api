@@ -121,6 +121,15 @@ describe('POST /api/v1/school-activities', () => {
 
       expect(res.status).toBe(201);
       expect(res.body.data.photoUrls).toHaveLength(1);
+      expect(res.body.data.photoUrls[0]).toMatch(
+        /^http:\/\/localhost\/storage\//,
+      );
+
+      const dbActivity = await activityRepo.findOne({
+        where: { id: res.body.data.id },
+      });
+      expect(dbActivity?.photoUrls).toHaveLength(1);
+      expect(dbActivity?.photoUrls[0]).not.toContain('/');
     });
   });
 
