@@ -59,14 +59,13 @@ export class CardsService {
     );
 
     const uploadedKeys: string[] = [];
-    const imageUrls: string[] = [];
     const batchSize = 3;
 
     try {
       for (let i = 0; i < codes.length; i += batchSize) {
         const slice = codes.slice(i, i + batchSize);
         const bufferSlice = qrBuffers.slice(i, i + batchSize);
-        const results = await Promise.all(
+        await Promise.all(
           slice.map((code, j) => {
             const key = `cards/${dto.schoolId}/${code}.png`;
             uploadedKeys.push(key);
@@ -77,7 +76,6 @@ export class CardsService {
             );
           }),
         );
-        imageUrls.push(...results);
       }
     } catch (error) {
       this.logger.error('QR upload failed, rolling back Spaces keys');
@@ -90,11 +88,11 @@ export class CardsService {
     let savedCards: Card[];
     try {
       savedCards = await this.cardRepo.save(
-        codes.map((code, i) => ({
+        codes.map((code) => ({
           code,
           schoolId: dto.schoolId,
           status: CardStatus.UNASSIGNED,
-          imageUrl: imageUrls[i],
+          imageUrl: `${code}.png`,
         })),
       );
     } catch (error) {
@@ -325,7 +323,11 @@ export class CardsService {
       schoolId: card.schoolId,
       studentId: card.studentId ?? null,
       dailyLimit: card.dailyLimit,
-      imageUrl: card.imageUrl ?? null,
+      imageUrl: card.imageUrl
+        ? this.storageService.getPublicUrl(
+            `cards/${card.schoolId}/${card.imageUrl}`,
+          )
+        : null,
       createdAt: card.createdAt,
     };
   }

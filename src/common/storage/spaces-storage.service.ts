@@ -40,12 +40,16 @@ export class SpacesStorageService implements IStorageService {
         ACL: 'public-read',
       }),
     );
-    return `https://${this.bucket}.${this.region}.digitaloceanspaces.com/${key}`;
+    return this.getPublicUrl(key);
   }
 
   async deleteFile(key: string): Promise<void> {
     await this.s3.send(
       new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
     );
+  }
+
+  getPublicUrl(key: string): string {
+    return `https://${this.bucket}.${this.region}.digitaloceanspaces.com/${key}`;
   }
 }

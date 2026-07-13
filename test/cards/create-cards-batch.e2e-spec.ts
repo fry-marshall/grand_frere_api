@@ -96,6 +96,7 @@ describe('POST /api/v1/cards', () => {
         expect(card.schoolId).toBe(school.id);
         expect(card.dailyLimit).toBe(1000);
         expect(card.imageUrl).toBeDefined();
+        expect(card.imageUrl).toMatch(/^http:\/\/localhost\/storage\//);
         expect(card.studentId).toBeNull();
       }
 
@@ -103,6 +104,9 @@ describe('POST /api/v1/cards', () => {
         (c) => c.code,
       );
       expect(new Set(codes).size).toBe(5);
+
+      const dbCard = await cardRepo.findOne({ where: { code: codes[0] } });
+      expect(dbCard?.imageUrl).toBe(`${codes[0]}.png`);
     });
 
     it('should generate cards with unique codes across multiple batches', async () => {

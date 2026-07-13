@@ -6,10 +6,14 @@ export class LocalStorageService implements IStorageService {
     key: string,
     _contentType: string,
   ): Promise<string> {
-    return Promise.resolve(`http://localhost/storage/${key}`);
+    return Promise.resolve(this.getPublicUrl(key));
   }
 
   deleteFile(_key: string): Promise<void> {
     return Promise.resolve();
+  }
+
+  getPublicUrl(key: string): string {
+    return `http://localhost/storage/${key}`;
   }
 }
