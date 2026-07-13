@@ -163,7 +163,12 @@ describe('PUT /api/v1/items/:id/image', () => {
       expect(res.status).toBe(200);
       expect(res.body.data.imageUrl).toBeDefined();
       expect(res.body.data.imageUrl).not.toBeNull();
+      expect(res.body.data.imageUrl).toMatch(/^http:\/\/localhost\/storage\//);
       expect(res.body.data.id).toBe(item.id);
+
+      const dbItem = await itemRepo.findOne({ where: { id: item.id } });
+      expect(dbItem?.imageUrl).not.toContain('/');
+      expect(dbItem?.imageUrl).toMatch(/\.png$/);
     });
 
     it('should upload image for SUPER_ADMIN', async () => {

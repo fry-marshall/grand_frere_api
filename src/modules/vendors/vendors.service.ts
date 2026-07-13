@@ -342,7 +342,9 @@ export class VendorsService {
       name: i.name,
       price: i.price,
       description: i.description,
-      imageUrl: i.imageUrl,
+      imageUrl: i.imageUrl
+        ? this.storageService.getPublicUrl(`items/${i.id}/${i.imageUrl}`)
+        : i.imageUrl,
       status: i.status,
       createdAt: i.createdAt,
     }));

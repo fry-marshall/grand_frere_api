@@ -175,15 +175,16 @@ export class ItemsService {
     }
 
     if (item.imageUrl) {
-      const oldKey = item.imageUrl.split('/').slice(-2).join('/');
-      await this.storageService.deleteFile(oldKey).catch(() => undefined);
+      await this.storageService
+        .deleteFile(`items/${id}/${item.imageUrl}`)
+        .catch(() => undefined);
     }
 
     const ext = file.mimetype.split('/')[1];
-    const key = `items/${id}/${Date.now()}.${ext}`;
-    const imageUrl = await this.storageService.uploadBuffer(
+    const imageUrl = `${Date.now()}.${ext}`;
+    await this.storageService.uploadBuffer(
       file.buffer,
-      key,
+      `items/${id}/${imageUrl}`,
       file.mimetype,
     );
 
@@ -198,7 +199,9 @@ export class ItemsService {
       name: item.name,
       price: item.price,
       description: item.description,
-      imageUrl: item.imageUrl,
+      imageUrl: item.imageUrl
+        ? this.storageService.getPublicUrl(`items/${item.id}/${item.imageUrl}`)
+        : item.imageUrl,
       status: item.status,
       createdAt: item.createdAt,
     };
