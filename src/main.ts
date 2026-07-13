@@ -27,19 +27,17 @@ async function bootstrap() {
         : '*',
   });
 
-  if (process.env.NODE_ENV !== 'prod') {
-    const config = new DocumentBuilder()
-      .setTitle('Grand Frere API')
-      .setDescription('Grand Frere API documentation')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build();
-    SwaggerModule.setup(
-      'api/docs',
-      app,
-      SwaggerModule.createDocument(app, config),
-    );
-  }
+  const config = new DocumentBuilder()
+    .setTitle('Grand Frere API')
+    .setDescription('Grand Frere API documentation')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  SwaggerModule.setup(
+    'api/docs',
+    app,
+    SwaggerModule.createDocument(app, config),
+  );
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
