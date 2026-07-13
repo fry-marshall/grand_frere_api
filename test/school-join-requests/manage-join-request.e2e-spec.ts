@@ -8,7 +8,7 @@ import { SchoolJoinRequestStatus } from '../../src/modules/school-join-requests/
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
-import { UserRole } from '../../src/modules/users/user.types';
+import { Gender, UserRole } from '../../src/modules/users/user.types';
 import { ErrorMessages } from '../../src/common/swagger/error-messages';
 
 describe('GET/PUT /api/v1/school-join-requests', () => {
@@ -28,7 +28,14 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
   let existingSchool: School;
 
   const sigles = ['TS-JR2', 'TS-JR3', 'TS-JR4', 'TS-JR5'];
-  const phones = ['+2250100009201', '+2250100009202', '+2250100009203'];
+  const phones = [
+    '+2250100009201',
+    '+2250100009202',
+    '+2250100009203',
+    '+2250100009204',
+    '+2250100009205',
+    '+2250100009206',
+  ];
 
   beforeAll(async () => {
     const { app: nestApp, moduleRef } = await createTestApp();
@@ -46,10 +53,10 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
         await userRepo.delete({ schoolId: leftover.id });
         await schoolRepo.delete({ id: leftover.id });
       }
-      await requestRepo.delete({ sigle });
     }
     for (const phone of phones) {
       await userRepo.delete({ phone });
+      await requestRepo.delete({ phone });
     }
 
     existingSchool = await schoolRepo.save({
@@ -86,41 +93,53 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
 
     pendingToApprove = await requestRepo.save({
       schoolName: 'Ecole To Approve',
-      sigle: 'TS-JR2',
-      address: '2 Rue Approve',
-      contactFirstName: 'Fatou',
-      contactLastName: 'Traore',
-      contactPhone: phones[2],
+      city: 'Abidjan',
+      studentCount: 200,
+      gender: Gender.FEMALE,
+      firstName: 'Fatou',
+      lastName: 'Traore',
+      phone: phones[2],
+      email: 'fatou.traore@example.com',
+      position: 'Directrice',
       status: SchoolJoinRequestStatus.PENDING,
     });
 
     pendingToReject = await requestRepo.save({
       schoolName: 'Ecole To Reject',
-      sigle: 'TS-JR4',
-      address: '4 Rue Reject',
-      contactFirstName: 'Yao',
-      contactLastName: 'Bamba',
-      contactPhone: '+2250100009204',
+      city: 'Bouake',
+      studentCount: 150,
+      gender: Gender.MALE,
+      firstName: 'Yao',
+      lastName: 'Bamba',
+      phone: phones[3],
+      email: 'yao.bamba@example.com',
+      position: 'Directeur',
       status: SchoolJoinRequestStatus.PENDING,
     });
 
     duplicateSigleRequest = await requestRepo.save({
       schoolName: 'Ecole Duplicate Sigle',
-      sigle: existingSchool.sigle,
-      address: '5 Rue Duplicate',
-      contactFirstName: 'Aya',
-      contactLastName: 'Konan',
-      contactPhone: '+2250100009205',
+      city: 'Yamoussoukro',
+      studentCount: 100,
+      gender: Gender.FEMALE,
+      firstName: 'Aya',
+      lastName: 'Konan',
+      phone: phones[4],
+      email: 'aya.konan@example.com',
+      position: 'Directrice',
       status: SchoolJoinRequestStatus.PENDING,
     });
 
     alreadyProcessed = await requestRepo.save({
       schoolName: 'Ecole Already Processed',
-      sigle: 'TS-JR5',
-      address: '6 Rue Processed',
-      contactFirstName: 'Kader',
-      contactLastName: 'Diallo',
-      contactPhone: '+2250100009206',
+      city: 'San Pedro',
+      studentCount: 80,
+      gender: Gender.MALE,
+      firstName: 'Kader',
+      lastName: 'Diallo',
+      phone: phones[5],
+      email: 'kader.diallo@example.com',
+      position: 'Directeur',
       status: SchoolJoinRequestStatus.REJECTED,
       rejectionReason: 'Already handled',
     });
@@ -133,15 +152,10 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
         await userRepo.delete({ schoolId: school.id });
         await schoolRepo.delete({ id: school.id });
       }
-      await requestRepo.delete({ sigle });
     }
-    for (const phone of [
-      ...phones,
-      '+2250100009204',
-      '+2250100009205',
-      '+2250100009206',
-    ]) {
+    for (const phone of phones) {
       await userRepo.delete({ phone });
+      await requestRepo.delete({ phone });
     }
     await app.close();
   });
@@ -218,11 +232,12 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
         const res = await request(getServer(app))
           .put(`/api/v1/school-join-requests/${pendingToApprove.id}/approve`)
           .set('Authorization', `Bearer ${superAdminToken}`)
-          .send({ password: 'SecurePass123' });
+          .send({ sigle: 'TS-JR2', password: 'SecurePass123' });
 
         expect(res.status).toBe(200);
         expect(res.body.data.school.sigle).toBe('TS-JR2');
-        expect(res.body.data.admin.phone).toBe(pendingToApprove.contactPhone);
+        expect(res.body.data.school.address).toBe(pendingToApprove.city);
+        expect(res.body.data.admin.phone).toBe(pendingToApprove.phone);
         expect(res.body.data.admin.role).toBe(UserRole.SCHOOL_ADMIN);
 
         const updatedRequest = await requestRepo.findOne({
@@ -233,7 +248,7 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
         const signinRes = await request(getServer(app))
           .post('/api/v1/auth/signin')
           .send({
-            phone: pendingToApprove.contactPhone,
+            phone: pendingToApprove.phone,
             password: 'SecurePass123',
           });
         expect(signinRes.status).toBe(200);
@@ -246,7 +261,7 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
         const res = await request(getServer(app))
           .put(`/api/v1/school-join-requests/${pendingToReject.id}/approve`)
           .set('Authorization', `Bearer ${schoolAdminToken}`)
-          .send({ password: 'SecurePass123' });
+          .send({ sigle: 'TS-JR4', password: 'SecurePass123' });
         expect(res.status).toBe(403);
       });
 
@@ -256,7 +271,7 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
             `/api/v1/school-join-requests/${duplicateSigleRequest.id}/approve`,
           )
           .set('Authorization', `Bearer ${superAdminToken}`)
-          .send({ password: 'SecurePass123' });
+          .send({ sigle: existingSchool.sigle, password: 'SecurePass123' });
 
         expect(res.status).toBe(409);
         expect(res.body.message).toBe(
@@ -273,7 +288,7 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
         const res = await request(getServer(app))
           .put(`/api/v1/school-join-requests/${alreadyProcessed.id}/approve`)
           .set('Authorization', `Bearer ${superAdminToken}`)
-          .send({ password: 'SecurePass123' });
+          .send({ sigle: 'TS-JR5', password: 'SecurePass123' });
 
         expect(res.status).toBe(409);
         expect(res.body.message).toBe(
@@ -287,7 +302,7 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
             '/api/v1/school-join-requests/00000000-0000-0000-0000-000000000000/approve',
           )
           .set('Authorization', `Bearer ${superAdminToken}`)
-          .send({ password: 'SecurePass123' });
+          .send({ sigle: 'TS-JR9', password: 'SecurePass123' });
         expect(res.status).toBe(404);
       });
     });

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SchoolJoinRequestStatus } from '../school-join-request.types';
+import { Gender } from '../../users/user.types';
 
 export class SchoolJoinRequestResponseDto {
   @ApiProperty()
@@ -9,19 +10,28 @@ export class SchoolJoinRequestResponseDto {
   schoolName: string;
 
   @ApiProperty()
-  sigle: string;
+  city: string;
 
   @ApiProperty()
-  address: string;
+  studentCount: number;
+
+  @ApiProperty({ enum: Gender })
+  gender: Gender;
 
   @ApiProperty()
-  contactFirstName: string;
+  firstName: string;
 
   @ApiProperty()
-  contactLastName: string;
+  lastName: string;
 
   @ApiProperty()
-  contactPhone: string;
+  phone: string;
+
+  @ApiProperty()
+  email: string;
+
+  @ApiProperty()
+  position: string;
 
   @ApiPropertyOptional()
   message?: string;

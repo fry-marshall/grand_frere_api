@@ -5,6 +5,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { SchoolJoinRequestStatus } from '../school-join-request.types';
+import { Gender } from '../../users/user.types';
 
 @Entity('school_join_requests')
 export class SchoolJoinRequest {
@@ -15,19 +16,28 @@ export class SchoolJoinRequest {
   schoolName: string;
 
   @Column()
-  sigle: string;
+  city: string;
 
   @Column()
-  address: string;
+  studentCount: number;
+
+  @Column({ type: 'enum', enum: Gender })
+  gender: Gender;
 
   @Column()
-  contactFirstName: string;
+  firstName: string;
 
   @Column()
-  contactLastName: string;
+  lastName: string;
 
   @Column()
-  contactPhone: string;
+  phone: string;
+
+  @Column()
+  email: string;
+
+  @Column()
+  position: string;
 
   @Column({ type: 'text', nullable: true })
   message: string;

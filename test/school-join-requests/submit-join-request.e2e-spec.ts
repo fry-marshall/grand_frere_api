@@ -4,6 +4,7 @@ import request from 'supertest';
 import { createTestApp, getServer } from '../helpers/create-app';
 import { SchoolJoinRequest } from '../../src/modules/school-join-requests/entities/school-join-request.entity';
 import { SchoolJoinRequestStatus } from '../../src/modules/school-join-requests/school-join-request.types';
+import { Gender } from '../../src/modules/users/user.types';
 
 describe('POST /api/v1/school-join-requests', () => {
   let app: INestApplication;
@@ -11,11 +12,14 @@ describe('POST /api/v1/school-join-requests', () => {
 
   const validPayload = {
     schoolName: 'Ecole Test Submit',
-    sigle: 'TS-JR',
-    address: '1 Rue Submit',
-    contactFirstName: 'Awa',
-    contactLastName: 'Koffi',
-    contactPhone: '+2250100009200',
+    city: 'Abidjan',
+    studentCount: 300,
+    gender: Gender.FEMALE,
+    firstName: 'Awa',
+    lastName: 'Koffi',
+    phone: '+2250100009200',
+    email: 'awa.koffi@example.com',
+    position: 'Directrice',
     message: 'We would like to join the network.',
   };
 
@@ -26,11 +30,11 @@ describe('POST /api/v1/school-join-requests', () => {
     const ds = moduleRef.get(DataSource);
     requestRepo = ds.getRepository(SchoolJoinRequest);
 
-    await requestRepo.delete({ sigle: 'TS-JR' });
+    await requestRepo.delete({ phone: validPayload.phone });
   });
 
   afterAll(async () => {
-    await requestRepo.delete({ sigle: 'TS-JR' });
+    await requestRepo.delete({ phone: validPayload.phone });
     await app.close();
   });
 
@@ -42,8 +46,9 @@ describe('POST /api/v1/school-join-requests', () => {
 
       expect(res.status).toBe(201);
       expect(res.body.data.status).toBe(SchoolJoinRequestStatus.PENDING);
-      expect(res.body.data.sigle).toBe('TS-JR');
-      expect(res.body.data.contactPhone).toBe(validPayload.contactPhone);
+      expect(res.body.data.city).toBe(validPayload.city);
+      expect(res.body.data.phone).toBe(validPayload.phone);
+      expect(res.body.data.email).toBe(validPayload.email);
     });
   });
 
@@ -56,18 +61,34 @@ describe('POST /api/v1/school-join-requests', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should return 400 when contactPhone is not a valid CI number', async () => {
+    it('should return 400 when phone is not a valid CI number', async () => {
       const res = await request(getServer(app))
         .post('/api/v1/school-join-requests')
-        .send({ ...validPayload, contactPhone: '123' });
+        .send({ ...validPayload, phone: '123' });
 
       expect(res.status).toBe(400);
     });
 
-    it('should return 400 when sigle does not match the expected format', async () => {
+    it('should return 400 when email is not valid', async () => {
       const res = await request(getServer(app))
         .post('/api/v1/school-join-requests')
-        .send({ ...validPayload, sigle: 'lowercase' });
+        .send({ ...validPayload, email: 'not-an-email' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 400 when gender is not a valid enum value', async () => {
+      const res = await request(getServer(app))
+        .post('/api/v1/school-join-requests')
+        .send({ ...validPayload, gender: 'OTHER' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 400 when studentCount is not a positive integer', async () => {
+      const res = await request(getServer(app))
+        .post('/api/v1/school-join-requests')
+        .send({ ...validPayload, studentCount: 0 });
 
       expect(res.status).toBe(400);
     });

@@ -76,8 +76,8 @@ export class SchoolJoinRequestsService {
 
     const school = await this.schoolsService.create({
       name: request.schoolName,
-      sigle: request.sigle,
-      address: request.address,
+      sigle: dto.sigle,
+      address: request.city,
     });
 
     // SchoolsService.create/createAdmin use their own repos rather than a
@@ -87,9 +87,9 @@ export class SchoolJoinRequestsService {
     let admin: SchoolAdminResponseDto;
     try {
       admin = await this.schoolsService.createAdmin(school.id, {
-        firstName: request.contactFirstName,
-        lastName: request.contactLastName,
-        phone: request.contactPhone,
+        firstName: request.firstName,
+        lastName: request.lastName,
+        phone: request.phone,
         password: dto.password,
       });
     } catch (error) {
@@ -133,11 +133,14 @@ export class SchoolJoinRequestsService {
     return {
       id: request.id,
       schoolName: request.schoolName,
-      sigle: request.sigle,
-      address: request.address,
-      contactFirstName: request.contactFirstName,
-      contactLastName: request.contactLastName,
-      contactPhone: request.contactPhone,
+      city: request.city,
+      studentCount: request.studentCount,
+      gender: request.gender,
+      firstName: request.firstName,
+      lastName: request.lastName,
+      phone: request.phone,
+      email: request.email,
+      position: request.position,
       message: request.message,
       status: request.status,
       rejectionReason: request.rejectionReason,
