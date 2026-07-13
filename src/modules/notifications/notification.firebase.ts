@@ -45,13 +45,13 @@ export class NotificationFirebase implements OnModuleInit {
     try {
       const serviceAccount = JSON.parse(
         this.configService.getOrThrow<string>('FIREBASE_SERVICE_ACCOUNT'),
-      ) as admin.ServiceAccount;
-      console.log(serviceAccount);
-      this.logger.log('serviceAccount', serviceAccount);
+      ) as admin.ServiceAccount & { project_id: string };
 
       this.firebaseApp = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id,
       });
+
       this.logger.log('Firebase app initialized successfully');
     } catch (err) {
       this.logger.error(
@@ -90,6 +90,7 @@ export class NotificationFirebase implements OnModuleInit {
       this.logger.debug(`Push sent to user ${userId}`);
     } catch (err) {
       const code = (err as { code?: string }).code;
+      this.logger.error(`Push failed for user ${userId}, code: ${code}`);
       if (
         code === 'messaging/registration-token-not-registered' ||
         code === 'messaging/invalid-registration-token'
