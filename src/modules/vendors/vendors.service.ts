@@ -423,15 +423,16 @@ export class VendorsService {
     }
 
     if (vendor.photoUrl) {
-      const oldKey = vendor.photoUrl.split('/').slice(-2).join('/');
-      await this.storageService.deleteFile(oldKey).catch(() => undefined);
+      await this.storageService
+        .deleteFile(`vendors/${id}/${vendor.photoUrl}`)
+        .catch(() => undefined);
     }
 
     const ext = file.mimetype.split('/')[1];
-    const key = `vendors/${id}/${Date.now()}.${ext}`;
-    const photoUrl = await this.storageService.uploadBuffer(
+    const photoUrl = `${Date.now()}.${ext}`;
+    await this.storageService.uploadBuffer(
       file.buffer,
-      key,
+      `vendors/${id}/${photoUrl}`,
       file.mimetype,
     );
 
@@ -498,7 +499,11 @@ export class VendorsService {
       waveNumber: vendor.waveNumber,
       openingTime: vendor.openingTime,
       closingTime: vendor.closingTime,
-      photoUrl: vendor.photoUrl,
+      photoUrl: vendor.photoUrl
+        ? this.storageService.getPublicUrl(
+            `vendors/${vendor.id}/${vendor.photoUrl}`,
+          )
+        : vendor.photoUrl,
       status: vendor.status,
       schoolId: vendor.schoolId,
       createdAt: vendor.createdAt,

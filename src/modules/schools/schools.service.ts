@@ -1,6 +1,7 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -29,6 +30,8 @@ import { SchoolTransactionResponseDto } from './dto/school-transaction-response.
 import { SchoolTransactionsQueryDto } from './dto/school-transactions-query.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
+import type { IStorageService } from '../../common/storage/storage.interface';
+import { STORAGE_SERVICE } from '../../common/storage/storage.interface';
 
 @Injectable()
 export class SchoolsService {
@@ -42,6 +45,7 @@ export class SchoolsService {
     private readonly parentRepo: Repository<Parent>,
     @InjectRepository(Transaction)
     private readonly transactionRepo: Repository<Transaction>,
+    @Inject(STORAGE_SERVICE) private readonly storageService: IStorageService,
   ) {}
 
   async create(dto: CreateSchoolDto): Promise<SchoolResponseDto> {
@@ -199,7 +203,9 @@ export class SchoolsService {
         id: v.id,
         shopName: v.shopName,
         waveNumber: v.waveNumber,
-        photoUrl: v.photoUrl,
+        photoUrl: v.photoUrl
+          ? this.storageService.getPublicUrl(`vendors/${v.id}/${v.photoUrl}`)
+          : v.photoUrl,
         status: v.status,
         createdAt: v.createdAt,
         user: {
