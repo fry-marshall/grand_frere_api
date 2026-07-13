@@ -194,15 +194,17 @@ export class VendorsService {
           quantity: i.quantity,
           unitPrice: i.unitPrice,
         })),
-        student: {
-          id: o.student.id,
-          class: o.student.class,
-          user: {
-            id: o.student.user.id,
-            firstName: o.student.user.firstName,
-            lastName: o.student.user.lastName,
-          },
-        },
+        student: o.student?.user
+          ? {
+              id: o.student.id,
+              class: o.student.class,
+              user: {
+                id: o.student.user.id,
+                firstName: o.student.user.firstName,
+                lastName: o.student.user.lastName,
+              },
+            }
+          : undefined,
       })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };

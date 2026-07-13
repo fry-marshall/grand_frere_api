@@ -40,10 +40,10 @@ export class VendorOrderResponseDto {
   @ApiProperty({ type: [VendorOrderItemDto] })
   items: VendorOrderItemDto[];
 
-  @ApiProperty()
-  student: {
+  @ApiProperty({ required: false })
+  student?: {
     id: string;
-    class: string;
+    class: string | null;
     user: { id: string; firstName: string; lastName: string };
   };
 }

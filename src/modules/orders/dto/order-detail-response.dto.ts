@@ -29,6 +29,10 @@ export class OrderDetailResponseDto {
   expiresAt: Date;
   createdAt: Date;
   vendor?: { id: string; shopName: string; waveNumber: string };
-  student?: { user: { firstName: string; lastName: string } };
+  student?: {
+    id: string;
+    class: string | null;
+    user: { id: string; firstName: string; lastName: string };
+  };
   items: OrderItemResponseDto[];
 }

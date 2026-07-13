@@ -188,7 +188,10 @@ export class OrdersService {
         : undefined,
       student: order.student?.user
         ? {
+            id: order.student.id,
+            class: order.student.class,
             user: {
+              id: order.student.user.id,
               firstName: order.student.user.firstName,
               lastName: order.student.user.lastName,
             },
@@ -677,7 +680,10 @@ export class OrdersService {
         : undefined,
       student: order.student?.user
         ? {
+            id: order.student.id,
+            class: order.student.class,
             user: {
+              id: order.student.user.id,
               firstName: order.student.user.firstName,
               lastName: order.student.user.lastName,
             },
@@ -731,7 +737,10 @@ export class OrdersService {
         : undefined,
       student: order.student?.user
         ? {
+            id: order.student.id,
+            class: order.student.class,
             user: {
+              id: order.student.user.id,
               firstName: order.student.user.firstName,
               lastName: order.student.user.lastName,
             },
