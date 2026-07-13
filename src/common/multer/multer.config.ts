@@ -19,6 +19,11 @@ export const FILE_CONFIGS = {
     maxFileSizeBytes: 5 * 1024 * 1024, // 5 MB
     allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
   },
+  SCHOOL_ACTIVITY_PHOTOS: {
+    maxFiles: 5,
+    maxFileSizeBytes: 5 * 1024 * 1024, // 5 MB
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  },
 } as const satisfies Record<string, FileUploadConfig>;
 
 export function createMulterOptions(config: FileUploadConfig): MulterOptions {

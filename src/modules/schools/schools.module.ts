@@ -26,5 +26,6 @@ import { Wallet } from '../wallets/entities/wallet.entity';
   ],
   controllers: [SchoolsController],
   providers: [SchoolsService],
+  exports: [SchoolsService],
 })
 export class SchoolsModule {}

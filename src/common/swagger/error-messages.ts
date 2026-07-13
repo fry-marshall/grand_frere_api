@@ -78,4 +78,13 @@ export const ErrorMessages = {
     NOT_REJECTABLE: 'Vendor can only be rejected when pending',
     WALLET_NOT_FOUND: 'Vendor wallet not found',
   },
+  SCHOOL_JOIN_REQUESTS: {
+    NOT_FOUND: 'School join request not found',
+    NOT_PENDING: 'Join request has already been processed',
+  },
+  SCHOOL_ACTIVITIES: {
+    NOT_FOUND: 'School activity not found',
+    NOT_PUBLISHABLE: 'Activity is already visible',
+    NOT_HIDABLE: 'Activity is already hidden',
+  },
 } as const;

@@ -9,6 +9,8 @@ import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { AuthModule } from './modules/auth/auth.module';
 import { CardsModule } from './modules/cards/cards.module';
 import { SchoolsModule } from './modules/schools/schools.module';
+import { SchoolJoinRequestsModule } from './modules/school-join-requests/school-join-requests.module';
+import { SchoolActivitiesModule } from './modules/school-activities/school-activities.module';
 import { VendorsModule } from './modules/vendors/vendors.module';
 import { StudentsModule } from './modules/students/students.module';
 import { ParentsModule } from './modules/parents/parents.module';
@@ -39,6 +41,8 @@ import { PaystackModule } from './common/paystack/paystack.module';
     AuthModule,
     CardsModule,
     SchoolsModule,
+    SchoolJoinRequestsModule,
+    SchoolActivitiesModule,
     VendorsModule,
     StudentsModule,
     ParentsModule,
