@@ -1,11 +1,21 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { OrderStatus, PaymentMethod } from '../order.types';
 
 export class OrderItemResponseDto {
+  @ApiProperty()
   id: string;
+
+  @ApiProperty()
   itemId: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
   quantity: number;
+
+  @ApiProperty()
   unitPrice: number;
-  item?: { name: string };
 }
 
 export class OrderDetailResponseDto {

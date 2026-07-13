@@ -302,6 +302,7 @@ describe('GET /api/v1/orders/:id', () => {
       expect(res.body.data.items.length).toBe(1);
       expect(res.body.data.items[0].quantity).toBe(2);
       expect(res.body.data.items[0].unitPrice).toBe(500);
+      expect(res.body.data.items[0].name).toBeDefined();
     });
 
     it('should return order details for own SCHOOL_ADMIN', async () => {

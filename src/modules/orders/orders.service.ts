@@ -197,9 +197,9 @@ export class OrdersService {
       items: order.items.map((i) => ({
         id: i.id,
         itemId: i.itemId,
+        name: i.item?.name ?? '',
         quantity: i.quantity,
         unitPrice: i.unitPrice,
-        item: i.item ? { name: i.item.name } : undefined,
       })),
     };
   }
@@ -686,9 +686,9 @@ export class OrdersService {
       items: order.items.map((i) => ({
         id: i.id,
         itemId: i.itemId,
+        name: i.item?.name ?? '',
         quantity: i.quantity,
         unitPrice: i.unitPrice,
-        item: i.item ? { name: i.item.name } : undefined,
       })),
     };
   }
@@ -740,9 +740,9 @@ export class OrdersService {
       items: order.items.map((i) => ({
         id: i.id,
         itemId: i.itemId,
+        name: i.item?.name ?? '',
         quantity: i.quantity,
         unitPrice: i.unitPrice,
-        item: i.item ? { name: i.item.name } : undefined,
       })),
     };
   }
