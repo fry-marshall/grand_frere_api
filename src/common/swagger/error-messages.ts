@@ -23,6 +23,8 @@ export const ErrorMessages = {
     NOT_SUSPENDABLE: 'Card can only be suspended when active',
     NOT_ACTIVATABLE: 'Card can only be activated when suspended',
     DAILY_LIMIT_FORBIDDEN: 'Only the linked parent can update the daily limit',
+    DAILY_LIMIT_EDIT_NOT_ALLOWED:
+      'Student is not allowed to update the daily limit',
     NOT_ACTIVE: 'Card is not active',
     PIN_NOT_SET: 'Card PIN is not set',
     PIN_INVALID: 'Invalid PIN',

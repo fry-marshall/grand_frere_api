@@ -22,6 +22,7 @@ import { UserRole } from '../users/user.types';
 import { CreateCardsBatchDto } from './dto/create-cards-batch.dto';
 import { CardResponseDto } from './dto/card-response.dto';
 import { UpdateDailyLimitDto } from './dto/update-daily-limit.dto';
+import { UpdateDailyLimitPermissionDto } from './dto/update-daily-limit-permission.dto';
 import { VerifyPinDto } from './dto/verify-pin.dto';
 import { ResetPinDto } from './dto/reset-pin.dto';
 import * as storageInterface from '../../common/storage/storage.interface';
@@ -164,10 +165,34 @@ export class CardsService {
       await this.assertParentOwnsCard(currentUser.id, card);
     } else {
       await this.assertStudentOwnsCard(currentUser.id, card);
+      if (!card.studentCanEditDailyLimit) {
+        throw new ForbiddenException(
+          ErrorMessages.CARDS.DAILY_LIMIT_EDIT_NOT_ALLOWED,
+        );
+      }
     }
 
     await this.cardRepo.update(card.id, { dailyLimit: dto.dailyLimit });
     return this.toDto({ ...card, dailyLimit: dto.dailyLimit });
+  }
+
+  async updateDailyLimitPermission(
+    code: string,
+    dto: UpdateDailyLimitPermissionDto,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<CardResponseDto> {
+    const card = await this.cardRepo.findOne({ where: { code } });
+    if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
+
+    await this.assertParentOwnsCard(currentUser.id, card);
+
+    await this.cardRepo.update(card.id, {
+      studentCanEditDailyLimit: dto.studentCanEditDailyLimit,
+    });
+    return this.toDto({
+      ...card,
+      studentCanEditDailyLimit: dto.studentCanEditDailyLimit,
+    });
   }
 
   async verifyPin(code: string, dto: VerifyPinDto): Promise<CardResponseDto> {
@@ -323,6 +348,7 @@ export class CardsService {
       schoolId: card.schoolId,
       studentId: card.studentId ?? null,
       dailyLimit: card.dailyLimit,
+      studentCanEditDailyLimit: card.studentCanEditDailyLimit,
       imageUrl: card.imageUrl
         ? this.storageService.getPublicUrl(
             `cards/${card.schoolId}/${card.imageUrl}`,

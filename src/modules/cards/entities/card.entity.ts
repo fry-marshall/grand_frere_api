@@ -41,6 +41,9 @@ export class Card {
   @Column({ type: 'integer', default: 1000 })
   dailyLimit: number;
 
+  @Column({ default: true })
+  studentCanEditDailyLimit: boolean;
+
   @Column({ nullable: true })
   imageUrl: string;
 

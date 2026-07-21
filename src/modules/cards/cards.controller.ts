@@ -24,6 +24,7 @@ import { CardsService } from './cards.service';
 import { CreateCardsBatchDto } from './dto/create-cards-batch.dto';
 import { CardResponseDto } from './dto/card-response.dto';
 import { UpdateDailyLimitDto } from './dto/update-daily-limit.dto';
+import { UpdateDailyLimitPermissionDto } from './dto/update-daily-limit-permission.dto';
 import { VerifyPinDto } from './dto/verify-pin.dto';
 import { ResetPinDto } from './dto/reset-pin.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -156,6 +157,35 @@ export class CardsController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.cardsService.updateDailyLimit(code, dto, currentUser);
+  }
+
+  @Put(':code/daily-limit-permission')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.PARENT)
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      "Allow or forbid the student from editing their own card's daily spending limit",
+  })
+  @ApiSuccessResponse(CardResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.CARDS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({
+    description: ErrorMessages.CARDS.DAILY_LIMIT_FORBIDDEN,
+    type: ErrorResponse,
+  })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  updateDailyLimitPermission(
+    @Param('code') code: string,
+    @Body() dto: UpdateDailyLimitPermissionDto,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.cardsService.updateDailyLimitPermission(code, dto, currentUser);
   }
 
   @Post(':code/verify-pin')

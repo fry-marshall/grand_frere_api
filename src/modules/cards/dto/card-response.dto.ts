@@ -20,6 +20,9 @@ export class CardResponseDto {
   @ApiProperty()
   dailyLimit: number;
 
+  @ApiProperty()
+  studentCanEditDailyLimit: boolean;
+
   @ApiPropertyOptional()
   imageUrl: string | null;
 
