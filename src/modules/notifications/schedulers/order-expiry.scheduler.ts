@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, LessThanOrEqual, Repository } from 'typeorm';
+import { DataSource, In, LessThanOrEqual, Repository } from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
 import { Wallet } from '../../wallets/entities/wallet.entity';
 import { Transaction } from '../../wallets/entities/transaction.entity';
@@ -36,7 +36,7 @@ export class OrderExpiryScheduler {
   async expireOrders(): Promise<void> {
     const expiredOrders = await this.orderRepo.find({
       where: {
-        status: OrderStatus.PENDING,
+        status: In([OrderStatus.PENDING, OrderStatus.VALIDATED]),
         expiresAt: LessThanOrEqual(new Date()),
       },
     });
@@ -49,6 +49,11 @@ export class OrderExpiryScheduler {
           await manager.update(Order, order.id, {
             status: OrderStatus.EXPIRED,
           });
+
+          // Une commande VALIDATED a déjà réglé sa réservation wallet lors
+          // de la validation (débit élève + crédit vendeur définitifs) —
+          // seule une commande encore PENDING a une réservation à libérer.
+          if (order.status !== OrderStatus.PENDING) return;
 
           const wallet = await this.walletRepo.findOne({
             where: { studentId: order.studentId },
