@@ -12,6 +12,12 @@ export class SchoolVendorResponseDto {
   waveNumber: string;
 
   @ApiProperty({ nullable: true })
+  openingTime: string | null;
+
+  @ApiProperty({ nullable: true })
+  closingTime: string | null;
+
+  @ApiProperty({ nullable: true })
   photoUrl: string;
 
   @ApiProperty({ enum: VendorStatus })

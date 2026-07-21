@@ -203,6 +203,8 @@ export class SchoolsService {
         id: v.id,
         shopName: v.shopName,
         waveNumber: v.waveNumber,
+        openingTime: v.openingTime,
+        closingTime: v.closingTime,
         photoUrl: v.photoUrl
           ? this.storageService.getPublicUrl(`vendors/${v.id}/${v.photoUrl}`)
           : v.photoUrl,

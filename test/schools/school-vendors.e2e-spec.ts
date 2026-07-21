@@ -135,6 +135,8 @@ describe('GET /api/v1/schools/:id/vendors', () => {
       schoolId: school.id,
       shopName: 'Snack du Coin',
       status: VendorStatus.ACTIVE,
+      openingTime: '08:00',
+      closingTime: '17:00',
     });
 
     // Pending vendor in school (should be hidden from STUDENT/PARENT)
@@ -285,6 +287,8 @@ describe('GET /api/v1/schools/:id/vendors', () => {
       expect(res.status).toBe(200);
       expect(res.body.data.meta.total).toBe(1);
       expect(res.body.data.data[0].shopName).toBe('Snack du Coin');
+      expect(res.body.data.data[0].openingTime).toBe('08:00');
+      expect(res.body.data.data[0].closingTime).toBe('17:00');
       expect(res.body.data.data[0].status).toBe('ACTIVE');
     });
 
