@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus, PaymentMethod } from '../order.types';
 
 export class OrderItemResponseDto {
@@ -10,6 +10,12 @@ export class OrderItemResponseDto {
 
   @ApiProperty()
   name: string;
+
+  @ApiPropertyOptional()
+  description: string | null;
+
+  @ApiPropertyOptional()
+  imageUrl: string | null;
 
   @ApiProperty()
   quantity: number;

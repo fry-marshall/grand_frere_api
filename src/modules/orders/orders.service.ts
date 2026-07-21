@@ -5,6 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
@@ -19,6 +20,8 @@ import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { User } from '../users/entities/user.entity';
+import type { IStorageService } from '../../common/storage/storage.interface';
+import { STORAGE_SERVICE } from '../../common/storage/storage.interface';
 import { OrderStatus, PaymentMethod } from './order.types';
 import { ItemStatus } from '../items/item.types';
 import { CardStatus } from '../cards/card.types';
@@ -66,7 +69,15 @@ export class OrdersService {
     private readonly dataSource: DataSource,
     private readonly gateway: NotificationsGateway,
     private readonly notificationsService: NotificationsService,
+    @Inject(STORAGE_SERVICE)
+    private readonly storageService: IStorageService,
   ) {}
+
+  private itemImageUrl(item?: { id: string; imageUrl: string }): string | null {
+    return item?.imageUrl
+      ? this.storageService.getPublicUrl(`items/${item.id}/${item.imageUrl}`)
+      : null;
+  }
 
   async findAll(
     currentUser: { id: string; role: UserRole },
@@ -201,6 +212,8 @@ export class OrdersService {
         id: i.id,
         itemId: i.itemId,
         name: i.item?.name ?? '',
+        description: i.item?.description ?? null,
+        imageUrl: this.itemImageUrl(i.item),
         quantity: i.quantity,
         unitPrice: i.unitPrice,
       })),
@@ -693,6 +706,8 @@ export class OrdersService {
         id: i.id,
         itemId: i.itemId,
         name: i.item?.name ?? '',
+        description: i.item?.description ?? null,
+        imageUrl: this.itemImageUrl(i.item),
         quantity: i.quantity,
         unitPrice: i.unitPrice,
       })),
@@ -750,6 +765,8 @@ export class OrdersService {
         id: i.id,
         itemId: i.itemId,
         name: i.item?.name ?? '',
+        description: i.item?.description ?? null,
+        imageUrl: this.itemImageUrl(i.item),
         quantity: i.quantity,
         unitPrice: i.unitPrice,
       })),
