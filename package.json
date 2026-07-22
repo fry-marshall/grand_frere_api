@@ -24,6 +24,7 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/data-source.ts",
     "seed": "ts-node -r tsconfig-paths/register src/database/seeds/seed-super-admin.ts",
     "seed:vendors": "ts-node -r tsconfig-paths/register src/database/seeds/seed-vendors.ts",
+    "seed:school-admin": "ts-node -r tsconfig-paths/register src/database/seeds/seed-school-admin.ts",
     "prepare": "husky"
   },
   "lint-staged": {
