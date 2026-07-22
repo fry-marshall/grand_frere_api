@@ -34,7 +34,12 @@ export class OrderDetailResponseDto {
   shortCode: string | null;
   expiresAt: Date;
   createdAt: Date;
-  vendor?: { id: string; shopName: string; waveNumber: string };
+  vendor?: {
+    id: string;
+    shopName: string;
+    waveNumber: string;
+    phone?: string;
+  };
   student?: {
     id: string;
     class: string | null;

@@ -144,7 +144,14 @@ export class OrdersService {
   ): Promise<OrderDetailResponseDto> {
     const order = await this.orderRepo.findOne({
       where: { id },
-      relations: ['items', 'items.item', 'vendor', 'student', 'student.user'],
+      relations: [
+        'items',
+        'items.item',
+        'vendor',
+        'vendor.user',
+        'student',
+        'student.user',
+      ],
     });
     if (!order) throw new NotFoundException(ErrorMessages.ORDERS.NOT_FOUND);
 
@@ -195,6 +202,7 @@ export class OrdersService {
             id: order.vendor.id,
             shopName: order.vendor.shopName,
             waveNumber: order.vendor.waveNumber,
+            phone: order.vendor.user?.phone,
           }
         : undefined,
       student: order.student?.user

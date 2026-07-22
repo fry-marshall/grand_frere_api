@@ -305,6 +305,7 @@ describe('GET /api/v1/orders/:id', () => {
       expect(res.body.data.items[0].name).toBeDefined();
       expect(res.body.data.items[0]).toHaveProperty('description');
       expect(res.body.data.items[0]).toHaveProperty('imageUrl');
+      expect(res.body.data.vendor.phone).toBe('+2250100005203');
     });
 
     it('should return order details for own SCHOOL_ADMIN', async () => {
