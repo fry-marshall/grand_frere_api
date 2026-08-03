@@ -514,6 +514,18 @@ describe('POST /api/v1/orders/vendor/:vendorId', () => {
       await walletRepo.update(wallet.id, { balance: 10000, reserved: 0 });
     });
 
+    it('should return 400 when trying to pay by cash (paymentMethod is no longer an accepted field)', async () => {
+      const res = await request(getServer(app))
+        .post(`/api/v1/orders/vendor/${vendor.id}`)
+        .set('Authorization', `Bearer ${vendorToken}`)
+        .send({
+          studentId: student.id,
+          items: [{ itemId: item1.id, quantity: 1 }],
+          paymentMethod: 'CASH',
+        });
+      expect(res.status).toBe(400);
+    });
+
     it('should return 400 when card is SUSPENDED', async () => {
       const card = await cardRepo.save({
         code: 'TEST-SUSP-001',

@@ -279,8 +279,6 @@ export class OrdersService {
       throw new BadRequestException(ErrorMessages.ORDERS.INVALID_ITEMS);
     }
 
-    const paymentMethod = dto.paymentMethod ?? PaymentMethod.WALLET;
-
     const itemPriceMap = new Map(items.map((i) => [i.id, i.price]));
     const totalAmount = dto.items.reduce(
       (sum, line) => sum + itemPriceMap.get(line.itemId)! * line.quantity,
@@ -306,41 +304,37 @@ export class OrdersService {
       );
     }
 
-    if (paymentMethod === PaymentMethod.WALLET) {
-      const available = wallet.balance - wallet.reserved;
-      if (available < totalAmount) {
-        throw new BadRequestException(
-          ErrorMessages.ORDERS.INSUFFICIENT_BALANCE,
-        );
+    const available = wallet.balance - wallet.reserved;
+    if (available < totalAmount) {
+      throw new BadRequestException(ErrorMessages.ORDERS.INSUFFICIENT_BALANCE);
+    }
+
+    const card = await this.cardRepo.findOne({
+      where: { studentId: student.id },
+    });
+    if (card) {
+      if (
+        card.status === CardStatus.SUSPENDED ||
+        card.status === CardStatus.BLOCKED
+      ) {
+        throw new BadRequestException(ErrorMessages.CARDS.NOT_ACTIVE);
       }
 
-      const card = await this.cardRepo.findOne({
-        where: { studentId: student.id },
-      });
-      if (card) {
-        if (
-          card.status === CardStatus.SUSPENDED ||
-          card.status === CardStatus.BLOCKED
-        ) {
-          throw new BadRequestException(ErrorMessages.CARDS.NOT_ACTIVE);
-        }
+      const row = await this.orderRepo
+        .createQueryBuilder('o')
+        .select('COALESCE(SUM(o.totalAmount), 0)', 'total')
+        .where('o.studentId = :studentId', { studentId: dto.studentId })
+        .andWhere('o.status IN (:...statuses)', {
+          statuses: [OrderStatus.PENDING, OrderStatus.VALIDATED],
+        })
+        .andWhere('o.scheduledFor = :scheduledFor', { scheduledFor })
+        .getRawOne<{ total: string }>();
 
-        const row = await this.orderRepo
-          .createQueryBuilder('o')
-          .select('COALESCE(SUM(o.totalAmount), 0)', 'total')
-          .where('o.studentId = :studentId', { studentId: dto.studentId })
-          .andWhere('o.status IN (:...statuses)', {
-            statuses: [OrderStatus.PENDING, OrderStatus.VALIDATED],
-          })
-          .andWhere('o.scheduledFor = :scheduledFor', { scheduledFor })
-          .getRawOne<{ total: string }>();
-
-        const spentOnDay = parseInt(row?.total ?? '0', 10);
-        if (spentOnDay + totalAmount > card.dailyLimit) {
-          throw new BadRequestException(
-            ErrorMessages.ORDERS.DAILY_LIMIT_EXCEEDED,
-          );
-        }
+      const spentOnDay = parseInt(row?.total ?? '0', 10);
+      if (spentOnDay + totalAmount > card.dailyLimit) {
+        throw new BadRequestException(
+          ErrorMessages.ORDERS.DAILY_LIMIT_EXCEEDED,
+        );
       }
     }
 
@@ -354,7 +348,7 @@ export class OrdersService {
         vendorId,
         studentId: dto.studentId,
         status: OrderStatus.PENDING,
-        paymentMethod,
+        paymentMethod: PaymentMethod.WALLET,
         totalAmount,
         shortCode,
         expiresAt,
@@ -370,21 +364,19 @@ export class OrdersService {
         });
       }
 
-      if (paymentMethod === PaymentMethod.WALLET) {
-        await manager.update(Wallet, wallet.id, {
-          reserved: wallet.reserved + totalAmount,
-        });
+      await manager.update(Wallet, wallet.id, {
+        reserved: wallet.reserved + totalAmount,
+      });
 
-        await manager.save(Transaction, {
-          walletId: wallet.id,
-          type: TransactionType.RESERVE,
-          amount: totalAmount,
-          currency: wallet.currency ?? Currency.XOF,
-          balanceBefore: wallet.balance,
-          balanceAfter: wallet.balance,
-          orderId: newOrder.id,
-        });
-      }
+      await manager.save(Transaction, {
+        walletId: wallet.id,
+        type: TransactionType.RESERVE,
+        amount: totalAmount,
+        currency: wallet.currency ?? Currency.XOF,
+        balanceBefore: wallet.balance,
+        balanceAfter: wallet.balance,
+        orderId: newOrder.id,
+      });
 
       return newOrder;
     });

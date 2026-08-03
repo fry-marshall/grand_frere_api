@@ -4,13 +4,11 @@ import {
   ArrayMinSize,
   IsArray,
   IsDateString,
-  IsEnum,
   IsOptional,
   IsUUID,
   ValidateNested,
 } from 'class-validator';
 import { CreateOrderItemDto } from './create-order-item.dto';
-import { PaymentMethod } from '../order.types';
 
 export class CreateOrderDto {
   @ApiProperty({ example: 'uuid' })
@@ -23,15 +21,6 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
   items: CreateOrderItemDto[];
-
-  @ApiPropertyOptional({
-    enum: PaymentMethod,
-    default: PaymentMethod.WALLET,
-    description: 'Payment method. Defaults to WALLET.',
-  })
-  @IsOptional()
-  @IsEnum(PaymentMethod)
-  paymentMethod?: PaymentMethod;
 
   @ApiPropertyOptional({
     example: '2026-06-16',
