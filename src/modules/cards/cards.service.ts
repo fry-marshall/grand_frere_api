@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Card } from './entities/card.entity';
 import { School } from '../schools/entities/school.entity';
@@ -25,6 +25,7 @@ import { UpdateDailyLimitDto } from './dto/update-daily-limit.dto';
 import { UpdateDailyLimitPermissionDto } from './dto/update-daily-limit-permission.dto';
 import { VerifyPinDto } from './dto/verify-pin.dto';
 import { ResetPinDto } from './dto/reset-pin.dto';
+import { ReplaceCardDto } from './dto/replace-card.dto';
 import * as storageInterface from '../../common/storage/storage.interface';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -43,6 +44,7 @@ export class CardsService {
     private readonly studentParentRepo: Repository<StudentParent>,
     @Inject(storageInterface.STORAGE_SERVICE)
     private readonly storageService: storageInterface.IStorageService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createBatch(dto: CreateCardsBatchDto): Promise<CardResponseDto[]> {
@@ -262,6 +264,68 @@ export class CardsService {
       status: newStatus,
     });
     return this.toDto({ ...card, pinAttempts: 0, status: newStatus });
+  }
+
+  async replaceCard(
+    code: string,
+    dto: ReplaceCardDto,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<CardResponseDto> {
+    const lostCard = await this.cardRepo.findOne({ where: { code } });
+    if (!lostCard) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
+
+    await this.assertOwnership(currentUser, lostCard);
+
+    if (!lostCard.studentId || lostCard.status === CardStatus.UNASSIGNED) {
+      throw new ConflictException(ErrorMessages.CARDS.NOT_REPLACEABLE);
+    }
+
+    if (lostCard.code === dto.newCardCode) {
+      throw new ConflictException(ErrorMessages.CARDS.SAME_CARD);
+    }
+
+    const newCard = await this.cardRepo.findOne({
+      where: { code: dto.newCardCode },
+    });
+    if (!newCard) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
+
+    if (newCard.status !== CardStatus.UNASSIGNED) {
+      throw new ConflictException(ErrorMessages.CARDS.NEW_CARD_NOT_BLANK);
+    }
+
+    if (newCard.schoolId !== lostCard.schoolId) {
+      throw new ConflictException(ErrorMessages.CARDS.SCHOOL_MISMATCH);
+    }
+
+    const studentId = lostCard.studentId;
+
+    await this.dataSource.transaction(async (manager) => {
+      await manager.update(Card, newCard.id, {
+        status: CardStatus.ACTIVE,
+        studentId,
+        pinHash: lostCard.pinHash,
+        pinAttempts: 0,
+        dailyLimit: lostCard.dailyLimit,
+        studentCanEditDailyLimit: lostCard.studentCanEditDailyLimit,
+      });
+
+      await manager.update(Card, lostCard.id, {
+        status: CardStatus.LOST,
+        studentId: null as unknown as string,
+      });
+
+      await manager.update(Student, studentId, { cardId: newCard.id });
+    });
+
+    return this.toDto({
+      ...newCard,
+      status: CardStatus.ACTIVE,
+      studentId,
+      pinHash: lostCard.pinHash,
+      pinAttempts: 0,
+      dailyLimit: lostCard.dailyLimit,
+      studentCanEditDailyLimit: lostCard.studentCanEditDailyLimit,
+    });
   }
 
   private async assertOwnership(

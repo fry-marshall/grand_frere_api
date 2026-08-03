@@ -27,6 +27,7 @@ import { UpdateDailyLimitDto } from './dto/update-daily-limit.dto';
 import { UpdateDailyLimitPermissionDto } from './dto/update-daily-limit-permission.dto';
 import { VerifyPinDto } from './dto/verify-pin.dto';
 import { ResetPinDto } from './dto/reset-pin.dto';
+import { ReplaceCardDto } from './dto/replace-card.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/decorators/role.decorator';
@@ -250,5 +251,42 @@ export class CardsController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.cardsService.resetPin(code, dto, currentUser);
+  }
+
+  @Put(':code/replace')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(
+    UserRole.SUPER_ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PARENT,
+    UserRole.STUDENT,
+  )
+  @ApiOperation({
+    summary:
+      'Replace a lost card with a blank one, carrying over the PIN, daily limit and student link',
+  })
+  @ApiSuccessResponse(CardResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.CARDS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: `${ErrorMessages.CARDS.NOT_REPLACEABLE} | ${ErrorMessages.CARDS.SAME_CARD} | ${ErrorMessages.CARDS.NEW_CARD_NOT_BLANK} | ${ErrorMessages.CARDS.SCHOOL_MISMATCH}`,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({
+    description: 'Not the card owner',
+    type: ErrorResponse,
+  })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  replaceCard(
+    @Param('code') code: string,
+    @Body() dto: ReplaceCardDto,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.cardsService.replaceCard(code, dto, currentUser);
   }
 }

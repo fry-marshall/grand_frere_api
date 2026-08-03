@@ -32,6 +32,10 @@ export const ErrorMessages = {
     PIN_INVALID: 'Invalid PIN',
     CARD_BLOCKED: 'Card is blocked after 3 failed PIN attempts',
     INVALID_PASSWORD: 'Invalid password',
+    NOT_REPLACEABLE: 'Card must be assigned to a student to be replaced',
+    SAME_CARD: 'Replacement card must be different from the lost card',
+    NEW_CARD_NOT_BLANK: 'Replacement card must be a blank, unassigned card',
+    SCHOOL_MISMATCH: 'Replacement card must belong to the same school',
   },
   SCHOOLS: {
     NOT_FOUND: 'School not found',

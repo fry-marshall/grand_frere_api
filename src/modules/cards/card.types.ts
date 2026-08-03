@@ -3,4 +3,5 @@ export enum CardStatus {
   ACTIVE = 'ACTIVE',
   SUSPENDED = 'SUSPENDED',
   BLOCKED = 'BLOCKED',
+  LOST = 'LOST',
 }
