@@ -376,8 +376,8 @@ export class VendorsService {
       .select('COUNT(*)', 'count')
       .where('o.vendorId = :id', { id })
       .andWhere('o.scheduledFor = :today', { today })
-      .andWhere('o.status NOT IN (:...excluded)', {
-        excluded: [OrderStatus.CANCELLED, OrderStatus.EXPIRED],
+      .andWhere('o.status IN (:...active)', {
+        active: [OrderStatus.PENDING, OrderStatus.VALIDATED],
       })
       .getRawOne<{ count: string }>();
 

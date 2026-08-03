@@ -175,6 +175,15 @@ describe('GET /api/v1/vendors/:id/stats', () => {
         expiresAt: new Date(Date.now() + 3600000),
         scheduledFor: today,
       },
+      {
+        vendorId: vendor.id,
+        studentId: student.id,
+        status: OrderStatus.PENDING,
+        paymentMethod: PaymentMethod.WALLET,
+        totalAmount: 300,
+        expiresAt: new Date(Date.now() + 3600000),
+        scheduledFor: today,
+      },
     ]);
   });
 
@@ -204,7 +213,7 @@ describe('GET /api/v1/vendors/:id/stats', () => {
         .set('Authorization', `Bearer ${superAdminToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.todayOrderCount).toBe(2); // CANCELLED excluded
+      expect(res.body.data.todayOrderCount).toBe(2); // PENDING + VALIDATED only
       expect(res.body.data.todayRevenue).toBe(1500); // COMPLETED only
       expect(res.body.data.cashToCollect).toBe(800); // VALIDATED + CASH
     });

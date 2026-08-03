@@ -1,6 +1,6 @@
 # Grand Frère API — Documentation Complète
 
-> Version : 1.1 — Base URL : `http://localhost:3000/api/v1`  
+> Version : 1.2 — Base URL : `http://localhost:3000/api/v1`  
 > Swagger (hors prod) : `GET /api/docs`
 
 ---
@@ -25,6 +25,8 @@
    - [Payments](#610-payments)
    - [Withdrawals](#611-withdrawals)
    - [Notifications](#612-notifications)
+   - [School Activities](#613-school-activities)
+   - [School Join Requests](#614-school-join-requests)
 7. [WebSocket (temps réel)](#7-websocket-temps-réel)
 8. [Règles métier & edge cases](#8-règles-métier--edge-cases)
 
@@ -239,6 +241,14 @@ Exemples valides : `+22501XXXXXXXX`, `+22505XXXXXXXX`, `+22507XXXXXXXX`
 |---|
 | `MALE` |
 | `FEMALE` |
+
+### `SchoolJoinRequestStatus`
+
+| Valeur | Description |
+|---|---|
+| `PENDING` | En attente de traitement |
+| `APPROVED` | Approuvée — école et admin créés |
+| `REJECTED` | Rejetée |
 
 ---
 
@@ -628,18 +638,21 @@ Génère un lot de cartes avec QR code pour une école.
   "data": [
     {
       "id": "uuid",
-      "code": "GF-2024-001",
+      "code": "GF-LMC-0842",
       "status": "UNASSIGNED",
       "schoolId": "uuid",
       "studentId": null,
       "dailyLimit": 1000,
-      "imageUrl": "https://cdn.example.com/cards/GF-2024-001.png",
+      "studentCanEditDailyLimit": true,
+      "imageUrl": "https://cdn.example.com/cards/GF-LMC-0842.png",
       "createdAt": "2026-06-20T10:00:00.000Z"
     }
   ],
   "statusCode": 201
 }
 ```
+
+> Le code est généré au format `GF-<sigle-école>-<4 chiffres>` (ex: `GF-LMC-0842`), unique en base.
 
 **Erreurs**
 
@@ -726,9 +739,40 @@ Met à jour la limite journalière de dépenses.
 |---|---|
 | `400` | Validation failed |
 | `403` | `Only the linked parent can update the daily limit` |
+| `403` | `Student is not allowed to update the daily limit` (élève sans permission — voir `daily-limit-permission`) |
 | `404` | `Card not found` |
 
-**Edge case** : Seul le parent ou l'élève directement lié à la carte peut modifier la limite. Un admin ne peut pas.
+**Edge cases**
+
+- Seul le parent ou l'élève directement lié à la carte peut modifier la limite. Un admin ne peut pas.
+- Si l'appelant est `STUDENT`, la modification n'est autorisée que si `card.studentCanEditDailyLimit` est `true` (voir `PUT /cards/:code/daily-limit-permission`).
+
+---
+
+#### `PUT /cards/:code/daily-limit-permission`
+
+Autorise ou interdit à l'élève de modifier lui-même la limite journalière de sa carte.
+
+**Rôles** : `PARENT`  
+**Params** : `code`
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `studentCanEditDailyLimit` | `boolean` | oui | |
+
+**Réponse 200** : Objet `CardResponseDto` mis à jour (`studentCanEditDailyLimit` reflète la nouvelle valeur)
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `400` | Validation failed |
+| `403` | `Only the linked parent can update the daily limit` |
+| `404` | `Card not found` |
+
+**Edge case** : Seul le parent lié à l'élève de la carte peut modifier ce réglage — l'élève lui-même ne le peut pas.
 
 ---
 
@@ -899,7 +943,7 @@ Met à jour le nom ou l'adresse d'une école.
 
 | Champ | Type | Requis | Contraintes |
 |---|---|---|---|
-| `name` | `string` | non | |
+| `name` | `string` | non | Non vide |
 | `address` | `string` | non | 5 à 255 caractères |
 
 **Réponse 200** : `SchoolResponseDto` mis à jour
@@ -1007,6 +1051,33 @@ Liste les vendeurs d'une école avec pagination.
 
 **Réponse 200** : Objet paginé de `SchoolVendorResponseDto`
 
+```json
+{
+  "data": {
+    "data": [
+      {
+        "id": "uuid",
+        "shopName": "Maquis Chez Konan",
+        "waveNumber": "+2250700000000",
+        "openingTime": "08:00",
+        "closingTime": "17:00",
+        "photoUrl": "https://cdn.example.com/vendors/uuid.jpg",
+        "status": "ACTIVE",
+        "createdAt": "2026-06-20T10:00:00.000Z",
+        "user": {
+          "id": "uuid",
+          "firstName": "Konan",
+          "lastName": "Brou",
+          "phone": "+22501000000"
+        }
+      }
+    ],
+    "meta": { "total": 5, "page": 1, "limit": 20, "totalPages": 1 }
+  },
+  "statusCode": 200
+}
+```
+
 **Erreurs**
 
 | Code | Message |
@@ -1073,7 +1144,49 @@ Liste les transactions d'une école avec statistiques.
 | `from` | `ISO8601` | non | Date de début (ex: `2026-01-01T00:00:00Z`) |
 | `to` | `ISO8601` | non | Date de fin (ex: `2026-12-31T23:59:59Z`) |
 
-**Réponse 200** : Objet paginé de `SchoolTransactionResponseDto`
+**Réponse 200**
+
+> Contrairement aux autres listes, cette réponse n'est **pas** une simple pagination — elle inclut un bloc `stats` calculé sur l'ensemble des transactions filtrées (indépendamment de la page courante).
+
+```json
+{
+  "data": {
+    "transactions": {
+      "data": [
+        {
+          "id": "uuid",
+          "type": "DEBIT",
+          "amount": 3500,
+          "currency": "XOF",
+          "balanceBefore": 100000,
+          "balanceAfter": 96500,
+          "orderId": "uuid",
+          "paymentId": null,
+          "createdAt": "2026-06-23T08:00:00.000Z",
+          "student": {
+            "id": "uuid",
+            "class": "6ème A",
+            "user": { "id": "uuid", "firstName": "Kouassi", "lastName": "Yao" }
+          }
+        }
+      ],
+      "meta": { "total": 42, "page": 1, "limit": 20, "totalPages": 3 }
+    },
+    "stats": {
+      "totalTransactions": 42,
+      "totalCredits": 500000,
+      "totalDebits": 87500
+    }
+  },
+  "statusCode": 200
+}
+```
+
+| Champ | Description |
+|---|---|
+| `stats.totalTransactions` | Nombre total de transactions correspondant au filtre (`from`/`to`), toutes pages confondues |
+| `stats.totalCredits` | Somme des montants des transactions `CREDIT` sur la période filtrée |
+| `stats.totalDebits` | Somme des montants des transactions `DEBIT` sur la période filtrée |
 
 **Erreurs**
 
@@ -1418,6 +1531,7 @@ Liste les vendeurs avec pagination.
         "waveNumber": "+2250700000000",
         "openingTime": "08:00",
         "closingTime": "17:00",
+        "photoUrl": "https://cdn.example.com/vendors/uuid.jpg",
         "status": "ACTIVE",
         "schoolId": "uuid",
         "createdAt": "2026-06-20T10:00:00.000Z",
@@ -1453,6 +1567,7 @@ Profil du vendeur connecté.
     "waveNumber": "+2250700000000",
     "openingTime": "08:00",
     "closingTime": "17:00",
+    "photoUrl": "https://cdn.example.com/vendors/uuid.jpg",
     "status": "ACTIVE",
     "schoolId": "uuid",
     "createdAt": "2026-06-28T10:00:00.000Z",
@@ -1515,6 +1630,32 @@ Met à jour les informations d'un vendeur.
 
 | Code | Message |
 |---|---|
+| `403` | Access denied |
+| `404` | `Vendor not found` |
+
+---
+
+#### `PUT /vendors/:id/photo`
+
+Uploade ou remplace la photo de profil du vendeur.
+
+**Rôles** : `SUPER_ADMIN`, `VENDOR` (soi-même)  
+**Params** : `id`  
+**Content-Type** : `multipart/form-data`
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `file` | `binary` | oui | Image JPEG/PNG/WebP, max 5 Mo |
+
+**Réponse 200** : `VendorResponseDto` avec `photoUrl` mis à jour
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `400` | File validation failed (type/taille invalide) |
 | `403` | Access denied |
 | `404` | `Vendor not found` |
 
@@ -1611,7 +1752,6 @@ Liste les commandes d'un vendeur avec pagination.
         "status": "VALIDATED",
         "paymentMethod": "WALLET",
         "totalAmount": 3500,
-        "shortCode": "2841",
         "scheduledFor": "2026-06-23",
         "expiresAt": "2026-06-23T23:59:59.999Z",
         "createdAt": "2026-06-23T08:00:00.000Z",
@@ -1713,7 +1853,7 @@ Retourne les KPIs journaliers du vendeur pour le dashboard.
 
 | Champ | Description |
 |---|---|
-| `todayOrderCount` | Nombre de commandes prévues aujourd'hui (hors `CANCELLED` et `EXPIRED`) |
+| `todayOrderCount` | Nombre de commandes en cours aujourd'hui (`PENDING` et `VALIDATED` uniquement — exclut `COMPLETED`, `CANCELLED` et `EXPIRED`) |
 | `todayRevenue` | Somme des `totalAmount` des commandes `COMPLETED` aujourd'hui |
 | `cashToCollect` | Somme des `totalAmount` des commandes `VALIDATED` avec `paymentMethod = CASH` aujourd'hui |
 
@@ -1915,7 +2055,8 @@ Liste les commandes filtrées selon le rôle.
         "shortCode": "2841",
         "expiresAt": "2026-06-23T23:59:59.999Z",
         "scheduledFor": "2026-06-23",
-        "createdAt": "2026-06-23T08:00:00.000Z"
+        "createdAt": "2026-06-23T08:00:00.000Z",
+        "vendor": { "id": "uuid", "shopName": "Maquis Chez Konan" }
       }
     ],
     "meta": { "total": 8, "page": 1, "limit": 20, "totalPages": 1 }
@@ -1923,6 +2064,8 @@ Liste les commandes filtrées selon le rôle.
   "statusCode": 200
 }
 ```
+
+> `vendor` est un résumé optionnel (`{ id, shopName }`) inclus quand la relation vendeur est chargée par le serveur.
 
 **Filtrage par rôle**
 
@@ -2010,10 +2153,14 @@ Récupère les détails d'une commande avec ses articles.
     "vendor": {
       "id": "uuid",
       "shopName": "Maquis Chez Konan",
-      "waveNumber": "+2250700000000"
+      "waveNumber": "+2250700000000",
+      "phone": "+22501000000"
     },
     "student": {
+      "id": "uuid",
+      "class": "6ème A",
       "user": {
+        "id": "uuid",
         "firstName": "Kouassi",
         "lastName": "Yao"
       }
@@ -2022,22 +2169,28 @@ Récupère les détails d'une commande avec ses articles.
       {
         "id": "uuid",
         "itemId": "uuid",
+        "name": "Riz sauce",
+        "description": "Riz blanc avec sauce graine",
+        "imageUrl": "https://cdn.example.com/items/riz-sauce.jpg",
         "quantity": 2,
-        "unitPrice": 1500,
-        "item": { "name": "Riz sauce" }
+        "unitPrice": 1500
       },
       {
         "id": "uuid",
         "itemId": "uuid",
+        "name": "Eau minérale",
+        "description": null,
+        "imageUrl": null,
         "quantity": 1,
-        "unitPrice": 500,
-        "item": { "name": "Eau minérale" }
+        "unitPrice": 500
       }
     ]
   },
   "statusCode": 200
 }
 ```
+
+> `vendor.phone` et `student` peuvent être absents si les relations correspondantes ne sont pas chargées côté serveur. `description` et `imageUrl` sont des champs plats de chaque item de commande (pas imbriqués) et peuvent être `null`.
 
 **Erreurs**
 
@@ -2556,6 +2709,381 @@ Marque une notification spécifique comme lue.
 
 ---
 
+### 6.13 School Activities
+
+**Base route** : `/api/v1/school-activities`  
+**Authentification** : Bearer token requis sauf `GET /school-activities` (public) et `GET /school-activities/:id` (public)
+
+Permet aux écoles de publier des actualités (journée sportive, sortie, etc.) avec des photos, visibles publiquement une fois publiées.
+
+---
+
+#### `POST /school-activities`
+
+Crée une activité scolaire (créée en brouillon, non visible publiquement).
+
+**Rôles** : `SCHOOL_ADMIN`, `SUPER_ADMIN`  
+**HTTP** : 201  
+**Content-Type** : `multipart/form-data`
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `title` | `string` | oui | Max 255 caractères |
+| `description` | `string` | oui | |
+| `schoolId` | `uuid` | conditionnel | Requis si appelant `SUPER_ADMIN`. Ignoré pour `SCHOOL_ADMIN` (dérivé de son école) |
+| `photos[]` | `binary[]` | non | Max 5 fichiers, JPEG/PNG/WebP, 5 Mo max chacun |
+
+**Réponse 201**
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "schoolId": "uuid",
+    "title": "Journée sportive",
+    "description": "Les élèves ont participé à des activités sportives.",
+    "photoUrls": [
+      "https://cdn.example.com/school-activities/uuid/1.jpg"
+    ],
+    "isVisible": false,
+    "createdAt": "2026-06-20T10:00:00.000Z",
+    "school": { "id": "uuid", "name": "Lycée Moderne de Cocody", "sigle": "LMC" }
+  },
+  "statusCode": 201
+}
+```
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `400` | Validation failed |
+| `400` | `schoolId is required` (appelant `SUPER_ADMIN` sans `schoolId`) |
+| `404` | `School not found` |
+
+**Edge case** : L'activité est créée avec `isVisible: false` — elle doit être publiée explicitement via `PUT /school-activities/:id/publish` pour apparaître dans le flux public.
+
+---
+
+#### `PUT /school-activities/:id`
+
+Met à jour une activité scolaire. Si des photos sont envoyées, elles remplacent entièrement le jeu existant.
+
+**Rôles** : `SCHOOL_ADMIN` (son école uniquement), `SUPER_ADMIN`  
+**Params** : `id`  
+**Content-Type** : `multipart/form-data`
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `title` | `string` | non | Max 255 caractères, non vide |
+| `description` | `string` | non | Non vide |
+| `photos[]` | `binary[]` | non | Max 5 fichiers, JPEG/PNG/WebP, 5 Mo max chacun — remplace toutes les photos existantes |
+
+**Réponse 200** : `SchoolActivityResponseDto` mis à jour
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `400` | Validation failed |
+| `403` | Not your school |
+| `404` | `School activity not found` |
+
+---
+
+#### `DELETE /school-activities/:id`
+
+Supprime une activité scolaire (et ses photos).
+
+**Rôles** : `SCHOOL_ADMIN` (son école uniquement), `SUPER_ADMIN`  
+**HTTP** : 204  
+**Params** : `id`
+
+**Réponse 204** : Pas de corps
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `403` | Not your school |
+| `404` | `School activity not found` |
+
+---
+
+#### `PUT /school-activities/:id/publish`
+
+Rend une activité visible publiquement.
+
+**Rôles** : `SCHOOL_ADMIN` (son école uniquement), `SUPER_ADMIN`  
+**Params** : `id`
+
+**Réponse 200** : `SchoolActivityResponseDto` avec `isVisible: true`
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `403` | Not your school |
+| `404` | `School activity not found` |
+| `409` | `Activity is already visible` |
+
+---
+
+#### `PUT /school-activities/:id/hide`
+
+Masque une activité publiée.
+
+**Rôles** : `SCHOOL_ADMIN` (son école uniquement), `SUPER_ADMIN`  
+**Params** : `id`
+
+**Réponse 200** : `SchoolActivityResponseDto` avec `isVisible: false`
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `403` | Not your school |
+| `404` | `School activity not found` |
+| `409` | `Activity is already hidden` |
+
+---
+
+#### `GET /school-activities/mine`
+
+Liste les activités pour la gestion (brouillons + publiées).
+
+**Rôles** : `SCHOOL_ADMIN`, `SUPER_ADMIN`  
+**Query params**
+
+| Param | Type | Requis | Description |
+|---|---|---|---|
+| `page` | `integer` | non | Défaut : 1 |
+| `limit` | `integer` | non | Défaut : 20, max 100 |
+| `schoolId` | `uuid` | non | Filtre optionnel — ignoré pour `SCHOOL_ADMIN` (scopé à sa propre école) |
+
+**Réponse 200** : Objet paginé de `SchoolActivityResponseDto`
+
+> `SCHOOL_ADMIN` ne voit que les activités de son école (brouillons compris). `SUPER_ADMIN` voit tout, filtrable par `schoolId`.
+
+**Important** : Cette route est déclarée **avant** `GET /school-activities/:id` dans le contrôleur pour éviter que `/mine` ne soit interprété comme un `:id`.
+
+---
+
+#### `GET /school-activities`
+
+Liste les activités publiées (public). Filtre optionnel `?schoolId=`.
+
+**Auth** : Aucune — endpoint public  
+**Query params**
+
+| Param | Type | Requis | Description |
+|---|---|---|---|
+| `page` | `integer` | non | Défaut : 1 |
+| `limit` | `integer` | non | Défaut : 20, max 100 |
+| `schoolId` | `uuid` | non | Filtre par école |
+
+**Réponse 200** : Objet paginé de `SchoolActivityResponseDto` (activités `isVisible: true` uniquement)
+
+---
+
+#### `GET /school-activities/:id`
+
+Récupère une activité publiée par son id (public).
+
+**Auth** : Aucune — endpoint public  
+**Params** : `id` (uuid)
+
+**Réponse 200** : `SchoolActivityResponseDto`
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `404` | `School activity not found` (introuvable ou non publiée) |
+
+---
+
+### 6.14 School Join Requests
+
+**Base route** : `/api/v1/school-join-requests`  
+**Authentification** : Publique pour la soumission, Bearer token (`SUPER_ADMIN`) pour la gestion
+
+Permet à une école externe de demander à rejoindre le réseau Grand Frère. Un `SUPER_ADMIN` approuve (créant l'école et son admin) ou rejette la demande.
+
+---
+
+#### `POST /school-join-requests`
+
+Soumet une demande d'adhésion au réseau d'écoles.
+
+**Auth** : Aucune  
+**HTTP** : 201
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `schoolName` | `string` | oui | |
+| `city` | `string` | oui | |
+| `studentCount` | `integer` | oui | ≥ 1 |
+| `gender` | `Gender` | oui | |
+| `firstName` | `string` | oui | |
+| `lastName` | `string` | oui | |
+| `phone` | `string` | oui | Format CI |
+| `email` | `string` | oui | Email valide |
+| `position` | `string` | oui | Poste du contact (ex: `Directeur`) |
+| `message` | `string` | non | Max 1000 caractères |
+
+**Réponse 201**
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "schoolName": "Lycée Moderne de Cocody",
+    "city": "Abidjan",
+    "studentCount": 450,
+    "gender": "MALE",
+    "firstName": "Kouamé",
+    "lastName": "Assi",
+    "phone": "+22507000000001",
+    "email": "contact@lmc.ci",
+    "position": "Directeur",
+    "message": "We would like to join the network.",
+    "status": "PENDING",
+    "createdAt": "2026-06-20T10:00:00.000Z"
+  },
+  "statusCode": 201
+}
+```
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `400` | Validation failed |
+
+---
+
+#### `GET /school-join-requests`
+
+Liste les demandes d'adhésion.
+
+**Rôles** : `SUPER_ADMIN`  
+**Query params**
+
+| Param | Type | Requis | Description |
+|---|---|---|---|
+| `page` | `integer` | non | Défaut : 1 |
+| `limit` | `integer` | non | Défaut : 20, max 100 |
+| `status` | `SchoolJoinRequestStatus` | non | Filtre par statut |
+
+**Réponse 200** : Objet paginé de `SchoolJoinRequestResponseDto`
+
+---
+
+#### `GET /school-join-requests/:id`
+
+Récupère une demande d'adhésion.
+
+**Rôles** : `SUPER_ADMIN`  
+**Params** : `id` (uuid)
+
+**Réponse 200** : `SchoolJoinRequestResponseDto`
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `404` | `School join request not found` |
+
+---
+
+#### `PUT /school-join-requests/:id/approve`
+
+Approuve une demande — crée l'école et son administrateur.
+
+**Rôles** : `SUPER_ADMIN`  
+**Params** : `id`
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `sigle` | `string` | oui | `[A-Z0-9-]{2,10}` — unique |
+| `password` | `string` | oui | Min 8 caractères — mot de passe du compte admin créé |
+
+**Réponse 200**
+
+```json
+{
+  "data": {
+    "school": {
+      "id": "uuid",
+      "name": "Lycée Moderne de Cocody",
+      "sigle": "LMC",
+      "address": "Abidjan",
+      "status": "ACTIVE",
+      "createdAt": "2026-06-20T10:00:00.000Z"
+    },
+    "admin": {
+      "id": "uuid",
+      "firstName": "Kouamé",
+      "lastName": "Assi",
+      "phone": "+22507000000001",
+      "role": "SCHOOL_ADMIN",
+      "schoolId": "uuid",
+      "createdAt": "2026-06-20T10:00:00.000Z"
+    }
+  },
+  "statusCode": 200
+}
+```
+
+> Le nom de l'école (`school.name`) et son adresse (`school.address`) sont dérivés respectivement de `schoolName` et `city` de la demande d'origine. Les informations de l'admin (nom, téléphone) viennent aussi de la demande — seul `sigle` et `password` sont fournis à l'approbation.
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `400` | Validation failed |
+| `404` | `School join request not found` |
+| `409` | Request already processed / sigle already exists / phone already exists |
+
+**Side effect** : `SchoolsService.create` et `createAdmin` n'utilisent pas de transaction DB partagée — si la création de l'admin échoue après celle de l'école, l'école nouvellement créée est automatiquement supprimée pour éviter de laisser une école sans administrateur.
+
+---
+
+#### `PUT /school-join-requests/:id/reject`
+
+Rejette une demande d'adhésion.
+
+**Rôles** : `SUPER_ADMIN`  
+**Params** : `id`
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `reason` | `string` | non | Max 500 caractères |
+
+**Réponse 200** : `SchoolJoinRequestResponseDto` avec `status: "REJECTED"` et `rejectionReason` renseigné
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `404` | `School join request not found` |
+| `409` | `Join request has already been processed` |
+
+**Edge case** : Seules les demandes `PENDING` peuvent être approuvées ou rejetées.
+
+---
+
 ## 7. WebSocket (temps réel)
 
 **URL** : `ws://localhost:3000` (même port que le serveur HTTP)  
@@ -2668,7 +3196,7 @@ Deux modes d'identification de la commande à encaisser :
 - Généré automatiquement à la création de chaque commande.
 - 4 chiffres décimaux (1000–9999), unique par combinaison `(vendorId, scheduledFor)`.
 - Collision résolue par jusqu'à 10 tentatives de régénération aléatoire.
-- Présent dans `OrderResponseDto`, `OrderDetailResponseDto` et `VendorOrderResponseDto`.
+- Présent dans `OrderResponseDto` et `OrderDetailResponseDto`. **Absent** de `VendorOrderResponseDto` (liste des commandes d'un vendeur) — le vendeur retrouve la commande à encaisser via `GET /orders/by-card` ou `GET /orders/by-code`, pas via cette liste.
 - Peut être `null` pour les commandes créées avant l'introduction de ce champ.
 
 ### Calcul des montants de commande
@@ -2750,3 +3278,5 @@ Tous les endpoints de liste supportent :
 | `GET /parents` | Tous | École | ✗ | ✗ | ✗ |
 | `GET /vendors` | Tous | École | ✗ | ✗ | ✗ |
 | `GET /payments` | Tous | École | ✗ | ✗ | ✗ |
+| `GET /school-activities` | ✅ public | ✅ public | ✅ public | ✅ public | ✅ public |
+| `GET /school-activities/mine` | Tous | École | ✗ | ✗ | ✗ |
