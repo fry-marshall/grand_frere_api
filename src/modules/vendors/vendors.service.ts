@@ -344,6 +344,7 @@ export class VendorsService {
       imageUrl: i.imageUrl
         ? this.storageService.getPublicUrl(`items/${i.id}/${i.imageUrl}`)
         : i.imageUrl,
+      pendingImageUrl: null,
       status: i.status,
       createdAt: i.createdAt,
     }));

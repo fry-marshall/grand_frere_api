@@ -20,6 +20,12 @@ export class ItemResponseDto {
   @ApiProperty({ nullable: true })
   imageUrl: string;
 
+  @ApiProperty({
+    nullable: true,
+    description: 'Image awaiting admin approval, if any',
+  })
+  pendingImageUrl: string | null;
+
   @ApiProperty({ enum: ItemStatus })
   status: ItemStatus;
 

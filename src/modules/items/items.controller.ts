@@ -17,6 +17,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConflictResponse,
   ApiConsumes,
   ApiForbiddenResponse,
   ApiNoContentResponse,
@@ -123,7 +124,10 @@ export class ItemsController {
   )
   @UseFilters(MulterExceptionFilter)
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: "Upload or replace item's image" })
+  @ApiOperation({
+    summary:
+      "Upload or replace item's image — held as pending until an admin approves it",
+  })
   @ApiBody({
     schema: {
       type: 'object',
@@ -144,6 +148,52 @@ export class ItemsController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.itemsService.updateImage(id, file, currentUser);
+  }
+
+  @Put(':id/image/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @ApiOperation({
+    summary: "Approve an item's pending image — it becomes the live photo",
+  })
+  @ApiSuccessResponse(ItemResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.ITEMS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  @ApiConflictResponse({
+    description: ErrorMessages.ITEMS.NO_PENDING_IMAGE,
+    type: ErrorResponse,
+  })
+  approveImage(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.itemsService.approveImage(id, currentUser);
+  }
+
+  @Put(':id/image/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @ApiOperation({
+    summary: "Reject an item's pending image — the live photo is unchanged",
+  })
+  @ApiSuccessResponse(ItemResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.ITEMS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  @ApiConflictResponse({
+    description: ErrorMessages.ITEMS.NO_PENDING_IMAGE,
+    type: ErrorResponse,
+  })
+  rejectImage(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.itemsService.rejectImage(id, currentUser);
   }
 
   @Delete(':id')
