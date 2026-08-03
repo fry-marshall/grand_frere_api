@@ -14,6 +14,7 @@ import { Wallet } from '../../src/modules/wallets/entities/wallet.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
 import { UserRole } from '../../src/modules/users/user.types';
 import { CardStatus } from '../../src/modules/cards/card.types';
+import { ErrorMessages } from '../../src/common/swagger/error-messages';
 
 describe('POST /api/v1/parents/me/students', () => {
   let app: INestApplication;
@@ -332,13 +333,24 @@ describe('POST /api/v1/parents/me/students', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should return 401 when PIN is invalid for ACTIVE card', async () => {
+    it('should return 401 when no PIN is provided for a card that already has one', async () => {
+      const res = await request(getServer(app))
+        .post('/api/v1/parents/me/students')
+        .set('Authorization', `Bearer ${parentToken}`)
+        .send({ cardCode: cardWithTwoParents.code });
+
+      expect(res.status).toBe(401);
+      expect(res.body.message).toBe(ErrorMessages.CARDS.PIN_INVALID);
+    });
+
+    it('should return 409 when the PIN does not match the one already set on the card', async () => {
       const res = await request(getServer(app))
         .post('/api/v1/parents/me/students')
         .set('Authorization', `Bearer ${parentToken}`)
         .send({ cardCode: cardWithTwoParents.code, pin: '0000' });
 
-      expect(res.status).toBe(401);
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe(ErrorMessages.CARDS.PIN_MISMATCH);
     });
 
     it('should return 409 when student already has 2 parents', async () => {

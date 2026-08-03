@@ -293,9 +293,11 @@ export class ParentsService {
     if (card.pinHash) {
       if (!dto.pin)
         throw new UnauthorizedException(ErrorMessages.CARDS.PIN_INVALID);
+      // Same rule as signup: confirm the PIN already set by whoever
+      // registered the card first, don't just reject the field.
       const isValid = await bcrypt.compare(dto.pin, card.pinHash);
       if (!isValid)
-        throw new UnauthorizedException(ErrorMessages.CARDS.PIN_INVALID);
+        throw new ConflictException(ErrorMessages.CARDS.PIN_MISMATCH);
     }
 
     const alreadyLinked = await this.studentParentRepo.findOne({
