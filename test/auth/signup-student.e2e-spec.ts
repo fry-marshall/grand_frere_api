@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
+import * as bcrypt from 'bcrypt';
 import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
@@ -14,13 +15,19 @@ import { ErrorMessages } from '../../src/common/swagger/error-messages';
 
 const PHONE_SUCCESS = '+2250100000010';
 const PHONE_SUCCESS_PIN = '+2250100000011';
+const PHONE_SUCCESS_PIN_REUSE = '+2250100000013';
 const PHONE_CLAIM_SUCCESS = '+2250100000012';
+const PHONE_CLAIM_PIN_CONFLICT = '+2250100000014';
+const PHONE_CLAIM_PIN_CONFIRM = '+2250100000015';
 const PHONE_EXISTING = '+2250500000019';
 const PHONE_ACTIVE_STUDENT = '+2250500000020';
 const TEST_PHONES = [
   PHONE_SUCCESS,
   PHONE_SUCCESS_PIN,
+  PHONE_SUCCESS_PIN_REUSE,
   PHONE_CLAIM_SUCCESS,
+  PHONE_CLAIM_PIN_CONFLICT,
+  PHONE_CLAIM_PIN_CONFIRM,
   PHONE_EXISTING,
   PHONE_ACTIVE_STUDENT,
 ];
@@ -37,8 +44,11 @@ describe('POST /api/v1/auth/signup/student', () => {
   let unassignedCard: Card;
   let unassignedCard2: Card;
   let unassignedCard3: Card;
+  let unassignedCard4: Card;
   let activeCard: Card;
   let shellCard: Card;
+  let shellCardWithPin: Card;
+  let shellCardWithPinMismatch: Card;
 
   beforeAll(async () => {
     const { app: nestApp, moduleRef } = await createTestApp();
@@ -91,6 +101,14 @@ describe('POST /api/v1/auth/signup/student', () => {
       schoolId: school.id,
     });
 
+    // Card 4: UNASSIGNED → proves another student can reuse the exact same
+    // PIN digits as card 3's student without any conflict
+    unassignedCard4 = await cardRepo.save({
+      code: 'GF-SS-006',
+      status: CardStatus.UNASSIGNED,
+      schoolId: school.id,
+    });
+
     // Card ACTIVE with real student (has phone) → card not available case
     activeCard = await cardRepo.save({
       code: 'GF-SS-002',
@@ -129,6 +147,54 @@ describe('POST /api/v1/auth/signup/student', () => {
       schoolId: school.id,
     });
     await cardRepo.update(shellCard.id, { studentId: shellStudent.id });
+
+    // Card ACTIVE with shell student AND a PIN already set by the parent →
+    // the student claiming the account must confirm that same PIN
+    shellCardWithPin = await cardRepo.save({
+      code: 'GF-SS-007',
+      status: CardStatus.ACTIVE,
+      pinHash: await bcrypt.hash('1234', 10),
+      schoolId: school.id,
+    });
+    const shellStudentUser2 = await userRepo.save({
+      firstName: 'Shell',
+      lastName: 'StudentTwo',
+      role: UserRole.STUDENT,
+      schoolId: school.id,
+      isOnboarded: false,
+    });
+    const shellStudent2 = await studentRepo.save({
+      userId: shellStudentUser2.id,
+      cardId: shellCardWithPin.id,
+      schoolId: school.id,
+    });
+    await cardRepo.update(shellCardWithPin.id, {
+      studentId: shellStudent2.id,
+    });
+
+    // Same setup again, dedicated to the mismatch case — claiming a shell
+    // student is a one-shot action, so it needs its own card/student pair
+    shellCardWithPinMismatch = await cardRepo.save({
+      code: 'GF-SS-008',
+      status: CardStatus.ACTIVE,
+      pinHash: await bcrypt.hash('1234', 10),
+      schoolId: school.id,
+    });
+    const shellStudentUser3 = await userRepo.save({
+      firstName: 'Shell',
+      lastName: 'StudentThree',
+      role: UserRole.STUDENT,
+      schoolId: school.id,
+      isOnboarded: false,
+    });
+    const shellStudent3 = await studentRepo.save({
+      userId: shellStudentUser3.id,
+      cardId: shellCardWithPinMismatch.id,
+      schoolId: school.id,
+    });
+    await cardRepo.update(shellCardWithPinMismatch.id, {
+      studentId: shellStudent3.id,
+    });
 
     // User with existing phone → phone conflict case
     await userRepo.save({
@@ -240,6 +306,53 @@ describe('POST /api/v1/auth/signup/student', () => {
       expect(updatedCard!.status).toBe(CardStatus.ACTIVE);
       expect(updatedCard!.pinHash).not.toBeNull();
     });
+
+    it('should allow another student to reuse the exact same PIN as a different card', async () => {
+      const res = await request(getServer(app))
+        .post('/api/v1/auth/signup/student')
+        .send({
+          cardCode: unassignedCard4.code,
+          firstName: 'Fatou',
+          lastName: 'Traoré',
+          phone: PHONE_SUCCESS_PIN_REUSE,
+          password: 'SecurePass123',
+          pin: '5678',
+        });
+
+      expect(res.status).toBe(201);
+
+      const card3 = await cardRepo.findOne({
+        where: { id: unassignedCard3.id },
+      });
+      const card4 = await cardRepo.findOne({
+        where: { id: unassignedCard4.id },
+      });
+      expect(card4!.pinHash).not.toBeNull();
+      // Same PIN digits ('5678') as unassignedCard3's student — must
+      // succeed, with each card keeping its own independent hash.
+      expect(card4!.pinHash).not.toBe(card3!.pinHash);
+    });
+
+    it('should let the student claim the shell account when they confirm the PIN the parent already set', async () => {
+      const res = await request(getServer(app))
+        .post('/api/v1/auth/signup/student')
+        .send({
+          cardCode: shellCardWithPin.code,
+          firstName: 'Kwame',
+          lastName: 'Mensah',
+          phone: PHONE_CLAIM_PIN_CONFIRM,
+          password: 'SecurePass123',
+          pin: '1234',
+        });
+
+      expect(res.status).toBe(201);
+
+      // The card keeps its original PIN hash — confirming doesn't re-set it
+      const card = await cardRepo.findOne({
+        where: { id: shellCardWithPin.id },
+      });
+      expect(card!.pinHash).toBe(shellCardWithPin.pinHash);
+    });
   });
 
   describe('Failure cases', () => {
@@ -307,6 +420,28 @@ describe('POST /api/v1/auth/signup/student', () => {
 
       expect(res.status).toBe(409);
       expect(res.body.message).toBe(ErrorMessages.AUTH.PHONE_ALREADY_EXISTS);
+    });
+
+    it('should return 409 when the student submits a PIN that does not match the one the parent already set', async () => {
+      const res = await request(getServer(app))
+        .post('/api/v1/auth/signup/student')
+        .send({
+          cardCode: shellCardWithPinMismatch.code,
+          firstName: 'Kwame',
+          lastName: 'Mensah',
+          phone: PHONE_CLAIM_PIN_CONFLICT,
+          password: 'SecurePass123',
+          pin: '9999',
+        });
+
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe(ErrorMessages.CARDS.PIN_MISMATCH);
+
+      // The original PIN must be untouched
+      const card = await cardRepo.findOne({
+        where: { id: shellCardWithPinMismatch.id },
+      });
+      expect(card!.pinHash).toBe(shellCardWithPinMismatch.pinHash);
     });
   });
 });

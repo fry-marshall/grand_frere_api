@@ -186,8 +186,24 @@ export class AuthService {
       );
     }
 
+    // The card's PIN belongs to the student, not to whichever parent
+    // registers it. A second parent joining an already-PIN'd card must
+    // confirm the PIN already set (by the first parent or the student),
+    // not set a different one.
+    if (dto.pin && card.pinHash) {
+      const pinMatches = await bcrypt.compare(dto.pin, card.pinHash);
+      if (!pinMatches) {
+        throw new ConflictException(ErrorMessages.CARDS.PIN_MISMATCH);
+      }
+    }
+
     return this.dataSource.transaction(async (manager) => {
       const passwordHash = await bcrypt.hash(dto.password, 10);
+
+      if (dto.pin && !card.pinHash) {
+        const pinHash = await bcrypt.hash(dto.pin, 10);
+        await manager.update(Card, card.id, { pinHash });
+      }
 
       const user = await manager.save(User, {
         firstName: dto.firstName,
@@ -253,10 +269,21 @@ export class AuthService {
         throw new ConflictException(ErrorMessages.AUTH.CARD_NOT_AVAILABLE);
       }
 
+      // The parent may have already set the card's PIN while creating this
+      // shell student. The student must confirm that same PIN here, not
+      // set a different one — a PIN change must go through reset-PIN.
+      if (dto.pin && card.pinHash) {
+        const pinMatches = await bcrypt.compare(dto.pin, card.pinHash);
+        if (!pinMatches) {
+          throw new ConflictException(ErrorMessages.CARDS.PIN_MISMATCH);
+        }
+      }
+
       // Claim the shell student account created by the parent
       return this.dataSource.transaction(async (manager) => {
         const passwordHash = await bcrypt.hash(dto.password, 10);
-        const pinHash = dto.pin ? await bcrypt.hash(dto.pin, 10) : undefined;
+        const pinHash =
+          dto.pin && !card.pinHash ? await bcrypt.hash(dto.pin, 10) : undefined;
 
         await manager.update(User, student.userId, {
           firstName: dto.firstName,

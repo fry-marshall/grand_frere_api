@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
+import * as bcrypt from 'bcrypt';
 import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { Card } from '../../src/modules/cards/entities/card.entity';
@@ -16,15 +17,21 @@ import { ErrorMessages } from '../../src/common/swagger/error-messages';
 
 const PHONE_SUCCESS_ACTIVE = '+2250100000001';
 const PHONE_SUCCESS_UNASSIGNED = '+2250100000003';
+const PHONE_SUCCESS_UNASSIGNED2 = '+2250100000006';
 const PHONE_EXISTING = '+2250500000099';
 const PHONE_PARENT1 = '+2250700000010';
 const PHONE_PARENT2 = '+2250700000011';
+const PHONE_PIN_CONFLICT = '+2250100000007';
+const PHONE_PIN_CONFIRM = '+2250100000008';
 const TEST_PHONES = [
   PHONE_SUCCESS_ACTIVE,
   PHONE_SUCCESS_UNASSIGNED,
+  PHONE_SUCCESS_UNASSIGNED2,
   PHONE_EXISTING,
   PHONE_PARENT1,
   PHONE_PARENT2,
+  PHONE_PIN_CONFLICT,
+  PHONE_PIN_CONFIRM,
 ];
 
 const BASE_PAYLOAD = {
@@ -47,7 +54,9 @@ describe('POST /api/v1/auth/signup/parent', () => {
 
   let school: School;
   let activeCard: Card;
+  let activeCardWithPin: Card;
   let unassignedCard: Card;
+  let unassignedCard2: Card;
   let unassignedCardNoStudent: Card;
   let suspendedCard: Card;
   let fullCard: Card;
@@ -108,9 +117,39 @@ describe('POST /api/v1/auth/signup/parent', () => {
     await cardRepo.update(activeCard.id, { studentId: student1.id });
     await walletRepo.save({ studentId: student1.id, balance: 0, reserved: 0 });
 
+    // Card ACTIVE with a student and a PIN already set — used to prove a
+    // second parent joining cannot silently overwrite the existing PIN
+    activeCardWithPin = await cardRepo.save({
+      code: 'GF-SP-006',
+      status: CardStatus.ACTIVE,
+      pinHash: await bcrypt.hash('1234', 10),
+      schoolId: school.id,
+    });
+    const studentUser3 = await userRepo.save({
+      firstName: 'Student',
+      lastName: 'Three',
+      role: UserRole.STUDENT,
+      schoolId: school.id,
+    });
+    const student3 = await studentRepo.save({
+      userId: studentUser3.id,
+      cardId: activeCardWithPin.id,
+      schoolId: school.id,
+    });
+    await cardRepo.update(activeCardWithPin.id, { studentId: student3.id });
+    await walletRepo.save({ studentId: student3.id, balance: 0, reserved: 0 });
+
     // Card UNASSIGNED — student creation flow
     unassignedCard = await cardRepo.save({
       code: 'GF-SP-004',
+      status: CardStatus.UNASSIGNED,
+      schoolId: school.id,
+    });
+
+    // Card UNASSIGNED — proves a different family can reuse the same PIN
+    // digits as another card without any conflict
+    unassignedCard2 = await cardRepo.save({
+      code: 'GF-SP-007',
       status: CardStatus.UNASSIGNED,
       schoolId: school.id,
     });
@@ -245,6 +284,46 @@ describe('POST /api/v1/auth/signup/parent', () => {
       });
       expect(wallet).not.toBeNull();
     });
+
+    it('should allow a different family to reuse the same 4-digit PIN on another card', async () => {
+      const res = await request(getServer(app))
+        .post('/api/v1/auth/signup/parent')
+        .send({
+          ...BASE_PAYLOAD,
+          cardCode: unassignedCard2.code,
+          phone: PHONE_SUCCESS_UNASSIGNED2,
+          pin: '1234',
+        });
+
+      expect(res.status).toBe(201);
+
+      const updatedCard = await cardRepo.findOne({
+        where: { id: unassignedCard2.id },
+      });
+      expect(updatedCard!.pinHash).not.toBeNull();
+      // Same PIN digits as the other card's test above, different hash —
+      // reusing a PIN across unrelated cards/families must never fail.
+      expect(updatedCard!.pinHash).not.toBe(activeCardWithPin.pinHash);
+    });
+
+    it('should let a second parent join when they confirm the PIN already set on the card', async () => {
+      const res = await request(getServer(app))
+        .post('/api/v1/auth/signup/parent')
+        .send({
+          ...BASE_PAYLOAD,
+          cardCode: activeCardWithPin.code,
+          phone: PHONE_PIN_CONFIRM,
+          pin: '1234',
+        });
+
+      expect(res.status).toBe(201);
+
+      // The card keeps its original PIN hash — confirming doesn't re-set it
+      const card = await cardRepo.findOne({
+        where: { id: activeCardWithPin.id },
+      });
+      expect(card!.pinHash).toBe(activeCardWithPin.pinHash);
+    });
   });
 
   describe('Failure cases', () => {
@@ -322,6 +401,26 @@ describe('POST /api/v1/auth/signup/parent', () => {
       expect(res.body.message).toBe(
         ErrorMessages.AUTH.STUDENT_ALREADY_HAS_TWO_PARENTS,
       );
+    });
+
+    it('should return 409 when a second parent submits a PIN that does not match the one already set on the card', async () => {
+      const res = await request(getServer(app))
+        .post('/api/v1/auth/signup/parent')
+        .send({
+          ...BASE_PAYLOAD,
+          cardCode: activeCardWithPin.code,
+          phone: PHONE_PIN_CONFLICT,
+          pin: '5678',
+        });
+
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe(ErrorMessages.CARDS.PIN_MISMATCH);
+
+      // The original PIN must be untouched
+      const card = await cardRepo.findOne({
+        where: { id: activeCardWithPin.id },
+      });
+      expect(card!.pinHash).toBe(activeCardWithPin.pinHash);
     });
   });
 });

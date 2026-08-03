@@ -27,6 +27,8 @@ export const ErrorMessages = {
       'Student is not allowed to update the daily limit',
     NOT_ACTIVE: 'Card is not active',
     PIN_NOT_SET: 'Card PIN is not set',
+    PIN_MISMATCH:
+      'PIN does not match the PIN already set on this card by another family member',
     PIN_INVALID: 'Invalid PIN',
     CARD_BLOCKED: 'Card is blocked after 3 failed PIN attempts',
     INVALID_PASSWORD: 'Invalid password',
