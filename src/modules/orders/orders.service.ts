@@ -434,15 +434,16 @@ export class OrdersService {
           reserved: wallet.reserved - order.totalAmount,
         });
 
-        await manager.save(Transaction, {
-          walletId: wallet.id,
-          type: TransactionType.DEBIT,
-          amount: order.totalAmount,
-          currency: wallet.currency ?? Currency.XOF,
-          balanceBefore,
-          balanceAfter,
-          orderId: order.id,
-        });
+        await manager.update(
+          Transaction,
+          { orderId: order.id, type: TransactionType.RESERVE },
+          {
+            type: TransactionType.DEBIT,
+            balanceBefore,
+            balanceAfter,
+            createdAt: new Date(),
+          },
+        );
       }
 
       return { ...order, status: OrderStatus.VALIDATED };
@@ -512,15 +513,14 @@ export class OrdersService {
           reserved: wallet.reserved - order.totalAmount,
         });
 
-        await manager.save(Transaction, {
-          walletId: wallet.id,
-          type: TransactionType.RELEASE,
-          amount: order.totalAmount,
-          currency: wallet.currency ?? Currency.XOF,
-          balanceBefore: wallet.balance,
-          balanceAfter: wallet.balance,
-          orderId: order.id,
-        });
+        await manager.update(
+          Transaction,
+          { orderId: order.id, type: TransactionType.RESERVE },
+          {
+            type: TransactionType.RELEASE,
+            createdAt: new Date(),
+          },
+        );
       }
     });
 
