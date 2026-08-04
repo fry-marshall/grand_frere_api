@@ -87,6 +87,7 @@ export const ErrorMessages = {
     NOT_APPROVABLE: 'Vendor can only be approved when pending',
     NOT_REJECTABLE: 'Vendor can only be rejected when pending',
     WALLET_NOT_FOUND: 'Vendor wallet not found',
+    NOT_ACTIVE: 'Vendor account must be approved before accessing orders',
   },
   SCHOOL_JOIN_REQUESTS: {
     NOT_FOUND: 'School join request not found',

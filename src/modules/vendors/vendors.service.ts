@@ -150,11 +150,11 @@ export class VendorsService {
     const vendor = await this.vendorRepo.findOne({ where: { id } });
     if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
 
-    if (
-      currentUser.role === UserRole.VENDOR &&
-      vendor.userId !== currentUser.id
-    ) {
-      throw new ForbiddenException();
+    if (currentUser.role === UserRole.VENDOR) {
+      if (vendor.userId !== currentUser.id) throw new ForbiddenException();
+      if (vendor.status !== VendorStatus.ACTIVE) {
+        throw new ForbiddenException(ErrorMessages.VENDORS.NOT_ACTIVE);
+      }
     }
 
     const { page, limit } = query;

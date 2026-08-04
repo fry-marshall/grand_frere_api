@@ -1639,7 +1639,7 @@ Liste les articles actifs d'un vendeur.
 
 Liste les commandes d'un vendeur avec pagination.
 
-**Rôles** : `SUPER_ADMIN`, `VENDOR` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `VENDOR` (soi-même, compte `ACTIVE` requis)  
 **Params** : `id`  
 **Query params** : `page`, `limit`
 
@@ -1680,6 +1680,7 @@ Liste les commandes d'un vendeur avec pagination.
 | Code | Message |
 |---|---|
 | `403` | Access denied |
+| `403` | `Vendor account must be approved before accessing orders` |
 | `404` | `Vendor not found` |
 
 ---
@@ -2017,6 +2018,8 @@ Liste les commandes filtrées selon le rôle.
 | `VENDOR` | Ses propres commandes |
 | `PARENT` | Commandes de ses élèves liés |
 | `STUDENT` | Ses propres commandes |
+
+> **VENDOR** : tant que le compte n'est pas `ACTIVE` (en attente de validation par un admin), tout accès aux commandes est refusé (`403 Vendor account must be approved before accessing orders`) — sur `GET /orders`, `GET /orders/:id`, `POST /orders/vendor/:vendorId`, `PUT /orders/:id/validate|complete|cancel`, `GET /orders/by-card`, `GET /orders/by-code` et `GET /vendors/:id/orders`. La gestion du menu (`/items/*`) reste accessible pendant l'attente.
 
 ---
 

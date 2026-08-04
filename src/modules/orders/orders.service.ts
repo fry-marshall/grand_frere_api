@@ -14,6 +14,7 @@ import { Wallet } from '../wallets/entities/wallet.entity';
 import { Transaction } from '../wallets/entities/transaction.entity';
 import { Student } from '../students/entities/student.entity';
 import { Vendor } from '../vendors/entities/vendor.entity';
+import { VendorStatus } from '../vendors/vendor.types';
 import { Item } from '../items/entities/item.entity';
 import { Card } from '../cards/entities/card.entity';
 import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
@@ -76,6 +77,12 @@ export class OrdersService {
       : null;
   }
 
+  private assertVendorActive(vendor: Vendor): void {
+    if (vendor.status !== VendorStatus.ACTIVE) {
+      throw new ForbiddenException(ErrorMessages.VENDORS.NOT_ACTIVE);
+    }
+  }
+
   async findAll(
     currentUser: { id: string; role: UserRole },
     query: PaginationQueryDto,
@@ -94,6 +101,7 @@ export class OrdersService {
         where: { userId: currentUser.id },
       });
       if (!vendor) throw new ForbiddenException();
+      this.assertVendorActive(vendor);
       qb.where('o.vendorId = :vendorId', { vendorId: vendor.id });
     } else if (currentUser.role === UserRole.PARENT) {
       const parent = await this.parentRepo.findOne({
@@ -150,6 +158,7 @@ export class OrdersService {
       });
       if (!vendor || order.vendorId !== vendor.id)
         throw new ForbiddenException();
+      this.assertVendorActive(vendor);
     } else if (currentUser.role === UserRole.PARENT) {
       const parent = await this.parentRepo.findOne({
         where: { userId: currentUser.id },
@@ -216,11 +225,9 @@ export class OrdersService {
     const vendor = await this.vendorRepo.findOne({ where: { id: vendorId } });
     if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
 
-    if (
-      currentUser.role === UserRole.VENDOR &&
-      vendor.userId !== currentUser.id
-    ) {
-      throw new ForbiddenException();
+    if (currentUser.role === UserRole.VENDOR) {
+      if (vendor.userId !== currentUser.id) throw new ForbiddenException();
+      this.assertVendorActive(vendor);
     }
 
     if (currentUser.role === UserRole.PARENT) {
@@ -392,6 +399,7 @@ export class OrdersService {
       });
       if (!vendor || order.vendorId !== vendor.id)
         throw new ForbiddenException();
+      this.assertVendorActive(vendor);
     }
 
     if (order.status !== OrderStatus.PENDING) {
@@ -450,6 +458,7 @@ export class OrdersService {
       });
       if (!vendor || order.vendorId !== vendor.id)
         throw new ForbiddenException();
+      this.assertVendorActive(vendor);
     } else if (currentUser.role === UserRole.PARENT) {
       const parent = await this.parentRepo.findOne({
         where: { userId: currentUser.id },
@@ -516,6 +525,7 @@ export class OrdersService {
       });
       if (!vendor || order.vendorId !== vendor.id)
         throw new ForbiddenException();
+      this.assertVendorActive(vendor);
     }
 
     if (order.status !== OrderStatus.VALIDATED) {
@@ -625,6 +635,7 @@ export class OrdersService {
       where: { userId: currentUser.id },
     });
     if (!vendor) throw new ForbiddenException();
+    this.assertVendorActive(vendor);
 
     const card = await this.cardRepo.findOne({ where: { code: cardCode } });
     if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
@@ -693,6 +704,7 @@ export class OrdersService {
       where: { userId: currentUser.id },
     });
     if (!vendor) throw new ForbiddenException();
+    this.assertVendorActive(vendor);
 
     const order = await this.orderRepo.findOne({
       where: {
