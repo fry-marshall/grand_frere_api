@@ -25,12 +25,7 @@ export class WalletsController {
 
   @Get('student/:studentId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(
-    UserRole.SUPER_ADMIN,
-    UserRole.SCHOOL_ADMIN,
-    UserRole.PARENT,
-    UserRole.STUDENT,
-  )
+  @Role(UserRole.SUPER_ADMIN, UserRole.PARENT, UserRole.STUDENT)
   @ApiOperation({ summary: "Get a student's wallet" })
   @ApiSuccessResponse(WalletResponseDto)
   @ApiNotFoundResponse({

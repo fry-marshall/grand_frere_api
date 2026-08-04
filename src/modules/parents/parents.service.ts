@@ -42,34 +42,9 @@ export class ParentsService {
   ) {}
 
   async findAll(
-    currentUser: { id: string; role: UserRole },
     query: PaginationQueryDto,
   ): Promise<{ data: ParentResponseDto[]; meta: object }> {
     const { page, limit } = query;
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (!admin?.schoolId) throw new ForbiddenException();
-
-      const [parents, total] = await this.parentRepo
-        .createQueryBuilder('p')
-        .innerJoinAndSelect('p.user', 'u')
-        .innerJoin('p.studentParents', 'sp')
-        .innerJoin('sp.student', 's')
-        .where('s.schoolId = :schoolId', { schoolId: admin.schoolId })
-        .distinct(true)
-        .orderBy('u.lastName', 'ASC')
-        .skip((page - 1) * limit)
-        .take(limit)
-        .getManyAndCount();
-
-      return {
-        data: parents.map((p) => this.toDto(p)),
-        meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
-      };
-    }
 
     const [parents, total] = await this.parentRepo.findAndCount({
       relations: ['user'],
@@ -103,19 +78,6 @@ export class ParentsService {
     });
     if (!parent) throw new NotFoundException(ErrorMessages.PARENTS.NOT_FOUND);
 
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      const linked = await this.studentParentRepo
-        .createQueryBuilder('sp')
-        .innerJoin('sp.student', 's')
-        .where('sp.parentId = :parentId', { parentId: id })
-        .andWhere('s.schoolId = :schoolId', { schoolId: admin?.schoolId })
-        .getOne();
-      if (!linked) throw new ForbiddenException();
-    }
-
     if (
       currentUser.role === UserRole.PARENT &&
       parent.userId !== currentUser.id
@@ -139,19 +101,6 @@ export class ParentsService {
   > {
     const parent = await this.parentRepo.findOne({ where: { id } });
     if (!parent) throw new NotFoundException(ErrorMessages.PARENTS.NOT_FOUND);
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      const linked = await this.studentParentRepo
-        .createQueryBuilder('sp')
-        .innerJoin('sp.student', 's')
-        .where('sp.parentId = :parentId', { parentId: id })
-        .andWhere('s.schoolId = :schoolId', { schoolId: admin?.schoolId })
-        .getOne();
-      if (!linked) throw new ForbiddenException();
-    }
 
     if (
       currentUser.role === UserRole.PARENT &&

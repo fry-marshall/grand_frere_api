@@ -208,17 +208,6 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
         expect(res.body.data.status).toBe(CardStatus.SUSPENDED);
       });
 
-      it('should allow SCHOOL_ADMIN to suspend a card in their school', async () => {
-        await resetCard(CardStatus.ACTIVE);
-
-        const res = await request(getServer(app))
-          .put(`/api/v1/cards/${activeCard.code}/suspend`)
-          .set('Authorization', `Bearer ${schoolAdminToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.data.status).toBe(CardStatus.SUSPENDED);
-      });
-
       it('should allow the linked PARENT to suspend their student card', async () => {
         await resetCard(CardStatus.ACTIVE);
 
@@ -254,6 +243,13 @@ describe('PUT /api/v1/cards/:code/suspend and /activate', () => {
         const res = await request(getServer(app))
           .put(`/api/v1/cards/${activeCard.code}/suspend`)
           .set('Authorization', `Bearer ${vendorToken}`);
+        expect(res.status).toBe(403);
+      });
+
+      it('should return 403 when user is SCHOOL_ADMIN', async () => {
+        const res = await request(getServer(app))
+          .put(`/api/v1/cards/${activeCard.code}/suspend`)
+          .set('Authorization', `Bearer ${schoolAdminToken}`);
         expect(res.status).toBe(403);
       });
 

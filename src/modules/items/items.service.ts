@@ -7,10 +7,9 @@ import {
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Item } from './entities/item.entity';
 import { Vendor } from '../vendors/entities/vendor.entity';
-import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/user.types';
 import type { IStorageService } from '../../common/storage/storage.interface';
 import { STORAGE_SERVICE } from '../../common/storage/storage.interface';
@@ -31,8 +30,6 @@ export class ItemsService {
     private readonly itemRepo: Repository<Item>,
     @InjectRepository(Vendor)
     private readonly vendorRepo: Repository<Vendor>,
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
     private readonly notificationsService: NotificationsService,
@@ -51,24 +48,6 @@ export class ItemsService {
       });
       if (!vendor) throw new ForbiddenException();
       whereClause.vendorId = vendor.id;
-    }
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (!admin?.schoolId) throw new ForbiddenException();
-      const vendors = await this.vendorRepo.find({
-        where: { schoolId: admin.schoolId },
-        select: ['id'],
-      });
-      if (vendors.length === 0) {
-        return {
-          data: [],
-          meta: { total: 0, page, limit, totalPages: 0 },
-        };
-      }
-      whereClause.vendorId = In(vendors.map((v) => v.id));
     }
 
     const [items, total] = await this.itemRepo.findAndCount({
@@ -96,16 +75,6 @@ export class ItemsService {
         where: { userId: currentUser.id },
       });
       if (vendor?.id !== item.vendorId) throw new ForbiddenException();
-    }
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      const vendor = await this.vendorRepo.findOne({
-        where: { id: item.vendorId },
-      });
-      if (vendor?.schoolId !== admin?.schoolId) throw new ForbiddenException();
     }
 
     return this.toDto(item);
@@ -201,14 +170,9 @@ export class ItemsService {
     return this.toDto({ ...item, pendingImageUrl });
   }
 
-  async approveImage(
-    id: string,
-    currentUser: { id: string; role: UserRole },
-  ): Promise<ItemResponseDto> {
+  async approveImage(id: string): Promise<ItemResponseDto> {
     const item = await this.itemRepo.findOne({ where: { id } });
     if (!item) throw new NotFoundException(ErrorMessages.ITEMS.NOT_FOUND);
-
-    await this.assertAdminScope(currentUser, item);
 
     if (!item.pendingImageUrl) {
       throw new ConflictException(ErrorMessages.ITEMS.NO_PENDING_IMAGE);
@@ -251,14 +215,9 @@ export class ItemsService {
     });
   }
 
-  async rejectImage(
-    id: string,
-    currentUser: { id: string; role: UserRole },
-  ): Promise<ItemResponseDto> {
+  async rejectImage(id: string): Promise<ItemResponseDto> {
     const item = await this.itemRepo.findOne({ where: { id } });
     if (!item) throw new NotFoundException(ErrorMessages.ITEMS.NOT_FOUND);
-
-    await this.assertAdminScope(currentUser, item);
 
     if (!item.pendingImageUrl) {
       throw new ConflictException(ErrorMessages.ITEMS.NO_PENDING_IMAGE);
@@ -291,23 +250,6 @@ export class ItemsService {
     }
 
     return this.toDto({ ...item, pendingImageUrl: null as unknown as string });
-  }
-
-  private async assertAdminScope(
-    currentUser: { id: string; role: UserRole },
-    item: Item,
-  ): Promise<void> {
-    if (currentUser.role === UserRole.SUPER_ADMIN) return;
-
-    const admin = await this.userRepo.findOne({
-      where: { id: currentUser.id },
-    });
-    const vendor = await this.vendorRepo.findOne({
-      where: { id: item.vendorId },
-    });
-    if (!admin?.schoolId || vendor?.schoolId !== admin.schoolId) {
-      throw new ForbiddenException();
-    }
   }
 
   private toDto(item: Item): ItemResponseDto {

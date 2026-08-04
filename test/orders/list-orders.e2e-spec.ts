@@ -267,34 +267,15 @@ describe('GET /api/v1/orders', () => {
       expect(res.body.data.meta.total).toBeGreaterThanOrEqual(2);
     });
 
-    it('should return only school orders for SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get('/api/v1/orders')
-        .set('Authorization', `Bearer ${schoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data.length).toBe(2);
-      expect(res.body.data.meta.total).toBe(2);
-    });
-
     it('should include the vendor shopName on each order', async () => {
       const res = await request(getServer(app))
         .get('/api/v1/orders')
-        .set('Authorization', `Bearer ${schoolAdminToken}`);
+        .set('Authorization', `Bearer ${vendorToken}`);
 
       expect(res.status).toBe(200);
       for (const order of res.body.data.data) {
         expect(order.vendor).toEqual({ id: vendor.id, shopName: 'Snack OL' });
       }
-    });
-
-    it('should return empty list for SCHOOL_ADMIN with no orders in their school', async () => {
-      const res = await request(getServer(app))
-        .get('/api/v1/orders')
-        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data).toEqual([]);
     });
 
     it('should return own orders for VENDOR', async () => {
@@ -337,7 +318,7 @@ describe('GET /api/v1/orders', () => {
     it('should respect pagination', async () => {
       const res = await request(getServer(app))
         .get('/api/v1/orders?page=1&limit=1')
-        .set('Authorization', `Bearer ${schoolAdminToken}`);
+        .set('Authorization', `Bearer ${superAdminToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.data.data.length).toBe(1);
@@ -349,6 +330,20 @@ describe('GET /api/v1/orders', () => {
     it('should return 401 when no token', async () => {
       const res = await request(getServer(app)).get('/api/v1/orders');
       expect(res.status).toBe(401);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN role', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/orders')
+        .set('Authorization', `Bearer ${schoolAdminToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN role (another school)', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/orders')
+        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
+      expect(res.status).toBe(403);
     });
   });
 });

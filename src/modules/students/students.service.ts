@@ -41,22 +41,11 @@ export class StudentsService {
   ) {}
 
   async findAll(
-    currentUser: { id: string; role: UserRole },
     query: PaginationQueryDto,
   ): Promise<{ data: StudentResponseDto[]; meta: object }> {
     const { page, limit } = query;
 
-    const whereClause: Record<string, unknown> = {};
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (!admin?.schoolId) throw new ForbiddenException();
-      whereClause.schoolId = admin.schoolId;
-    }
-
     const [students, total] = await this.studentRepo.findAndCount({
-      where: whereClause,
       relations: ['user', 'card'],
       order: { user: { lastName: 'ASC' } },
       skip: (page - 1) * limit,
@@ -88,13 +77,6 @@ export class StudentsService {
     });
     if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
 
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== student.schoolId) throw new ForbiddenException();
-    }
-
     if (
       currentUser.role === UserRole.STUDENT &&
       student.userId !== currentUser.id
@@ -111,13 +93,6 @@ export class StudentsService {
   ): Promise<StudentParentResponseDto[]> {
     const student = await this.studentRepo.findOne({ where: { id } });
     if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== student.schoolId) throw new ForbiddenException();
-    }
 
     if (
       currentUser.role === UserRole.STUDENT &&
@@ -149,13 +124,6 @@ export class StudentsService {
   ): Promise<{ data: StudentOrderResponseDto[]; meta: object }> {
     const student = await this.studentRepo.findOne({ where: { id } });
     if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== student.schoolId) throw new ForbiddenException();
-    }
 
     if (
       currentUser.role === UserRole.STUDENT &&
@@ -196,13 +164,6 @@ export class StudentsService {
   ): Promise<{ data: StudentTransactionResponseDto[]; meta: object }> {
     const student = await this.studentRepo.findOne({ where: { id } });
     if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== student.schoolId) throw new ForbiddenException();
-    }
 
     if (currentUser.role === UserRole.PARENT) {
       const parent = await this.parentRepo.findOne({
@@ -264,13 +225,6 @@ export class StudentsService {
       relations: ['user', 'card'],
     });
     if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== student.schoolId) throw new ForbiddenException();
-    }
 
     if (currentUser.role === UserRole.PARENT) {
       const parent = await this.parentRepo.findOne({

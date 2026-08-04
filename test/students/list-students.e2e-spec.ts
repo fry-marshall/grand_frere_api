@@ -153,32 +153,10 @@ describe('GET /api/v1/students', () => {
       expect(res.body.data.meta.total).toBeGreaterThanOrEqual(2);
     });
 
-    it('should return only own school students for SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get('/api/v1/students')
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      const students = res.body.data.data as { schoolId: string }[];
-      expect(students.every((s) => s.schoolId === school.id)).toBe(true);
-      expect(res.body.data.data.length).toBe(1);
-    });
-
-    it('should return only other school students for other SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get('/api/v1/students')
-        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data.length).toBe(1);
-      const students = res.body.data.data as { schoolId: string }[];
-      expect(students.every((s) => s.schoolId === otherSchool.id)).toBe(true);
-    });
-
     it('should include user and card fields in response', async () => {
       const res = await request(getServer(app))
         .get('/api/v1/students')
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+        .set('Authorization', `Bearer ${superAdminToken}`);
 
       expect(res.status).toBe(200);
       const student = res.body.data.data[0] as {
@@ -220,6 +198,20 @@ describe('GET /api/v1/students', () => {
       const res = await request(getServer(app))
         .get('/api/v1/students')
         .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN role', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/students')
+        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN role (another school)', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/students')
+        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
   });

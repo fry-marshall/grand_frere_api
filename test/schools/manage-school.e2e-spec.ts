@@ -148,18 +148,16 @@ describe('GET/PUT /api/v1/schools', () => {
         expect(res.status).toBe(200);
         expect(res.body.data.id).toBe(school.id);
       });
-
-      it('should return own school for SCHOOL_ADMIN', async () => {
-        const res = await request(getServer(app))
-          .get(`/api/v1/schools/${school.id}`)
-          .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.data.id).toBe(school.id);
-      });
     });
 
     describe('Failure cases', () => {
+      it('should return 403 when user is SCHOOL_ADMIN of the same school', async () => {
+        const res = await request(getServer(app))
+          .get(`/api/v1/schools/${school.id}`)
+          .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+        expect(res.status).toBe(403);
+      });
+
       it('should return 403 when SCHOOL_ADMIN accesses another school', async () => {
         const res = await request(getServer(app))
           .get(`/api/v1/schools/${school.id}`)

@@ -104,13 +104,6 @@ export class VendorsService {
     });
     if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
 
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== vendor.schoolId) throw new ForbiddenException();
-    }
-
     if (
       currentUser.role === UserRole.VENDOR &&
       vendor.userId !== currentUser.id
@@ -162,12 +155,6 @@ export class VendorsService {
       vendor.userId !== currentUser.id
     ) {
       throw new ForbiddenException();
-    }
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== vendor.schoolId) throw new ForbiddenException();
     }
 
     const { page, limit } = query;
@@ -223,12 +210,6 @@ export class VendorsService {
     ) {
       throw new ForbiddenException();
     }
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== vendor.schoolId) throw new ForbiddenException();
-    }
 
     const { page, limit } = query;
     const [withdrawals, total] = await this.withdrawalRepo.findAndCount({
@@ -265,12 +246,6 @@ export class VendorsService {
     ) {
       throw new ForbiddenException();
     }
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== vendor.schoolId) throw new ForbiddenException();
-    }
 
     const wallet = await this.vendorWalletRepo.findOne({
       where: { vendorId: id },
@@ -298,13 +273,6 @@ export class VendorsService {
       vendor.userId !== currentUser.id
     ) {
       throw new ForbiddenException();
-    }
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== vendor.schoolId) throw new ForbiddenException();
     }
 
     if (currentUser.role === UserRole.STUDENT) {
@@ -362,13 +330,6 @@ export class VendorsService {
       vendor.userId !== currentUser.id
     )
       throw new ForbiddenException();
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== vendor.schoolId) throw new ForbiddenException();
-    }
 
     const today = new Date().toISOString().slice(0, 10);
 

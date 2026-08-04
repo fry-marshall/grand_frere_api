@@ -334,11 +334,6 @@ export class CardsService {
   ): Promise<void> {
     if (currentUser.role === UserRole.SUPER_ADMIN) return;
 
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      await this.assertSchoolAdminOwnsCard(currentUser.id, card);
-      return;
-    }
-
     if (currentUser.role === UserRole.PARENT) {
       await this.assertParentOwnsCard(currentUser.id, card);
       return;
@@ -346,16 +341,6 @@ export class CardsService {
 
     if (currentUser.role === UserRole.STUDENT) {
       await this.assertStudentOwnsCard(currentUser.id, card);
-    }
-  }
-
-  private async assertSchoolAdminOwnsCard(
-    adminId: string,
-    card: Card,
-  ): Promise<void> {
-    const admin = await this.userRepo.findOne({ where: { id: adminId } });
-    if (admin?.schoolId !== card.schoolId) {
-      throw new ForbiddenException();
     }
   }
 

@@ -219,15 +219,6 @@ describe('GET /api/v1/cards/:code', () => {
       expect(res.body.data.dailyLimit).toBe(1000);
     });
 
-    it('should return card details to SCHOOL_ADMIN of the same school', async () => {
-      const res = await request(getServer(app))
-        .get(`/api/v1/cards/${card.code}`)
-        .set('Authorization', `Bearer ${schoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.code).toBe(card.code);
-    });
-
     it('should return card details to PARENT linked to the card student', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/cards/${studentCard.code}`)
@@ -266,6 +257,13 @@ describe('GET /api/v1/cards/:code', () => {
       const res = await request(getServer(app))
         .get(`/api/v1/cards/${studentCard.code}`)
         .set('Authorization', `Bearer ${otherStudentToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when user is SCHOOL_ADMIN of the same school', async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/cards/${card.code}`)
+        .set('Authorization', `Bearer ${schoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 

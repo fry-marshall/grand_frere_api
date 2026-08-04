@@ -190,17 +190,6 @@ describe('PUT /api/v1/items/:id/image/approve and /reject', () => {
         expect(dbItem?.pendingImageUrl).toBeNull();
         expect(dbItem?.imageUrl).not.toBeNull();
       });
-
-      it('should let SCHOOL_ADMIN approve a pending image for a vendor in their school', async () => {
-        const { itemId } = await createItemWithPendingImage();
-
-        const res = await request(getServer(app))
-          .put(`/api/v1/items/${itemId}/image/approve`)
-          .set('Authorization', `Bearer ${schoolAdminToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.data.pendingImageUrl).toBeNull();
-      });
     });
 
     describe('Failure cases', () => {
@@ -219,6 +208,15 @@ describe('PUT /api/v1/items/:id/image/approve and /reject', () => {
         const res = await request(getServer(app))
           .put(`/api/v1/items/${itemId}/image/approve`)
           .set('Authorization', `Bearer ${vendorToken}`);
+        expect(res.status).toBe(403);
+      });
+
+      it('should return 403 when SCHOOL_ADMIN of the same school attempts to approve', async () => {
+        const { itemId } = await createItemWithPendingImage();
+
+        const res = await request(getServer(app))
+          .put(`/api/v1/items/${itemId}/image/approve`)
+          .set('Authorization', `Bearer ${schoolAdminToken}`);
         expect(res.status).toBe(403);
       });
 
@@ -290,17 +288,6 @@ describe('PUT /api/v1/items/:id/image/approve and /reject', () => {
         expect(dbItem?.pendingImageUrl).toBeNull();
         expect(dbItem?.imageUrl).toBe(liveImageUrl);
       });
-
-      it('should let SCHOOL_ADMIN reject a pending image for a vendor in their school', async () => {
-        const { itemId } = await createItemWithPendingImage();
-
-        const res = await request(getServer(app))
-          .put(`/api/v1/items/${itemId}/image/reject`)
-          .set('Authorization', `Bearer ${schoolAdminToken}`);
-
-        expect(res.status).toBe(200);
-        expect(res.body.data.pendingImageUrl).toBeNull();
-      });
     });
 
     describe('Failure cases', () => {
@@ -319,6 +306,15 @@ describe('PUT /api/v1/items/:id/image/approve and /reject', () => {
         const res = await request(getServer(app))
           .put(`/api/v1/items/${itemId}/image/reject`)
           .set('Authorization', `Bearer ${vendorToken}`);
+        expect(res.status).toBe(403);
+      });
+
+      it('should return 403 when SCHOOL_ADMIN of the same school attempts to reject', async () => {
+        const { itemId } = await createItemWithPendingImage();
+
+        const res = await request(getServer(app))
+          .put(`/api/v1/items/${itemId}/image/reject`)
+          .set('Authorization', `Bearer ${schoolAdminToken}`);
         expect(res.status).toBe(403);
       });
 

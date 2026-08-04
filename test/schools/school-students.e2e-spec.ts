@@ -139,15 +139,6 @@ describe('GET /api/v1/schools/:id/students', () => {
       expect(res.body.data.meta.total).toBe(1);
     });
 
-    it('should return students list for own SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get(`/api/v1/schools/${school.id}/students`)
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data.length).toBe(1);
-    });
-
     it('should return empty list for school with no students', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/schools/${otherSchool.id}/students`)
@@ -175,6 +166,13 @@ describe('GET /api/v1/schools/:id/students', () => {
         `/api/v1/schools/${school.id}/students`,
       );
       expect(res.status).toBe(401);
+    });
+
+    it('should return 403 when user is SCHOOL_ADMIN of the same school', async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/schools/${school.id}/students`)
+        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+      expect(res.status).toBe(403);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses another school', async () => {

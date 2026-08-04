@@ -194,15 +194,6 @@ describe('GET /api/v1/parents/:id', () => {
       expect(res.body.data.user.firstName).toBe('Bintou');
     });
 
-    it('should return parent for SCHOOL_ADMIN whose school has a linked student', async () => {
-      const res = await request(getServer(app))
-        .get(`/api/v1/parents/${parent.id}`)
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.id).toBe(parent.id);
-    });
-
     it('should return own profile for PARENT', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/parents/${parent.id}`)
@@ -221,7 +212,14 @@ describe('GET /api/v1/parents/:id', () => {
       expect(res.status).toBe(401);
     });
 
-    it('should return 403 when SCHOOL_ADMIN has no student linked to this parent', async () => {
+    it("should return 403 for SCHOOL_ADMIN of the parent's school (no longer has access to this endpoint)", async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/parents/${parent.id}`)
+        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 for SCHOOL_ADMIN of another school', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/parents/${parent.id}`)
         .set('Authorization', `Bearer ${otherSchoolAdminToken}`);

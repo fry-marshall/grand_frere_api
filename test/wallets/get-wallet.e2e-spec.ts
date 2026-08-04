@@ -246,15 +246,6 @@ describe('GET /api/v1/wallets/student/:studentId', () => {
       expect(res.body.data.reserved).toBe(500);
     });
 
-    it('should return wallet for SCHOOL_ADMIN of same school', async () => {
-      const res = await request(getServer(app))
-        .get(`/api/v1/wallets/student/${student.id}`)
-        .set('Authorization', `Bearer ${schoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.studentId).toBe(student.id);
-    });
-
     it('should return wallet for linked PARENT', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/wallets/student/${student.id}`)
@@ -280,6 +271,13 @@ describe('GET /api/v1/wallets/student/:studentId', () => {
         `/api/v1/wallets/student/${student.id}`,
       );
       expect(res.status).toBe(401);
+    });
+
+    it('should return 403 for SCHOOL_ADMIN of the same school', async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/wallets/student/${student.id}`)
+        .set('Authorization', `Bearer ${schoolAdminToken}`);
+      expect(res.status).toBe(403);
     });
 
     it('should return 403 for SCHOOL_ADMIN of another school', async () => {

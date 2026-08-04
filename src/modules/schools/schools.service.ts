@@ -95,19 +95,9 @@ export class SchoolsService {
     return schools.map((s) => this.toDto(s));
   }
 
-  async findOne(
-    id: string,
-    currentUser: { id: string; role: UserRole },
-  ): Promise<SchoolResponseDto> {
+  async findOne(id: string): Promise<SchoolResponseDto> {
     const school = await this.schoolRepo.findOne({ where: { id } });
     if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== school.id) throw new ForbiddenException();
-    }
 
     return this.toDto(school);
   }
@@ -151,13 +141,6 @@ export class SchoolsService {
   ): Promise<{ data: SchoolVendorResponseDto[]; meta: object }> {
     const school = await this.schoolRepo.findOne({ where: { id } });
     if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== school.id) throw new ForbiddenException();
-    }
 
     if (currentUser.role === UserRole.STUDENT) {
       const student = await this.studentRepo.findOne({
@@ -223,18 +206,10 @@ export class SchoolsService {
 
   async findStudents(
     id: string,
-    currentUser: { id: string; role: UserRole },
     query: PaginationQueryDto,
   ): Promise<{ data: SchoolStudentResponseDto[]; meta: object }> {
     const school = await this.schoolRepo.findOne({ where: { id } });
     if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== school.id) throw new ForbiddenException();
-    }
 
     const { page, limit } = query;
     const [students, total] = await this.studentRepo.findAndCount({
@@ -263,18 +238,10 @@ export class SchoolsService {
 
   async findParents(
     id: string,
-    currentUser: { id: string; role: UserRole },
     query: PaginationQueryDto,
   ): Promise<{ data: SchoolParentResponseDto[]; meta: object }> {
     const school = await this.schoolRepo.findOne({ where: { id } });
     if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== school.id) throw new ForbiddenException();
-    }
 
     const { page, limit } = query;
     const [parents, total] = await this.parentRepo
@@ -309,7 +276,6 @@ export class SchoolsService {
 
   async findTransactions(
     id: string,
-    currentUser: { id: string; role: UserRole },
     query: SchoolTransactionsQueryDto,
   ): Promise<{
     transactions: { data: SchoolTransactionResponseDto[]; meta: object };
@@ -317,13 +283,6 @@ export class SchoolsService {
   }> {
     const school = await this.schoolRepo.findOne({ where: { id } });
     if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== school.id) throw new ForbiddenException();
-    }
 
     const { page, limit, from, to } = query;
 

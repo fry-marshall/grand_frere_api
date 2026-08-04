@@ -192,15 +192,6 @@ describe('GET /api/v1/vendors/:id/withdrawals', () => {
       expect(res.body.data.meta.total).toBe(1);
     });
 
-    it('should return withdrawals for own SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get(`/api/v1/vendors/${vendor.id}/withdrawals`)
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data.length).toBe(1);
-    });
-
     it('should return withdrawals for own VENDOR', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/withdrawals`)
@@ -230,6 +221,13 @@ describe('GET /api/v1/vendors/:id/withdrawals', () => {
         `/api/v1/vendors/${vendor.id}/withdrawals`,
       );
       expect(res.status).toBe(401);
+    });
+
+    it("should return 403 when user is SCHOOL_ADMIN of the vendor's school", async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/vendors/${vendor.id}/withdrawals`)
+        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+      expect(res.status).toBe(403);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses another school vendor', async () => {

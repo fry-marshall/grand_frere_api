@@ -204,29 +204,10 @@ describe('GET /api/v1/payments', () => {
       expect(res.body.data.meta.total).toBeGreaterThanOrEqual(2);
     });
 
-    it('should return payments for own school for SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get('/api/v1/payments')
-        .set('Authorization', `Bearer ${schoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data.length).toBe(2);
-      expect(res.body.data.meta.total).toBe(2);
-    });
-
-    it('should return empty list for SCHOOL_ADMIN with no payments in their school', async () => {
-      const res = await request(getServer(app))
-        .get('/api/v1/payments')
-        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data).toEqual([]);
-    });
-
     it('should respect pagination', async () => {
       const res = await request(getServer(app))
         .get('/api/v1/payments?page=1&limit=1')
-        .set('Authorization', `Bearer ${schoolAdminToken}`);
+        .set('Authorization', `Bearer ${superAdminToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.data.data.length).toBe(1);
@@ -244,6 +225,20 @@ describe('GET /api/v1/payments', () => {
       const res = await request(getServer(app))
         .get('/api/v1/payments')
         .set('Authorization', `Bearer ${parentToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN calls this endpoint', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/payments')
+        .set('Authorization', `Bearer ${schoolAdminToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN of another school calls this endpoint', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/payments')
+        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
   });

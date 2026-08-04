@@ -313,15 +313,6 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
       expect(res.body.data.status).toBe(OrderStatus.CANCELLED);
     });
 
-    it('should cancel an order as SCHOOL_ADMIN for own school student', async () => {
-      const order = await makeOrder();
-      const res = await request(getServer(app))
-        .put(`/api/v1/orders/${order.id}/cancel`)
-        .set('Authorization', `Bearer ${schoolAdminToken}`);
-      expect(res.status).toBe(200);
-      expect(res.body.data.status).toBe(OrderStatus.CANCELLED);
-    });
-
     it('should cancel an order as PARENT for linked student', async () => {
       const order = await makeOrder();
       const res = await request(getServer(app))
@@ -348,6 +339,14 @@ describe('PUT /api/v1/orders/:id/cancel', () => {
         `/api/v1/orders/${order.id}/cancel`,
       );
       expect(res.status).toBe(401);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN cancels order for own school student', async () => {
+      const order = await makeOrder();
+      const res = await request(getServer(app))
+        .put(`/api/v1/orders/${order.id}/cancel`)
+        .set('Authorization', `Bearer ${schoolAdminToken}`);
+      expect(res.status).toBe(403);
     });
 
     it('should return 403 when SCHOOL_ADMIN cancels order from another school', async () => {

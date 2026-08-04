@@ -38,14 +38,11 @@ export class StudentsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Role(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'List students' })
   @ApiSuccessResponse(StudentResponseDto)
-  findAll(
-    @CurrentUser() currentUser: { id: string; role: UserRole },
-    @Query() query: PaginationQueryDto,
-  ) {
-    return this.studentsService.findAll(currentUser, query);
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.studentsService.findAll(query);
   }
 
   @Get('me')
@@ -71,7 +68,7 @@ export class StudentsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.STUDENT)
+  @Role(UserRole.SUPER_ADMIN, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get student by id' })
   @ApiSuccessResponse(StudentResponseDto)
   @ApiNotFoundResponse({
@@ -88,7 +85,7 @@ export class StudentsController {
 
   @Get(':id/parents')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.STUDENT)
+  @Role(UserRole.SUPER_ADMIN, UserRole.STUDENT)
   @ApiOperation({ summary: "List student's parents" })
   @ApiSuccessResponse(StudentParentResponseDto)
   @ApiNotFoundResponse({
@@ -105,7 +102,7 @@ export class StudentsController {
 
   @Get(':id/orders')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.STUDENT)
+  @Role(UserRole.SUPER_ADMIN, UserRole.STUDENT)
   @ApiOperation({ summary: "List student's orders" })
   @ApiSuccessResponse(StudentOrderResponseDto)
   @ApiNotFoundResponse({
@@ -123,7 +120,7 @@ export class StudentsController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.PARENT)
+  @Role(UserRole.SUPER_ADMIN, UserRole.PARENT)
   @ApiOperation({ summary: "Update a student's profile" })
   @ApiSuccessResponse(StudentResponseDto)
   @ApiNotFoundResponse({
@@ -141,12 +138,7 @@ export class StudentsController {
 
   @Get(':id/transactions')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(
-    UserRole.SUPER_ADMIN,
-    UserRole.SCHOOL_ADMIN,
-    UserRole.PARENT,
-    UserRole.STUDENT,
-  )
+  @Role(UserRole.SUPER_ADMIN, UserRole.PARENT, UserRole.STUDENT)
   @ApiOperation({ summary: "List student's wallet transactions" })
   @ApiSuccessResponse(StudentTransactionResponseDto)
   @ApiNotFoundResponse({

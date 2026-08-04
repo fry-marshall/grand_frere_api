@@ -260,20 +260,6 @@ describe('PUT /api/v1/cards/:code/replace', () => {
       expect(updatedStudent?.cardId).toBe(blankCard.id);
     });
 
-    it('should allow SCHOOL_ADMIN to replace a card in their school', async () => {
-      const lostCard = await createLostCard(school.id);
-      const blankCard = await createBlankCard(school.id);
-      await studentRepo.update(student.id, { cardId: lostCard.id });
-
-      const res = await request(getServer(app))
-        .put(`/api/v1/cards/${lostCard.code}/replace`)
-        .set('Authorization', `Bearer ${schoolAdminToken}`)
-        .send({ newCardCode: blankCard.code });
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.status).toBe(CardStatus.ACTIVE);
-    });
-
     it('should allow the linked PARENT to replace their student card', async () => {
       const lostCard = await createLostCard(school.id);
       const blankCard = await createBlankCard(school.id);
@@ -353,6 +339,17 @@ describe('PUT /api/v1/cards/:code/replace', () => {
       const res = await request(getServer(app))
         .put(`/api/v1/cards/${lostCard.code}/replace`)
         .set('Authorization', `Bearer ${vendorToken}`)
+        .send({ newCardCode: blankCard.code });
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when user is SCHOOL_ADMIN', async () => {
+      const lostCard = await createLostCard(school.id);
+      const blankCard = await createBlankCard(school.id);
+
+      const res = await request(getServer(app))
+        .put(`/api/v1/cards/${lostCard.code}/replace`)
+        .set('Authorization', `Bearer ${schoolAdminToken}`)
         .send({ newCardCode: blankCard.code });
       expect(res.status).toBe(403);
     });

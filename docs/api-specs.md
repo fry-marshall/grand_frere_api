@@ -672,7 +672,7 @@ Génère un lot de cartes avec QR code pour une école.
 
 Récupère les détails d'une carte par son code.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `PARENT`, `STUDENT`  
+**Rôles** : `SUPER_ADMIN`, `PARENT`, `STUDENT`  
 **Params** : `code` (string, le code de la carte)
 
 **Réponse 200** : Objet `CardResponseDto` (voir structure POST ci-dessus)
@@ -689,7 +689,7 @@ Récupère les détails d'une carte par son code.
 
 Suspend une carte active.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `PARENT`, `STUDENT`  
+**Rôles** : `SUPER_ADMIN`, `PARENT`, `STUDENT`  
 **Params** : `code`
 
 **Réponse 200** : Objet `CardResponseDto` avec `status: "SUSPENDED"`
@@ -707,7 +707,7 @@ Suspend une carte active.
 
 Réactive une carte suspendue.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `PARENT`, `STUDENT`  
+**Rôles** : `SUPER_ADMIN`, `PARENT`, `STUDENT`  
 **Params** : `code`
 
 **Réponse 200** : Objet `CardResponseDto` avec `status: "ACTIVE"`
@@ -815,7 +815,7 @@ Débloque la carte si elle était `BLOCKED`.
 Remplace une carte perdue par une carte vierge (`UNASSIGNED`) de la même école.  
 Le PIN, la limite journalière et le droit d'édition de la limite sont recopiés sur la nouvelle carte ; l'élève est relié à la nouvelle carte et l'ancienne passe au statut `LOST` (définitif).
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `PARENT`, `STUDENT`  
+**Rôles** : `SUPER_ADMIN`, `PARENT`, `STUDENT`  
 **Params** : `code` (la carte perdue)
 
 **Body**
@@ -923,7 +923,7 @@ Liste toutes les écoles.
 Récupère les détails d'une école.
 
 **Auth** : Bearer token requis  
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`  
+**Rôles** : `SUPER_ADMIN`  
 **Params** : `id` (uuid)
 
 **Réponse 200** : `SchoolResponseDto`
@@ -932,7 +932,6 @@ Récupère les détails d'une école.
 
 | Code | Message |
 |---|---|
-| `403` | Not your school (SCHOOL_ADMIN accède uniquement à son école) |
 | `404` | `School not found` |
 
 ---
@@ -1051,7 +1050,7 @@ Crée un administrateur pour une école.
 Liste les vendeurs d'une école avec pagination.
 
 **Auth** : Bearer token requis  
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `STUDENT`, `PARENT`  
+**Rôles** : `SUPER_ADMIN`, `STUDENT`, `PARENT`  
 **Params** : `id`  
 **Query params** : `page`, `limit`
 
@@ -1061,7 +1060,7 @@ Liste les vendeurs d'une école avec pagination.
 
 | Code | Message |
 |---|---|
-| `403` | Not your school (SCHOOL_ADMIN, STUDENT, PARENT) |
+| `403` | Not your school (STUDENT, PARENT) |
 | `404` | `School not found` |
 
 ---
@@ -1071,7 +1070,7 @@ Liste les vendeurs d'une école avec pagination.
 Liste les élèves d'une école avec pagination.
 
 **Auth** : Bearer token requis  
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`  
+**Rôles** : `SUPER_ADMIN`  
 **Params** : `id`  
 **Query params** : `page`, `limit`
 
@@ -1081,7 +1080,6 @@ Liste les élèves d'une école avec pagination.
 
 | Code | Message |
 |---|---|
-| `403` | Not your school |
 | `404` | `School not found` |
 
 ---
@@ -1091,7 +1089,7 @@ Liste les élèves d'une école avec pagination.
 Liste les parents d'une école avec pagination.
 
 **Auth** : Bearer token requis  
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`  
+**Rôles** : `SUPER_ADMIN`  
 **Params** : `id`  
 **Query params** : `page`, `limit`
 
@@ -1101,7 +1099,6 @@ Liste les parents d'une école avec pagination.
 
 | Code | Message |
 |---|---|
-| `403` | Not your school |
 | `404` | `School not found` |
 
 ---
@@ -1111,7 +1108,7 @@ Liste les parents d'une école avec pagination.
 Liste les transactions d'une école avec statistiques.
 
 **Auth** : Bearer token requis  
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`  
+**Rôles** : `SUPER_ADMIN`  
 **Params** : `id`
 
 **Query params**
@@ -1145,12 +1142,10 @@ Liste les transactions d'une école avec statistiques.
 
 Liste les élèves avec pagination.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`  
+**Rôles** : `SUPER_ADMIN`  
 **Query params** : `page`, `limit`
 
 **Réponse 200** : Objet paginé de `StudentResponseDto`
-
-> `SCHOOL_ADMIN` ne voit que les élèves de son école.
 
 ---
 
@@ -1209,7 +1204,7 @@ Met à jour le profil de l'élève connecté.
 
 Récupère un élève par son id.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `STUDENT` (soi-même uniquement)  
+**Rôles** : `SUPER_ADMIN`, `STUDENT` (soi-même uniquement)  
 **Params** : `id` (uuid)
 
 **Réponse 200** : `StudentResponseDto`
@@ -1227,7 +1222,7 @@ Récupère un élève par son id.
 
 Met à jour le profil d'un élève.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `PARENT` (élèves liés uniquement)  
+**Rôles** : `SUPER_ADMIN`, `PARENT` (élèves liés uniquement)  
 **Params** : `id`
 
 **Body** : Identique à `PUT /students/me`
@@ -1247,7 +1242,7 @@ Met à jour le profil d'un élève.
 
 Liste les parents d'un élève.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `STUDENT` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `STUDENT` (soi-même)  
 **Params** : `id`
 
 **Réponse 200** : Tableau de `StudentParentResponseDto`
@@ -1265,7 +1260,7 @@ Liste les parents d'un élève.
 
 Liste les commandes d'un élève avec pagination.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `STUDENT` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `STUDENT` (soi-même)  
 **Params** : `id`  
 **Query params** : `page`, `limit`
 
@@ -1284,7 +1279,7 @@ Liste les commandes d'un élève avec pagination.
 
 Liste les transactions du wallet d'un élève avec pagination.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `PARENT` (élèves liés), `STUDENT` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `PARENT` (élèves liés), `STUDENT` (soi-même)  
 **Params** : `id`  
 **Query params** : `page`, `limit`
 
@@ -1310,12 +1305,10 @@ Liste les transactions du wallet d'un élève avec pagination.
 
 Liste les parents avec pagination.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`  
+**Rôles** : `SUPER_ADMIN`  
 **Query params** : `page`, `limit`
 
 **Réponse 200** : Objet paginé de `ParentResponseDto`
-
-> `SCHOOL_ADMIN` ne voit que les parents de son école.
 
 ---
 
@@ -1410,7 +1403,7 @@ Lie ou crée un élève pour le parent connecté via une carte.
 
 Récupère un parent par son id.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `PARENT` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `PARENT` (soi-même)  
 **Params** : `id` (uuid)
 
 **Réponse 200** : `ParentResponseDto`
@@ -1428,7 +1421,7 @@ Récupère un parent par son id.
 
 Liste les élèves d'un parent.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `PARENT` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `PARENT` (soi-même)  
 **Params** : `id`
 
 **Réponse 200** : Tableau de `StudentResponseDto`
@@ -1529,7 +1522,7 @@ Profil du vendeur connecté.
 
 Récupère un vendeur par son id.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `VENDOR` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `VENDOR` (soi-même)  
 **Params** : `id` (uuid)
 
 **Réponse 200** : `VendorResponseDto`
@@ -1628,7 +1621,7 @@ Rejette un vendeur en attente.
 
 Liste les articles actifs d'un vendeur.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `VENDOR`, `STUDENT`, `PARENT`  
+**Rôles** : `SUPER_ADMIN`, `VENDOR`, `STUDENT`, `PARENT`  
 **Params** : `id`
 
 **Réponse 200** : Tableau de `ItemResponseDto` (items `ACTIVE` uniquement)
@@ -1646,7 +1639,7 @@ Liste les articles actifs d'un vendeur.
 
 Liste les commandes d'un vendeur avec pagination.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `VENDOR` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `VENDOR` (soi-même)  
 **Params** : `id`  
 **Query params** : `page`, `limit`
 
@@ -1695,7 +1688,7 @@ Liste les commandes d'un vendeur avec pagination.
 
 Liste les retraits d'un vendeur avec pagination.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `VENDOR` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `VENDOR` (soi-même)  
 **Params** : `id`  
 **Query params** : `page`, `limit`
 
@@ -1714,7 +1707,7 @@ Liste les retraits d'un vendeur avec pagination.
 
 Récupère le solde du wallet vendeur.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `VENDOR` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `VENDOR` (soi-même)  
 **Params** : `id`
 
 **Réponse 200**
@@ -1745,7 +1738,7 @@ Récupère le solde du wallet vendeur.
 
 Retourne les KPIs journaliers du vendeur pour le dashboard.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `VENDOR` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `VENDOR` (soi-même)  
 **Params** : `id`
 
 **Réponse 200**
@@ -1789,7 +1782,7 @@ Retourne les KPIs journaliers du vendeur pour le dashboard.
 
 Liste les articles avec pagination.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `VENDOR`  
+**Rôles** : `SUPER_ADMIN`, `VENDOR`  
 **Query params** : `page`, `limit`
 
 **Réponse 200** : Objet paginé de `ItemResponseDto`
@@ -1824,7 +1817,7 @@ Liste les articles avec pagination.
 
 Récupère un article par son id.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `VENDOR`  
+**Rôles** : `SUPER_ADMIN`, `VENDOR`  
 **Params** : `id` (uuid)
 
 **Réponse 200** : `ItemResponseDto`
@@ -1924,7 +1917,7 @@ La photo n'est **pas** publiée immédiatement : elle est stockée dans `pending
 
 Approuve la photo en attente d'un article : elle devient la photo affichée (`imageUrl`), `pendingImageUrl` est vidé et l'ancienne photo est supprimée du storage.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN` (école du vendeur)  
+**Rôles** : `SUPER_ADMIN`  
 **Params** : `id`
 
 **Réponse 200** : `ItemResponseDto` mis à jour
@@ -1943,7 +1936,7 @@ Approuve la photo en attente d'un article : elle devient la photo affichée (`im
 
 Rejette la photo en attente d'un article : elle est supprimée du storage, `pendingImageUrl` est vidé. `imageUrl` (la photo actuellement visible) n'est pas modifié.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN` (école du vendeur)  
+**Rôles** : `SUPER_ADMIN`  
 **Params** : `id`
 
 **Réponse 200** : `ItemResponseDto` mis à jour
@@ -1988,7 +1981,7 @@ Supprime un article.
 
 Liste les commandes filtrées selon le rôle.
 
-**Rôles** : Tous  
+**Rôles** : `SUPER_ADMIN`, `VENDOR`, `PARENT`, `STUDENT`  
 **Query params** : `page`, `limit`
 
 **Réponse 200** : Objet paginé de `OrderResponseDto`
@@ -2021,7 +2014,6 @@ Liste les commandes filtrées selon le rôle.
 | Rôle | Commandes visibles |
 |---|---|
 | `SUPER_ADMIN` | Toutes |
-| `SCHOOL_ADMIN` | Commandes des élèves de son école |
 | `VENDOR` | Ses propres commandes |
 | `PARENT` | Commandes de ses élèves liés |
 | `STUDENT` | Ses propres commandes |
@@ -2082,7 +2074,7 @@ Retrouve une commande `VALIDATED` par son code court à 4 chiffres (flux encaiss
 
 Récupère les détails d'une commande avec ses articles.
 
-**Rôles** : Tous (avec contrôle d'accès identique à `GET /orders`)  
+**Rôles** : `SUPER_ADMIN`, `VENDOR`, `PARENT`, `STUDENT` (avec contrôle d'accès identique à `GET /orders`)  
 **Params** : `id` (uuid)
 
 **Réponse 200**
@@ -2255,7 +2247,7 @@ Confirme la livraison / encaissement d'une commande validée. État terminal pos
 
 Annule une commande en attente et libère la réservation wallet.
 
-**Rôles** : Tous (avec contrôle d'accès)  
+**Rôles** : `SUPER_ADMIN`, `VENDOR`, `PARENT`, `STUDENT` (avec contrôle d'accès)  
 **Params** : `id`
 
 **Réponse 200** : `OrderResponseDto` avec `status: "CANCELLED"`
@@ -2292,7 +2284,7 @@ Annule une commande en attente et libère la réservation wallet.
 
 Récupère le wallet d'un élève.
 
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `PARENT` (élèves liés), `STUDENT` (soi-même)  
+**Rôles** : `SUPER_ADMIN`, `PARENT` (élèves liés), `STUDENT` (soi-même)  
 **Params** : `studentId` (uuid)
 
 **Réponse 200**
@@ -2337,7 +2329,7 @@ Récupère le wallet d'un élève.
 Liste les paiements avec pagination.
 
 **Auth** : Bearer token requis  
-**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`  
+**Rôles** : `SUPER_ADMIN`  
 **Query params** : `page`, `limit`
 
 **Réponse 200** : Objet paginé de `PaymentResponseDto`
@@ -3174,13 +3166,13 @@ Tous les endpoints de liste supportent :
 | Endpoint | SUPER_ADMIN | SCHOOL_ADMIN | VENDOR | PARENT | STUDENT |
 |---|---|---|---|---|---|
 | `GET /schools` | ✅ public | ✅ public | ✅ public | ✅ public | ✅ public |
-| `GET /orders` | Tous | École | Ses commandes | Élèves liés | Soi-même |
+| `GET /orders` | Tous | ✗ | Ses commandes | Élèves liés | Soi-même |
 | `GET /orders/by-card` | ✗ | ✗ | ✅ | ✗ | ✗ |
 | `GET /orders/by-code` | ✗ | ✗ | ✅ | ✗ | ✗ |
-| `GET /vendors/:id/stats` | ✅ | ✅ | Soi-même | ✗ | ✗ |
+| `GET /vendors/:id/stats` | ✅ | ✗ | Soi-même | ✗ | ✗ |
 | `GET /withdrawals` | Tous | ✗ | Ses retraits | ✗ | ✗ |
-| `GET /items` | Tous | Tous | Ses items | ✗ | ✗ |
-| `GET /students` | Tous | École | ✗ | ✗ | ✗ |
-| `GET /parents` | Tous | École | ✗ | ✗ | ✗ |
+| `GET /items` | Tous | ✗ | Ses items | ✗ | ✗ |
+| `GET /students` | Tous | ✗ | ✗ | ✗ | ✗ |
+| `GET /parents` | Tous | ✗ | ✗ | ✗ | ✗ |
 | `GET /vendors` | Tous | École | ✗ | ✗ | ✗ |
-| `GET /payments` | Tous | École | ✗ | ✗ | ✗ |
+| `GET /payments` | Tous | ✗ | ✗ | ✗ | ✗ |

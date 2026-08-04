@@ -261,15 +261,6 @@ describe('GET /api/v1/students/:id/transactions', () => {
       expect(res.body.data.data[0].amount).toBeDefined();
     });
 
-    it('should return transactions for own SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get(`/api/v1/students/${student.id}/transactions`)
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data.length).toBe(2);
-    });
-
     it('should return own transactions for STUDENT', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/students/${student.id}/transactions`)
@@ -319,6 +310,13 @@ describe('GET /api/v1/students/:id/transactions', () => {
         `/api/v1/students/${student.id}/transactions`,
       );
       expect(res.status).toBe(401);
+    });
+
+    it('should return 403 when user is SCHOOL_ADMIN of the same school', async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/students/${student.id}/transactions`)
+        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+      expect(res.status).toBe(403);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses another school student', async () => {

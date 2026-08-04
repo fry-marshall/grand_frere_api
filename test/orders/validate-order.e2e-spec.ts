@@ -15,6 +15,7 @@ import { SchoolStatus } from '../../src/modules/schools/school.types';
 import { UserRole } from '../../src/modules/users/user.types';
 import { VendorStatus } from '../../src/modules/vendors/vendor.types';
 import { OrderStatus } from '../../src/modules/orders/order.types';
+import { TransactionType } from '../../src/modules/wallets/wallet.types';
 
 describe('PUT /api/v1/orders/:id/validate', () => {
   let app: INestApplication;
@@ -39,8 +40,8 @@ describe('PUT /api/v1/orders/:id/validate', () => {
   let otherVendorToken: string;
   let parentToken: string;
 
-  const makeOrder = async (status = OrderStatus.PENDING) =>
-    orderRepo.save({
+  const makeOrder = async (status = OrderStatus.PENDING) => {
+    const order = await orderRepo.save({
       vendorId: vendor.id,
       studentId: student.id,
       status,
@@ -48,6 +49,17 @@ describe('PUT /api/v1/orders/:id/validate', () => {
       expiresAt: new Date(Date.now() + 900000),
       scheduledFor: new Date().toISOString().slice(0, 10),
     });
+    await transactionRepo.save({
+      walletId: wallet.id,
+      type: TransactionType.RESERVE,
+      amount: 1000,
+      currency: wallet.currency,
+      balanceBefore: wallet.balance,
+      balanceAfter: wallet.balance,
+      orderId: order.id,
+    });
+    return order;
+  };
 
   beforeAll(async () => {
     const { app: nestApp, moduleRef } = await createTestApp();

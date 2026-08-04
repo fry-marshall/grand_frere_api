@@ -362,15 +362,6 @@ describe('GET /api/v1/vendors/:id/items', () => {
       expect(res.body.data).toHaveLength(2);
     });
 
-    it('should return items for SCHOOL_ADMIN of same school', async () => {
-      const res = await request(getServer(app))
-        .get(`/api/v1/vendors/${vendor.id}/items`)
-        .set('Authorization', `Bearer ${schoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data).toHaveLength(2);
-    });
-
     it('should return items for SUPER_ADMIN', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
@@ -416,6 +407,13 @@ describe('GET /api/v1/vendors/:id/items', () => {
       const res = await request(getServer(app))
         .get(`/api/v1/vendors/${vendor.id}/items`)
         .set('Authorization', `Bearer ${otherVendorToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN of the same school', async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/vendors/${vendor.id}/items`)
+        .set('Authorization', `Bearer ${schoolAdminToken}`);
       expect(res.status).toBe(403);
     });
 

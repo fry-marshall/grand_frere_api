@@ -193,27 +193,6 @@ describe('GET /api/v1/items', () => {
       expect(res.body.data.meta.total).toBeGreaterThanOrEqual(2);
     });
 
-    it('should return only own school items for SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get('/api/v1/items')
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data.length).toBe(2);
-      const items = res.body.data.data as { vendorId: string }[];
-      expect(items.every((i) => i.vendorId === vendor.id)).toBe(true);
-    });
-
-    it('should return empty list for SCHOOL_ADMIN with no vendors', async () => {
-      const res = await request(getServer(app))
-        .get('/api/v1/items')
-        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data).toEqual([]);
-      expect(res.body.data.meta.total).toBe(0);
-    });
-
     it('should return only own items for VENDOR', async () => {
       const res = await request(getServer(app))
         .get('/api/v1/items')
@@ -247,6 +226,20 @@ describe('GET /api/v1/items', () => {
     it('should return 401 when no token', async () => {
       const res = await request(getServer(app)).get('/api/v1/items');
       expect(res.status).toBe(401);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN role', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/items')
+        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN role (another school)', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/items')
+        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
+      expect(res.status).toBe(403);
     });
 
     it('should return 403 when STUDENT role', async () => {

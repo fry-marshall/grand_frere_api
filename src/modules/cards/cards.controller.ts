@@ -63,12 +63,7 @@ export class CardsController {
 
   @Get(':code')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(
-    UserRole.SUPER_ADMIN,
-    UserRole.SCHOOL_ADMIN,
-    UserRole.PARENT,
-    UserRole.STUDENT,
-  )
+  @Role(UserRole.SUPER_ADMIN, UserRole.PARENT, UserRole.STUDENT)
   @ApiOperation({ summary: 'Get card details by code' })
   @ApiSuccessResponse(CardResponseDto)
   @ApiNotFoundResponse({
@@ -84,12 +79,7 @@ export class CardsController {
 
   @Put(':code/suspend')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(
-    UserRole.SUPER_ADMIN,
-    UserRole.SCHOOL_ADMIN,
-    UserRole.PARENT,
-    UserRole.STUDENT,
-  )
+  @Role(UserRole.SUPER_ADMIN, UserRole.PARENT, UserRole.STUDENT)
   @ApiOperation({ summary: 'Suspend an active card' })
   @ApiSuccessResponse(CardResponseDto)
   @ApiNotFoundResponse({
@@ -109,12 +99,7 @@ export class CardsController {
 
   @Put(':code/activate')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(
-    UserRole.SUPER_ADMIN,
-    UserRole.SCHOOL_ADMIN,
-    UserRole.PARENT,
-    UserRole.STUDENT,
-  )
+  @Role(UserRole.SUPER_ADMIN, UserRole.PARENT, UserRole.STUDENT)
   @ApiOperation({ summary: 'Reactivate a suspended card' })
   @ApiSuccessResponse(CardResponseDto)
   @ApiNotFoundResponse({
@@ -255,12 +240,7 @@ export class CardsController {
 
   @Put(':code/replace')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(
-    UserRole.SUPER_ADMIN,
-    UserRole.SCHOOL_ADMIN,
-    UserRole.PARENT,
-    UserRole.STUDENT,
-  )
+  @Role(UserRole.SUPER_ADMIN, UserRole.PARENT, UserRole.STUDENT)
   @ApiOperation({
     summary:
       'Replace a lost card with a blank one, carrying over the PIN, daily limit and student link',

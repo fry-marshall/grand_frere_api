@@ -53,7 +53,7 @@ export class ItemsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.VENDOR)
+  @Role(UserRole.SUPER_ADMIN, UserRole.VENDOR)
   @ApiOperation({ summary: 'List items' })
   @ApiSuccessResponse(ItemResponseDto)
   findAll(
@@ -65,7 +65,7 @@ export class ItemsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.VENDOR)
+  @Role(UserRole.SUPER_ADMIN, UserRole.VENDOR)
   @ApiOperation({ summary: 'Get item by id' })
   @ApiSuccessResponse(ItemResponseDto)
   @ApiNotFoundResponse({
@@ -152,7 +152,7 @@ export class ItemsController {
 
   @Put(':id/image/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Role(UserRole.SUPER_ADMIN)
   @ApiOperation({
     summary: "Approve an item's pending image — it becomes the live photo",
   })
@@ -166,16 +166,13 @@ export class ItemsController {
     description: ErrorMessages.ITEMS.NO_PENDING_IMAGE,
     type: ErrorResponse,
   })
-  approveImage(
-    @Param('id') id: string,
-    @CurrentUser() currentUser: { id: string; role: UserRole },
-  ) {
-    return this.itemsService.approveImage(id, currentUser);
+  approveImage(@Param('id') id: string) {
+    return this.itemsService.approveImage(id);
   }
 
   @Put(':id/image/reject')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Role(UserRole.SUPER_ADMIN)
   @ApiOperation({
     summary: "Reject an item's pending image — the live photo is unchanged",
   })
@@ -189,11 +186,8 @@ export class ItemsController {
     description: ErrorMessages.ITEMS.NO_PENDING_IMAGE,
     type: ErrorResponse,
   })
-  rejectImage(
-    @Param('id') id: string,
-    @CurrentUser() currentUser: { id: string; role: UserRole },
-  ) {
-    return this.itemsService.rejectImage(id, currentUser);
+  rejectImage(@Param('id') id: string) {
+    return this.itemsService.rejectImage(id);
   }
 
   @Delete(':id')

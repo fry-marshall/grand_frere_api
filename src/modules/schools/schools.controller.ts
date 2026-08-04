@@ -91,7 +91,7 @@ export class SchoolsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Role(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Get school details' })
   @ApiSuccessResponse(SchoolResponseDto)
   @ApiNotFoundResponse({
@@ -99,11 +99,8 @@ export class SchoolsController {
     type: ErrorResponse,
   })
   @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
-  findOne(
-    @Param('id') id: string,
-    @CurrentUser() currentUser: { id: string; role: UserRole },
-  ) {
-    return this.schoolsService.findOne(id, currentUser);
+  findOne(@Param('id') id: string) {
+    return this.schoolsService.findOne(id);
   }
 
   @Put(':id')
@@ -159,12 +156,7 @@ export class SchoolsController {
 
   @Get(':id/vendors')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(
-    UserRole.SUPER_ADMIN,
-    UserRole.SCHOOL_ADMIN,
-    UserRole.STUDENT,
-    UserRole.PARENT,
-  )
+  @Role(UserRole.SUPER_ADMIN, UserRole.STUDENT, UserRole.PARENT)
   @ApiOperation({ summary: 'List vendors of a school' })
   @ApiSuccessResponse(SchoolVendorResponseDto)
   @ApiNotFoundResponse({
@@ -182,7 +174,7 @@ export class SchoolsController {
 
   @Get(':id/students')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Role(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'List students of a school' })
   @ApiSuccessResponse(SchoolStudentResponseDto)
   @ApiNotFoundResponse({
@@ -190,17 +182,13 @@ export class SchoolsController {
     type: ErrorResponse,
   })
   @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
-  findStudents(
-    @Param('id') id: string,
-    @CurrentUser() currentUser: { id: string; role: UserRole },
-    @Query() query: PaginationQueryDto,
-  ) {
-    return this.schoolsService.findStudents(id, currentUser, query);
+  findStudents(@Param('id') id: string, @Query() query: PaginationQueryDto) {
+    return this.schoolsService.findStudents(id, query);
   }
 
   @Get(':id/parents')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Role(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'List parents of a school' })
   @ApiSuccessResponse(SchoolParentResponseDto)
   @ApiNotFoundResponse({
@@ -208,17 +196,13 @@ export class SchoolsController {
     type: ErrorResponse,
   })
   @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
-  findParents(
-    @Param('id') id: string,
-    @CurrentUser() currentUser: { id: string; role: UserRole },
-    @Query() query: PaginationQueryDto,
-  ) {
-    return this.schoolsService.findParents(id, currentUser, query);
+  findParents(@Param('id') id: string, @Query() query: PaginationQueryDto) {
+    return this.schoolsService.findParents(id, query);
   }
 
   @Get(':id/transactions')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Role(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'List transactions of a school with stats' })
   @ApiSuccessResponse(SchoolTransactionResponseDto)
   @ApiNotFoundResponse({
@@ -228,9 +212,8 @@ export class SchoolsController {
   @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
   findTransactions(
     @Param('id') id: string,
-    @CurrentUser() currentUser: { id: string; role: UserRole },
     @Query() query: SchoolTransactionsQueryDto,
   ) {
-    return this.schoolsService.findTransactions(id, currentUser, query);
+    return this.schoolsService.findTransactions(id, query);
   }
 }

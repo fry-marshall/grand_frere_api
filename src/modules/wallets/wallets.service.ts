@@ -9,7 +9,6 @@ import { Wallet } from './entities/wallet.entity';
 import { Order } from '../orders/entities/order.entity';
 import { OrderStatus } from '../orders/order.types';
 import { Student } from '../students/entities/student.entity';
-import { User } from '../users/entities/user.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { UserRole } from '../users/user.types';
@@ -25,8 +24,6 @@ export class WalletsService {
     private readonly orderRepo: Repository<Order>,
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
     @InjectRepository(Parent)
     private readonly parentRepo: Repository<Parent>,
     @InjectRepository(StudentParent)
@@ -41,13 +38,6 @@ export class WalletsService {
       where: { id: studentId },
     });
     if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
-
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== student.schoolId) throw new ForbiddenException();
-    }
 
     if (currentUser.role === UserRole.PARENT) {
       const parent = await this.parentRepo.findOne({

@@ -205,16 +205,6 @@ describe('PUT /api/v1/students/:id', () => {
       expect(res.body.data.user.firstName).toBe('UpdatedBySuperAdmin');
     });
 
-    it('should update student for own SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .put(`/api/v1/students/${student.id}`)
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`)
-        .send({ lastName: 'UpdatedByAdmin' });
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.user.lastName).toBe('UpdatedByAdmin');
-    });
-
     it('should update student for linked PARENT', async () => {
       const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
@@ -258,6 +248,15 @@ describe('PUT /api/v1/students/:id', () => {
       const res = await request(getServer(app))
         .put(`/api/v1/students/${student.id}`)
         .set('Authorization', `Bearer ${studentToken}`)
+        .send({ firstName: 'Updated' });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 for SCHOOL_ADMIN of the same school', async () => {
+      const res = await request(getServer(app))
+        .put(`/api/v1/students/${student.id}`)
+        .set('Authorization', `Bearer ${ownSchoolAdminToken}`)
         .send({ firstName: 'Updated' });
 
       expect(res.status).toBe(403);

@@ -219,15 +219,6 @@ describe('GET /api/v1/students/:id/orders', () => {
       expect(res.body.data.meta.total).toBe(1);
     });
 
-    it('should return orders for own SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get(`/api/v1/students/${student.id}/orders`)
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data.length).toBe(1);
-    });
-
     it('should return own orders for STUDENT', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/students/${student.id}/orders`)
@@ -257,6 +248,13 @@ describe('GET /api/v1/students/:id/orders', () => {
         `/api/v1/students/${student.id}/orders`,
       );
       expect(res.status).toBe(401);
+    });
+
+    it('should return 403 when user is SCHOOL_ADMIN of the same school', async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/students/${student.id}/orders`)
+        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+      expect(res.status).toBe(403);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses another school student', async () => {

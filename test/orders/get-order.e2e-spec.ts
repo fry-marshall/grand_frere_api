@@ -308,16 +308,6 @@ describe('GET /api/v1/orders/:id', () => {
       expect(res.body.data.vendor.phone).toBe('+2250100005203');
     });
 
-    it('should return order details for own SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get(`/api/v1/orders/${order.id}`)
-        .set('Authorization', `Bearer ${schoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.id).toBe(order.id);
-      expect(res.body.data.items.length).toBe(1);
-    });
-
     it('should return order details for own VENDOR', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/orders/${order.id}`)
@@ -359,6 +349,13 @@ describe('GET /api/v1/orders/:id', () => {
         .get('/api/v1/orders/00000000-0000-0000-0000-000000000000')
         .set('Authorization', `Bearer ${superAdminToken}`);
       expect(res.status).toBe(404);
+    });
+
+    it('should return 403 when user is SCHOOL_ADMIN of the same school', async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/orders/${order.id}`)
+        .set('Authorization', `Bearer ${schoolAdminToken}`);
+      expect(res.status).toBe(403);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses order from another school', async () => {

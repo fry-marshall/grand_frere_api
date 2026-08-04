@@ -41,7 +41,6 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(
     UserRole.SUPER_ADMIN,
-    UserRole.SCHOOL_ADMIN,
     UserRole.VENDOR,
     UserRole.PARENT,
     UserRole.STUDENT,
@@ -103,7 +102,6 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(
     UserRole.SUPER_ADMIN,
-    UserRole.SCHOOL_ADMIN,
     UserRole.VENDOR,
     UserRole.PARENT,
     UserRole.STUDENT,
@@ -175,7 +173,6 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(
     UserRole.SUPER_ADMIN,
-    UserRole.SCHOOL_ADMIN,
     UserRole.VENDOR,
     UserRole.PARENT,
     UserRole.STUDENT,

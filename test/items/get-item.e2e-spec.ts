@@ -187,15 +187,6 @@ describe('GET /api/v1/items/:id', () => {
       expect(res.body.data.vendorId).toBe(vendor.id);
     });
 
-    it('should return item for own SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get(`/api/v1/items/${item.id}`)
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.id).toBe(item.id);
-    });
-
     it('should return item for own VENDOR', async () => {
       const res = await request(getServer(app))
         .get(`/api/v1/items/${item.id}`)
@@ -210,6 +201,13 @@ describe('GET /api/v1/items/:id', () => {
     it('should return 401 when no token', async () => {
       const res = await request(getServer(app)).get(`/api/v1/items/${item.id}`);
       expect(res.status).toBe(401);
+    });
+
+    it('should return 403 when user is SCHOOL_ADMIN of the same school', async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/items/${item.id}`)
+        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+      expect(res.status).toBe(403);
     });
 
     it('should return 403 when SCHOOL_ADMIN accesses item from another school', async () => {

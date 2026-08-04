@@ -82,7 +82,7 @@ export class VendorsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.VENDOR)
+  @Role(UserRole.SUPER_ADMIN, UserRole.VENDOR)
   @ApiOperation({ summary: 'Get vendor by id' })
   @ApiSuccessResponse(VendorResponseDto)
   @ApiNotFoundResponse({
@@ -162,7 +162,7 @@ export class VendorsController {
 
   @Get(':id/orders')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.VENDOR)
+  @Role(UserRole.SUPER_ADMIN, UserRole.VENDOR)
   @ApiOperation({ summary: "List vendor's orders" })
   @ApiSuccessResponse(VendorOrderResponseDto)
   @ApiNotFoundResponse({
@@ -180,7 +180,7 @@ export class VendorsController {
 
   @Get(':id/withdrawals')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.VENDOR)
+  @Role(UserRole.SUPER_ADMIN, UserRole.VENDOR)
   @ApiOperation({ summary: "List vendor's withdrawals" })
   @ApiSuccessResponse(VendorWithdrawalResponseDto)
   @ApiNotFoundResponse({
@@ -198,7 +198,7 @@ export class VendorsController {
 
   @Get(':id/balance')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.VENDOR)
+  @Role(UserRole.SUPER_ADMIN, UserRole.VENDOR)
   @ApiOperation({ summary: "Get vendor's wallet balance" })
   @ApiSuccessResponse(VendorBalanceResponseDto)
   @ApiNotFoundResponse({
@@ -217,7 +217,6 @@ export class VendorsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(
     UserRole.SUPER_ADMIN,
-    UserRole.SCHOOL_ADMIN,
     UserRole.VENDOR,
     UserRole.STUDENT,
     UserRole.PARENT,
@@ -238,7 +237,7 @@ export class VendorsController {
 
   @Get(':id/stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.VENDOR)
+  @Role(UserRole.SUPER_ADMIN, UserRole.VENDOR)
   @ApiOperation({
     summary: 'Get vendor daily stats (order count, revenue, cash to collect)',
   })

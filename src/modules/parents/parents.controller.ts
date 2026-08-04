@@ -38,14 +38,11 @@ export class ParentsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Role(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'List parents' })
   @ApiSuccessResponse(ParentResponseDto)
-  findAll(
-    @CurrentUser() currentUser: { id: string; role: UserRole },
-    @Query() query: PaginationQueryDto,
-  ) {
-    return this.parentsService.findAll(currentUser, query);
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.parentsService.findAll(query);
   }
 
   @Get('me')
@@ -97,7 +94,7 @@ export class ParentsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.PARENT)
+  @Role(UserRole.SUPER_ADMIN, UserRole.PARENT)
   @ApiOperation({ summary: 'Get parent by id' })
   @ApiSuccessResponse(ParentResponseDto)
   @ApiNotFoundResponse({
@@ -114,7 +111,7 @@ export class ParentsController {
 
   @Get(':id/students')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.PARENT)
+  @Role(UserRole.SUPER_ADMIN, UserRole.PARENT)
   @ApiOperation({ summary: "List parent's students" })
   @ApiSuccessResponse(ParentResponseDto)
   @ApiNotFoundResponse({

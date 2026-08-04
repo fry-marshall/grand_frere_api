@@ -206,26 +206,6 @@ describe('GET /api/v1/parents', () => {
       expect(res.body.data.meta.total).toBeGreaterThanOrEqual(2);
     });
 
-    it('should return only parents linked to own school for SCHOOL_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .get('/api/v1/parents')
-        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data.length).toBe(1);
-      expect(res.body.data.data[0].user.firstName).toBe('Aminata');
-    });
-
-    it('should return only parents linked to other school', async () => {
-      const res = await request(getServer(app))
-        .get('/api/v1/parents')
-        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.data.length).toBe(1);
-      expect(res.body.data.data[0].user.firstName).toBe('Fatoumata');
-    });
-
     it('should include user field in response', async () => {
       const res = await request(getServer(app))
         .get('/api/v1/parents')
@@ -265,6 +245,20 @@ describe('GET /api/v1/parents', () => {
       const res = await request(getServer(app))
         .get('/api/v1/parents')
         .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN role', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/parents')
+        .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 403 when SCHOOL_ADMIN role (another school)', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/parents')
+        .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
       expect(res.status).toBe(403);
     });
   });

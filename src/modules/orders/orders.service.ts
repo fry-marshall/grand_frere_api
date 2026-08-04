@@ -19,7 +19,6 @@ import { Card } from '../cards/entities/card.entity';
 import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
-import { User } from '../users/entities/user.entity';
 import type { IStorageService } from '../../common/storage/storage.interface';
 import { STORAGE_SERVICE } from '../../common/storage/storage.interface';
 import { OrderStatus, PaymentMethod } from './order.types';
@@ -64,8 +63,6 @@ export class OrdersService {
     private readonly parentRepo: Repository<Parent>,
     @InjectRepository(StudentParent)
     private readonly studentParentRepo: Repository<StudentParent>,
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly gateway: NotificationsGateway,
     private readonly notificationsService: NotificationsService,
@@ -92,15 +89,7 @@ export class OrdersService {
       .skip((page - 1) * limit)
       .take(limit);
 
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (!admin?.schoolId) throw new ForbiddenException();
-      qb.innerJoin('o.student', 's').where('s.schoolId = :schoolId', {
-        schoolId: admin.schoolId,
-      });
-    } else if (currentUser.role === UserRole.VENDOR) {
+    if (currentUser.role === UserRole.VENDOR) {
       const vendor = await this.vendorRepo.findOne({
         where: { userId: currentUser.id },
       });
@@ -155,16 +144,7 @@ export class OrdersService {
     });
     if (!order) throw new NotFoundException(ErrorMessages.ORDERS.NOT_FOUND);
 
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (!admin?.schoolId) throw new ForbiddenException();
-      const student = await this.studentRepo.findOne({
-        where: { id: order.studentId },
-      });
-      if (student?.schoolId !== admin.schoolId) throw new ForbiddenException();
-    } else if (currentUser.role === UserRole.VENDOR) {
+    if (currentUser.role === UserRole.VENDOR) {
       const vendor = await this.vendorRepo.findOne({
         where: { userId: currentUser.id },
       });
@@ -464,16 +444,7 @@ export class OrdersService {
     const order = await this.orderRepo.findOne({ where: { id } });
     if (!order) throw new NotFoundException(ErrorMessages.ORDERS.NOT_FOUND);
 
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (!admin?.schoolId) throw new ForbiddenException();
-      const student = await this.studentRepo.findOne({
-        where: { id: order.studentId },
-      });
-      if (student?.schoolId !== admin.schoolId) throw new ForbiddenException();
-    } else if (currentUser.role === UserRole.VENDOR) {
+    if (currentUser.role === UserRole.VENDOR) {
       const vendor = await this.vendorRepo.findOne({
         where: { userId: currentUser.id },
       });

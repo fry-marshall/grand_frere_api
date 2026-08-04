@@ -38,15 +38,12 @@ export class PaymentsController {
   @Get()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @Role(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'List payments' })
   @ApiSuccessResponse(PaymentResponseDto)
   @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
-  findAll(
-    @CurrentUser() currentUser: { id: string; role: UserRole },
-    @Query() query: PaginationQueryDto,
-  ) {
-    return this.paymentsService.findAll(currentUser, query);
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.paymentsService.findAll(query);
   }
 
   @Post('initiate')
