@@ -1,6 +1,6 @@
 # Grand Frère API — Documentation Complète
 
-> Version : 1.1 — Base URL : `http://localhost:3000/api/v1`  
+> Version : 1.2 — Base URL : `http://localhost:3000/api/v1`  
 > Swagger (hors prod) : `GET /api/docs`
 
 ---
@@ -25,6 +25,8 @@
    - [Payments](#610-payments)
    - [Withdrawals](#611-withdrawals)
    - [Notifications](#612-notifications)
+   - [School Activities](#613-school-activities)
+   - [School Join Requests](#614-school-join-requests)
 7. [WebSocket (temps réel)](#7-websocket-temps-réel)
 8. [Règles métier & edge cases](#8-règles-métier--edge-cases)
 
@@ -125,6 +127,13 @@ Exemples valides : `+22501XXXXXXXX`, `+22505XXXXXXXX`, `+22507XXXXXXXX`
 | `PARENT` | Parent / tuteur |
 | `STUDENT` | Élève |
 
+### `UserStatus`
+
+| Valeur | Description |
+|---|---|
+| `VALIDATED` | Compte actif — accès normal (défaut) |
+| `BLOCKED` | Compte bloqué — authentification et toutes les opérations refusées |
+
 ### `CardStatus`
 
 | Valeur | Description |
@@ -140,6 +149,14 @@ Exemples valides : `+22501XXXXXXXX`, `+22505XXXXXXXX`, `+22507XXXXXXXX`
 |---|---|
 | `ACTIVE` | École opérationnelle |
 | `SUSPENDED` | École suspendue |
+
+### `SchoolJoinRequestStatus`
+
+| Valeur | Description |
+|---|---|
+| `PENDING` | En attente de traitement |
+| `APPROVED` | Approuvée — école et admin créés |
+| `REJECTED` | Rejetée |
 
 ### `VendorStatus`
 
@@ -449,6 +466,7 @@ Connexion avec téléphone et mot de passe.
 |---|---|
 | `400` | Validation failed |
 | `401` | `Invalid credentials` |
+| `401` | `Account is blocked` (statut utilisateur ≠ `VALIDATED`) |
 
 ---
 
@@ -789,6 +807,38 @@ Débloque la carte si elle était `BLOCKED`.
 | `401` | `Invalid password` |
 | `403` | Not the card owner |
 | `404` | `Card not found` |
+
+---
+
+#### `PUT /cards/:code/replace`
+
+Remplace une carte perdue par une carte vierge (`UNASSIGNED`) de la même école.  
+Le PIN, la limite journalière et le droit d'édition de la limite sont recopiés sur la nouvelle carte ; l'élève est relié à la nouvelle carte et l'ancienne passe au statut `LOST` (définitif).
+
+**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN`, `PARENT`, `STUDENT`  
+**Params** : `code` (la carte perdue)
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `newCardCode` | `string` | oui | Code d'une carte `UNASSIGNED` existante |
+
+**Réponse 200** : Objet `CardResponseDto` de la nouvelle carte (`status: "ACTIVE"`)
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `400` | Validation failed |
+| `403` | Not the card owner |
+| `404` | `Card not found` |
+| `409` | `Card must be assigned to a student to be replaced` |
+| `409` | `Replacement card must be different from the lost card` |
+| `409` | `Replacement card must be a blank, unassigned card` |
+| `409` | `Replacement card must belong to the same school` |
+
+**Edge case** : L'ancienne carte passe en `LOST` et ne peut plus jamais être réactivée (contrairement à `SUSPENDED`/`BLOCKED`).
 
 ---
 
@@ -1755,6 +1805,7 @@ Liste les articles avec pagination.
         "price": 1500,
         "description": "Riz blanc avec sauce graine",
         "imageUrl": "https://cdn.example.com/items/riz-sauce.jpg",
+        "pendingImageUrl": null,
         "status": "ACTIVE",
         "createdAt": "2026-06-20T10:00:00.000Z"
       }
@@ -1765,7 +1816,7 @@ Liste les articles avec pagination.
 }
 ```
 
-> `VENDOR` ne voit que ses propres articles.
+> `VENDOR` ne voit que ses propres articles. `pendingImageUrl` est non-null quand une nouvelle photo attend l'approbation d'un admin (voir `PUT /items/:id/image`).
 
 ---
 
@@ -1842,7 +1893,8 @@ Met à jour un article.
 
 #### `PUT /items/:id/image`
 
-Uploade ou remplace l'image d'un article.
+Uploade ou remplace l'image d'un article.  
+La photo n'est **pas** publiée immédiatement : elle est stockée dans `pendingImageUrl` en attente de l'approbation d'un admin. `imageUrl` (la photo actuellement visible dans le menu) reste inchangé — l'article reste commandable normalement pendant la review.
 
 **Rôles** : `SUPER_ADMIN`, `VENDOR` (propriétaire)  
 **Params** : `id`  
@@ -1854,7 +1906,7 @@ Uploade ou remplace l'image d'un article.
 |---|---|---|
 | `file` | `binary` | oui |
 
-**Réponse 200** : `ItemResponseDto` avec `imageUrl` mis à jour
+**Réponse 200** : `ItemResponseDto` avec `pendingImageUrl` renseigné
 
 **Erreurs**
 
@@ -1863,6 +1915,46 @@ Uploade ou remplace l'image d'un article.
 | `400` | File validation failed (type/taille invalide) |
 | `403` | Access denied |
 | `404` | `Item not found` |
+
+**Edge case** : un nouvel upload avant qu'un admin n'ait statué sur le précédent remplace simplement la photo en attente (l'ancienne photo en attente est supprimée du storage).
+
+---
+
+#### `PUT /items/:id/image/approve`
+
+Approuve la photo en attente d'un article : elle devient la photo affichée (`imageUrl`), `pendingImageUrl` est vidé et l'ancienne photo est supprimée du storage.
+
+**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN` (école du vendeur)  
+**Params** : `id`
+
+**Réponse 200** : `ItemResponseDto` mis à jour
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `403` | Access denied |
+| `404` | `Item not found` |
+| `409` | `Item has no pending image to review` |
+
+---
+
+#### `PUT /items/:id/image/reject`
+
+Rejette la photo en attente d'un article : elle est supprimée du storage, `pendingImageUrl` est vidé. `imageUrl` (la photo actuellement visible) n'est pas modifié.
+
+**Rôles** : `SUPER_ADMIN`, `SCHOOL_ADMIN` (école du vendeur)  
+**Params** : `id`
+
+**Réponse 200** : `ItemResponseDto` mis à jour
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `403` | Access denied |
+| `404` | `Item not found` |
+| `409` | `Item has no pending image to review` |
 
 ---
 
@@ -2556,6 +2648,342 @@ Marque une notification spécifique comme lue.
 
 ---
 
+### 6.13 School Activities
+
+**Base route** : `/api/v1/school-activities`  
+**Authentification** : Bearer token requis sauf pour la consultation publique (`GET /`, `GET /:id`)
+
+---
+
+#### `POST /school-activities`
+
+Crée une activité scolaire (créée en brouillon, non visible publiquement).
+
+**Rôles** : `SCHOOL_ADMIN`, `SUPER_ADMIN`  
+**HTTP** : 201  
+**Content-Type** : `multipart/form-data`
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `title` | `string` | oui | Max 255 caractères |
+| `description` | `string` | oui | |
+| `schoolId` | `uuid` | conditionnel | Requis si l'appelant est `SUPER_ADMIN`. Ignoré pour `SCHOOL_ADMIN` (dérivé de sa propre école) |
+| `photos[]` | `binary[]` | non | Max 5 fichiers, 5 Mo chacun, `image/jpeg`, `image/png`, `image/webp` |
+
+**Réponse 201** : `SchoolActivityResponseDto` (`isVisible: false`)
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "schoolId": "uuid",
+    "title": "Journée sportive",
+    "description": "Les élèves ont participé à des activités sportives.",
+    "photoUrls": ["https://cdn.example.com/school-activities/uuid/1719900000-0.jpg"],
+    "isVisible": false,
+    "createdAt": "2026-07-13T10:00:00.000Z"
+  },
+  "statusCode": 201
+}
+```
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `400` | Validation failed |
+| `400` | File validation failed (type/taille invalide) |
+| `404` | `School not found` |
+
+---
+
+#### `PUT /school-activities/:id`
+
+Met à jour une activité scolaire.
+
+**Rôles** : `SCHOOL_ADMIN` (école propriétaire uniquement), `SUPER_ADMIN`  
+**Params** : `id`  
+**Content-Type** : `multipart/form-data`
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `title` | `string` | non | Max 255 caractères |
+| `description` | `string` | non | |
+| `photos[]` | `binary[]` | non | Si envoyées, remplacent entièrement le jeu de photos existant |
+
+**Réponse 200** : `SchoolActivityResponseDto` mis à jour
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `400` | Validation failed |
+| `403` | `Not your school` |
+| `404` | `School activity not found` |
+
+**Edge case** : Si `photos[]` est envoyé, les anciennes photos sont supprimées du storage puis remplacées — il n'y a pas de mode additif.
+
+---
+
+#### `DELETE /school-activities/:id`
+
+Supprime une activité scolaire (et ses photos associées).
+
+**Rôles** : `SCHOOL_ADMIN`, `SUPER_ADMIN`  
+**HTTP** : 204  
+**Params** : `id`
+
+**Réponse 204** : Pas de corps
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `403` | `Not your school` |
+| `404` | `School activity not found` |
+
+---
+
+#### `PUT /school-activities/:id/publish`
+
+Rend une activité visible publiquement.
+
+**Rôles** : `SCHOOL_ADMIN`, `SUPER_ADMIN`  
+**Params** : `id`
+
+**Réponse 200** : `SchoolActivityResponseDto` (`isVisible: true`)
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `403` | `Not your school` |
+| `404` | `School activity not found` |
+| `409` | `Activity is already visible` |
+
+---
+
+#### `PUT /school-activities/:id/hide`
+
+Masque une activité publiée.
+
+**Rôles** : `SCHOOL_ADMIN`, `SUPER_ADMIN`  
+**Params** : `id`
+
+**Réponse 200** : `SchoolActivityResponseDto` (`isVisible: false`)
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `403` | `Not your school` |
+| `404` | `School activity not found` |
+| `409` | `Activity is already hidden` |
+
+---
+
+#### `GET /school-activities/mine`
+
+Liste les activités pour la gestion (brouillons + publiées).
+
+**Rôles** : `SCHOOL_ADMIN`, `SUPER_ADMIN`  
+**Query params** : `page`, `limit`, `schoolId` (ignoré pour `SCHOOL_ADMIN` — scopé à sa propre école ; filtre optionnel pour `SUPER_ADMIN`)
+
+**Réponse 200** : Objet paginé de `SchoolActivityResponseDto` (brouillons et publiées incluses)
+
+> **Important** : Cet endpoint doit être appelé (déclaré) **avant** `GET /:id` dans le routing NestJS, sinon `/mine` serait interprété comme un `id`.
+
+---
+
+#### `GET /school-activities`
+
+Liste les activités **publiées** (public).
+
+**Auth** : Aucune  
+**Query params** : `page`, `limit`, `schoolId` (filtre optionnel)
+
+**Réponse 200** : Objet paginé de `SchoolActivityResponseDto` (`isVisible: true` uniquement)
+
+---
+
+#### `GET /school-activities/:id`
+
+Récupère une activité publiée (public).
+
+**Auth** : Aucune  
+**Params** : `id` (uuid)
+
+**Réponse 200** : `SchoolActivityResponseDto`
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `404` | `School activity not found` |
+
+**Edge case** : Retourne `404` aussi bien si l'id n'existe pas que si l'activité existe mais n'est pas `isVisible` (brouillon ou masquée) — le statut de visibilité n'est jamais révélé au public.
+
+---
+
+### 6.14 School Join Requests
+
+**Base route** : `/api/v1/school-join-requests`
+
+---
+
+#### `POST /school-join-requests`
+
+Soumet une demande d'adhésion au réseau d'écoles (formulaire public, avant tout compte).
+
+**Auth** : Aucune  
+**HTTP** : 201
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `schoolName` | `string` | oui | |
+| `city` | `string` | oui | |
+| `studentCount` | `integer` | oui | ≥ 1 |
+| `gender` | `Gender` | oui | |
+| `firstName` | `string` | oui | |
+| `lastName` | `string` | oui | |
+| `phone` | `string` | oui | Format CI |
+| `email` | `string` | oui | Email valide |
+| `position` | `string` | oui | Fonction du demandeur (ex: `Directeur`) |
+| `message` | `string` | non | Max 1000 caractères |
+
+**Réponse 201** : `SchoolJoinRequestResponseDto` (`status: "PENDING"`)
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `400` | Validation failed |
+
+---
+
+#### `GET /school-join-requests`
+
+Liste les demandes d'adhésion.
+
+**Auth** : Bearer token requis  
+**Rôles** : `SUPER_ADMIN`  
+**Query params** : `page`, `limit`, `status` (filtre optionnel `SchoolJoinRequestStatus`)
+
+**Réponse 200** : Objet paginé de `SchoolJoinRequestResponseDto`
+
+---
+
+#### `GET /school-join-requests/:id`
+
+Récupère une demande d'adhésion.
+
+**Auth** : Bearer token requis  
+**Rôles** : `SUPER_ADMIN`  
+**Params** : `id` (uuid)
+
+**Réponse 200** : `SchoolJoinRequestResponseDto`
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `404` | `School join request not found` |
+
+---
+
+#### `PUT /school-join-requests/:id/approve`
+
+Approuve une demande — crée l'école et son admin.
+
+**Auth** : Bearer token requis  
+**Rôles** : `SUPER_ADMIN`  
+**Params** : `id`
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `sigle` | `string` | oui | `[A-Z0-9-]{2,10}` — unique |
+| `password` | `string` | oui | Min 8 caractères |
+
+**Réponse 200**
+
+```json
+{
+  "data": {
+    "school": {
+      "id": "uuid",
+      "name": "Lycée Moderne de Cocody",
+      "sigle": "LMC",
+      "address": "Abidjan",
+      "status": "ACTIVE",
+      "createdAt": "2026-07-13T10:00:00.000Z"
+    },
+    "admin": {
+      "id": "uuid",
+      "firstName": "Kouamé",
+      "lastName": "Assi",
+      "phone": "+22507000000001",
+      "role": "SCHOOL_ADMIN",
+      "schoolId": "uuid",
+      "createdAt": "2026-07-13T10:00:00.000Z"
+    }
+  },
+  "statusCode": 200
+}
+```
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `400` | Validation failed |
+| `404` | `School join request not found` |
+| `409` | `Join request has already been processed` |
+| `409` | `School sigle already exists` |
+| `409` | `Phone already exists` |
+
+**Side effects**
+
+- Crée l'école (`address` = `city` de la demande) avec le `sigle`/`password` fournis dans le body.
+- Crée le compte `SCHOOL_ADMIN` avec `firstName`/`lastName`/`phone` repris de la demande.
+- Marque la demande `APPROVED`.
+
+**Edge case** : L'école et l'admin ne sont pas créés dans une transaction DB partagée (services distincts). Si la création de l'admin échoue après celle de l'école (ex: `Phone already exists`), l'école fraîchement créée est supprimée automatiquement pour éviter une école orpheline sans admin.
+
+---
+
+#### `PUT /school-join-requests/:id/reject`
+
+Rejette une demande d'adhésion.
+
+**Auth** : Bearer token requis  
+**Rôles** : `SUPER_ADMIN`  
+**Params** : `id`
+
+**Body**
+
+| Champ | Type | Requis | Contraintes |
+|---|---|---|---|
+| `reason` | `string` | non | Max 500 caractères |
+
+**Réponse 200** : `SchoolJoinRequestResponseDto` (`status: "REJECTED"`, `rejectionReason` renseigné)
+
+**Erreurs**
+
+| Code | Message |
+|---|---|
+| `404` | `School join request not found` |
+| `409` | `Join request has already been processed` |
+
+---
+
 ## 7. WebSocket (temps réel)
 
 **URL** : `ws://localhost:3000` (même port que le serveur HTTP)  
@@ -2725,6 +3153,12 @@ solde disponible = wallet.balance - wallet.reserved
 ```
 
 `orderId` est omis si la notification n'est pas liée à une commande (ex. `VENDOR_APPROVED`).
+
+### Statut de compte (`UserStatus`)
+
+- Tout utilisateur possède un `status` (`VALIDATED` par défaut, ou `BLOCKED`).
+- `POST /auth/signin` refuse la connexion avec `401 Account is blocked` si le compte n'est pas `VALIDATED`.
+- Une fois authentifié, chaque requête sur un endpoint protégé (`JwtAuthGuard`) revérifie le statut en base : un compte passé à `BLOCKED` après l'émission du token perd immédiatement l'accès à toute opération (`401 Account is blocked`), sans attendre l'expiration du token.
 
 ### Pagination
 

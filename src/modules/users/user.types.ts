@@ -10,3 +10,8 @@ export enum Gender {
   MALE = 'MALE',
   FEMALE = 'FEMALE',
 }
+
+export enum UserStatus {
+  VALIDATED = 'VALIDATED',
+  BLOCKED = 'BLOCKED',
+}

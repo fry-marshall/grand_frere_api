@@ -4,11 +4,12 @@ import request from 'supertest';
 import * as bcrypt from 'bcrypt';
 import { createTestApp, getServer } from '../helpers/create-app';
 import { User } from '../../src/modules/users/entities/user.entity';
-import { UserRole } from '../../src/modules/users/user.types';
+import { UserRole, UserStatus } from '../../src/modules/users/user.types';
 import { ErrorMessages } from '../../src/common/swagger/error-messages';
 
 const PHONE = '+2250100000050';
 const PASSWORD = 'SecurePass123';
+const BLOCKED_PHONE = '+2250100000870';
 
 describe('POST /api/v1/auth/signin', () => {
   let app: INestApplication;
@@ -22,6 +23,7 @@ describe('POST /api/v1/auth/signin', () => {
     userRepo = ds.getRepository(User);
 
     await userRepo.delete({ phone: PHONE });
+    await userRepo.delete({ phone: BLOCKED_PHONE });
 
     await userRepo.save({
       firstName: 'Kouassi',
@@ -31,10 +33,21 @@ describe('POST /api/v1/auth/signin', () => {
       role: UserRole.STUDENT,
       isOnboarded: true,
     });
+
+    await userRepo.save({
+      firstName: 'Blocked',
+      lastName: 'User',
+      phone: BLOCKED_PHONE,
+      passwordHash: await bcrypt.hash(PASSWORD, 10),
+      role: UserRole.STUDENT,
+      status: UserStatus.BLOCKED,
+      isOnboarded: true,
+    });
   });
 
   afterAll(async () => {
     await userRepo.delete({ phone: PHONE });
+    await userRepo.delete({ phone: BLOCKED_PHONE });
     await app.close();
   });
 
@@ -83,6 +96,15 @@ describe('POST /api/v1/auth/signin', () => {
 
       expect(res.status).toBe(401);
       expect(res.body.message).toBe(ErrorMessages.AUTH.INVALID_CREDENTIALS);
+    });
+
+    it('should return 401 with a blocked-account message when the user is not validated', async () => {
+      const res = await request(getServer(app))
+        .post('/api/v1/auth/signin')
+        .send({ phone: BLOCKED_PHONE, password: PASSWORD });
+
+      expect(res.status).toBe(401);
+      expect(res.body.message).toBe(ErrorMessages.AUTH.ACCOUNT_BLOCKED);
     });
   });
 });

@@ -9,7 +9,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { School } from '../../schools/entities/school.entity';
-import { Gender, UserRole } from '../user.types';
+import { Gender, UserRole, UserStatus } from '../user.types';
 
 @Entity('users')
 export class User {
@@ -34,6 +34,9 @@ export class User {
 
   @Column({ type: 'enum', enum: Gender, nullable: true })
   gender: Gender;
+
+  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.VALIDATED })
+  status: UserStatus;
 
   @Column({ nullable: true })
   schoolId: string;

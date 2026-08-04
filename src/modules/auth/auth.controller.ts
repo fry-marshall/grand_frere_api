@@ -130,7 +130,7 @@ export class AuthController {
     type: ErrorResponse,
   })
   @ApiUnauthorizedResponse({
-    description: ErrorMessages.AUTH.INVALID_CREDENTIALS,
+    description: `${ErrorMessages.AUTH.INVALID_CREDENTIALS} | ${ErrorMessages.AUTH.ACCOUNT_BLOCKED}`,
     type: ErrorResponse,
   })
   signin(@Body() dto: SigninDto) {

@@ -24,7 +24,7 @@ import { VendorWallet } from '../vendors/entities/vendor-wallet.entity';
 import { Otp } from '../otp/entities/otp.entity';
 import { OtpType } from '../otp/otp.types';
 import { CardStatus } from '../cards/card.types';
-import { UserRole } from '../users/user.types';
+import { UserRole, UserStatus } from '../users/user.types';
 import { ScanCardDto } from './dto/scan-card.dto';
 import { ScanCardResponseDto } from './dto/scan-card-response.dto';
 import { SignupParentDto } from './dto/signup-parent.dto';
@@ -490,6 +490,10 @@ export class AuthService {
     const passwordMatch = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordMatch) {
       throw new UnauthorizedException(ErrorMessages.AUTH.INVALID_CREDENTIALS);
+    }
+
+    if (user.status !== UserStatus.VALIDATED) {
+      throw new UnauthorizedException(ErrorMessages.AUTH.ACCOUNT_BLOCKED);
     }
 
     const accessToken = this.jwtService.sign({
