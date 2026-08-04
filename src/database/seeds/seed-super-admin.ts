@@ -18,12 +18,10 @@ async function seed() {
   await AppDataSource.initialize();
 
   const userRepo = AppDataSource.getRepository(User);
-  const existing = await userRepo.findOne({
-    where: { role: UserRole.SUPER_ADMIN },
-  });
+  const existing = await userRepo.findOne({ where: { phone } });
 
   if (existing) {
-    console.log('Super admin already exists — skipping.');
+    console.log(`A user with phone ${phone} already exists — skipping.`);
     await AppDataSource.destroy();
     return;
   }

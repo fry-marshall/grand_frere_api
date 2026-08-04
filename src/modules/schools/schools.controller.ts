@@ -29,6 +29,9 @@ import { SchoolStudentResponseDto } from './dto/school-student-response.dto';
 import { SchoolParentResponseDto } from './dto/school-parent-response.dto';
 import { SchoolTransactionResponseDto } from './dto/school-transaction-response.dto';
 import { SchoolTransactionsQueryDto } from './dto/school-transactions-query.dto';
+import { StatsQueryDto } from './dto/stats-query.dto';
+import { NetworkStatsResponseDto } from './dto/network-stats-response.dto';
+import { SchoolStatsResponseDto } from './dto/school-stats-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -87,6 +90,22 @@ export class SchoolsController {
   @ApiSuccessResponse(SchoolResponseDto)
   findAll() {
     return this.schoolsService.findAll();
+  }
+
+  @Get('stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary:
+      'Get network-wide stats: revenue, order volume, active students, per-school breakdown',
+  })
+  @ApiSuccessResponse(NetworkStatsResponseDto)
+  @ApiForbiddenResponse({
+    description: 'Insufficient role',
+    type: ErrorResponse,
+  })
+  getNetworkStats(@Query() query: StatsQueryDto) {
+    return this.schoolsService.getNetworkStats(query);
   }
 
   @Get(':id')
@@ -198,6 +217,27 @@ export class SchoolsController {
   @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
   findParents(@Param('id') id: string, @Query() query: PaginationQueryDto) {
     return this.schoolsService.findParents(id, query);
+  }
+
+  @Get(':id/stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @ApiOperation({
+    summary:
+      'Get stats for a single school: revenue, order volume, students/vendors/parents counts',
+  })
+  @ApiSuccessResponse(SchoolStatsResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.SCHOOLS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
+  getSchoolStats(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+    @Query() query: StatsQueryDto,
+  ) {
+    return this.schoolsService.getSchoolStats(id, currentUser, query);
   }
 
   @Get(':id/transactions')

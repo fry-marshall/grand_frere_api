@@ -20,6 +20,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { WithdrawalsModule } from './modules/withdrawals/withdrawals.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
 import { StorageModule } from './common/storage/storage.module';
 import { PaystackModule } from './common/paystack/paystack.module';
 
@@ -52,6 +53,7 @@ import { PaystackModule } from './common/paystack/paystack.module';
     OrdersModule,
     WithdrawalsModule,
     NotificationsModule,
+    TransactionsModule,
   ],
   providers: [
     {

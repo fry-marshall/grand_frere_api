@@ -15,9 +15,11 @@ import { User } from '../users/entities/user.entity';
 import { Vendor } from '../vendors/entities/vendor.entity';
 import { Student } from '../students/entities/student.entity';
 import { Parent } from '../parents/entities/parent.entity';
+import { Order } from '../orders/entities/order.entity';
+import { OrderStatus } from '../orders/order.types';
 import { SchoolStatus } from './school.types';
 import { VendorStatus } from '../vendors/vendor.types';
-import { UserRole } from '../users/user.types';
+import { UserRole, UserStatus } from '../users/user.types';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { CreateSchoolAdminDto } from './dto/create-school-admin.dto';
 import { UpdateSchoolDto } from './dto/update-school.dto';
@@ -28,6 +30,9 @@ import { SchoolStudentResponseDto } from './dto/school-student-response.dto';
 import { SchoolParentResponseDto } from './dto/school-parent-response.dto';
 import { SchoolTransactionResponseDto } from './dto/school-transaction-response.dto';
 import { SchoolTransactionsQueryDto } from './dto/school-transactions-query.dto';
+import { StatsQueryDto } from './dto/stats-query.dto';
+import { NetworkStatsResponseDto } from './dto/network-stats-response.dto';
+import { SchoolStatsResponseDto } from './dto/school-stats-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 import type { IStorageService } from '../../common/storage/storage.interface';
@@ -45,6 +50,7 @@ export class SchoolsService {
     private readonly parentRepo: Repository<Parent>,
     @InjectRepository(Transaction)
     private readonly transactionRepo: Repository<Transaction>,
+    @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
     @Inject(STORAGE_SERVICE) private readonly storageService: IStorageService,
   ) {}
 
@@ -271,6 +277,118 @@ export class SchoolsService {
         },
       })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async getNetworkStats(
+    query: StatsQueryDto,
+  ): Promise<NetworkStatsResponseDto> {
+    const { from, to } = query;
+
+    const buildBaseQb = () => {
+      const qb = this.orderRepo
+        .createQueryBuilder('o')
+        .innerJoin('o.student', 's')
+        .where('o.status = :status', { status: OrderStatus.COMPLETED });
+      if (from) qb.andWhere('o.createdAt >= :from', { from });
+      if (to) qb.andWhere('o.createdAt <= :to', { to });
+      return qb;
+    };
+
+    const totalsRaw = await buildBaseQb()
+      .select('COALESCE(SUM(o.totalAmount), 0)', 'revenue')
+      .addSelect('COUNT(o.id)', 'volume')
+      .getRawOne<{ revenue: string; volume: string }>();
+
+    const perSchoolRaw = await buildBaseQb()
+      .select('s.schoolId', 'schoolId')
+      .addSelect('COALESCE(SUM(o.totalAmount), 0)', 'revenue')
+      .addSelect('COUNT(o.id)', 'volume')
+      .groupBy('s.schoolId')
+      .getRawMany<{ schoolId: string; revenue: string; volume: string }>();
+
+    const perSchoolMap = new Map(
+      perSchoolRaw.map((r) => [
+        r.schoolId,
+        { revenue: Number(r.revenue) || 0, volume: Number(r.volume) || 0 },
+      ]),
+    );
+
+    const activeStudentsCount = await this.studentRepo
+      .createQueryBuilder('s')
+      .innerJoin('s.user', 'u')
+      .where('u.status = :status', { status: UserStatus.VALIDATED })
+      .getCount();
+
+    const schools = await this.schoolRepo.find({ order: { name: 'ASC' } });
+
+    return {
+      totalRevenue: Number(totalsRaw?.revenue) || 0,
+      orderVolume: Number(totalsRaw?.volume) || 0,
+      activeStudentsCount,
+      schools: schools.map((sc) => ({
+        schoolId: sc.id,
+        name: sc.name,
+        sigle: sc.sigle,
+        revenue: perSchoolMap.get(sc.id)?.revenue ?? 0,
+        volume: perSchoolMap.get(sc.id)?.volume ?? 0,
+      })),
+    };
+  }
+
+  async getSchoolStats(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+    query: StatsQueryDto,
+  ): Promise<SchoolStatsResponseDto> {
+    const school = await this.schoolRepo.findOne({ where: { id } });
+    if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
+
+    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
+      const admin = await this.userRepo.findOne({
+        where: { id: currentUser.id },
+      });
+      if (admin?.schoolId !== id) throw new ForbiddenException();
+    }
+
+    const { from, to } = query;
+
+    const statsQb = this.orderRepo
+      .createQueryBuilder('o')
+      .innerJoin('o.student', 's')
+      .where('s.schoolId = :schoolId', { schoolId: id })
+      .andWhere('o.status = :status', { status: OrderStatus.COMPLETED });
+    if (from) statsQb.andWhere('o.createdAt >= :from', { from });
+    if (to) statsQb.andWhere('o.createdAt <= :to', { to });
+
+    const statsRaw = await statsQb
+      .select('COALESCE(SUM(o.totalAmount), 0)', 'revenue')
+      .addSelect('COUNT(o.id)', 'volume')
+      .getRawOne<{ revenue: string; volume: string }>();
+
+    const [studentsCount, vendorsCount, parentsCount] = await Promise.all([
+      this.studentRepo.count({ where: { schoolId: id } }),
+      this.vendorRepo.count({ where: { schoolId: id } }),
+      this.parentRepo
+        .createQueryBuilder('parent')
+        .innerJoin('student_parents', 'sp', 'sp.parentId = parent.id')
+        .innerJoin(
+          'students',
+          's',
+          's.id = sp.studentId AND s.schoolId = :schoolId',
+          { schoolId: id },
+        )
+        .distinct(true)
+        .getCount(),
+    ]);
+
+    return {
+      schoolId: id,
+      revenue: Number(statsRaw?.revenue) || 0,
+      volume: Number(statsRaw?.volume) || 0,
+      studentsCount,
+      vendorsCount,
+      parentsCount,
     };
   }
 
