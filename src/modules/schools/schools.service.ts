@@ -22,6 +22,7 @@ import { VendorStatus } from '../vendors/vendor.types';
 import { UserRole, UserStatus } from '../users/user.types';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { CreateSchoolAdminDto } from './dto/create-school-admin.dto';
+import { SchoolsSearchQueryDto } from './dto/schools-search-query.dto';
 import { UpdateSchoolDto } from './dto/update-school.dto';
 import { SchoolResponseDto } from './dto/school-response.dto';
 import { SchoolAdminResponseDto } from './dto/school-admin-response.dto';
@@ -35,6 +36,7 @@ import { NetworkStatsResponseDto } from './dto/network-stats-response.dto';
 import { SchoolStatsResponseDto } from './dto/school-stats-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
+import { generateRandomPassword } from '../../common/utils/generate-password.util';
 import type { IStorageService } from '../../common/storage/storage.interface';
 import { STORAGE_SERVICE } from '../../common/storage/storage.interface';
 
@@ -80,7 +82,8 @@ export class SchoolsService {
     if (phoneExists)
       throw new ConflictException(ErrorMessages.AUTH.PHONE_ALREADY_EXISTS);
 
-    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const password = generateRandomPassword();
+    const passwordHash = await bcrypt.hash(password, 10);
     const user = await this.userRepo.save({
       firstName: dto.firstName,
       lastName: dto.lastName,
@@ -91,7 +94,7 @@ export class SchoolsService {
       isOnboarded: true,
     });
 
-    return this.toAdminDto(user);
+    return { ...this.toAdminDto(user), password };
   }
 
   async findAll(): Promise<SchoolResponseDto[]> {
@@ -99,6 +102,33 @@ export class SchoolsService {
       order: { createdAt: 'DESC' },
     });
     return schools.map((s) => this.toDto(s));
+  }
+
+  async search(
+    query: SchoolsSearchQueryDto,
+  ): Promise<{ data: SchoolResponseDto[]; meta: object }> {
+    const { search, status, page, limit } = query;
+
+    const qb = this.schoolRepo.createQueryBuilder('school');
+    if (search) {
+      qb.andWhere('(school.name ILIKE :search OR school.sigle ILIKE :search)', {
+        search: `%${search}%`,
+      });
+    }
+    if (status) {
+      qb.andWhere('school.status = :status', { status });
+    }
+
+    const [schools, total] = await qb
+      .orderBy('school.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data: schools.map((s) => this.toDto(s)),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async findOne(id: string): Promise<SchoolResponseDto> {
@@ -138,6 +168,27 @@ export class SchoolsService {
 
     await this.schoolRepo.update(id, { status: SchoolStatus.ACTIVE });
     return this.toDto({ ...school, status: SchoolStatus.ACTIVE });
+  }
+
+  async findAdmins(
+    id: string,
+    query: PaginationQueryDto,
+  ): Promise<{ data: SchoolAdminResponseDto[]; meta: object }> {
+    const school = await this.schoolRepo.findOne({ where: { id } });
+    if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
+
+    const { page, limit } = query;
+    const [admins, total] = await this.userRepo.findAndCount({
+      where: { schoolId: id, role: UserRole.SCHOOL_ADMIN },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      data: admins.map((a) => this.toAdminDto(a)),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async findVendors(

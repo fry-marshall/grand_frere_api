@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Matches, MinLength } from 'class-validator';
+import { IsString, Matches } from 'class-validator';
 
 export class ApproveSchoolJoinRequestDto {
   @ApiProperty({
@@ -11,9 +11,4 @@ export class ApproveSchoolJoinRequestDto {
     message: 'Sigle must be 2–10 uppercase alphanumeric characters',
   })
   sigle: string;
-
-  @ApiProperty({ example: 'SecurePass123' })
-  @IsString()
-  @MinLength(8)
-  password: string;
 }

@@ -90,7 +90,6 @@ export class SchoolJoinRequestsService {
         firstName: request.firstName,
         lastName: request.lastName,
         phone: request.phone,
-        password: dto.password,
       });
     } catch (error) {
       await this.schoolRepo.delete(school.id);

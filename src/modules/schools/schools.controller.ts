@@ -30,6 +30,7 @@ import { SchoolParentResponseDto } from './dto/school-parent-response.dto';
 import { SchoolTransactionResponseDto } from './dto/school-transaction-response.dto';
 import { SchoolTransactionsQueryDto } from './dto/school-transactions-query.dto';
 import { StatsQueryDto } from './dto/stats-query.dto';
+import { SchoolsSearchQueryDto } from './dto/schools-search-query.dto';
 import { NetworkStatsResponseDto } from './dto/network-stats-response.dto';
 import { SchoolStatsResponseDto } from './dto/school-stats-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
@@ -108,6 +109,22 @@ export class SchoolsController {
     return this.schoolsService.getNetworkStats(query);
   }
 
+  @Get('search')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary:
+      'Search/filter/paginate schools for the back-office (name/sigle search, status filter)',
+  })
+  @ApiSuccessResponse(SchoolResponseDto)
+  @ApiForbiddenResponse({
+    description: 'Insufficient role',
+    type: ErrorResponse,
+  })
+  search(@Query() query: SchoolsSearchQueryDto) {
+    return this.schoolsService.search(query);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.SUPER_ADMIN)
@@ -171,6 +188,19 @@ export class SchoolsController {
   })
   activate(@Param('id') id: string) {
     return this.schoolsService.activate(id);
+  }
+
+  @Get(':id/admins')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'List school admins of a school' })
+  @ApiSuccessResponse(SchoolAdminResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.SCHOOLS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  findAdmins(@Param('id') id: string, @Query() query: PaginationQueryDto) {
+    return this.schoolsService.findAdmins(id, query);
   }
 
   @Get(':id/vendors')

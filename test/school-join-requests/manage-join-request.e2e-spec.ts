@@ -228,17 +228,19 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
 
   describe('PUT /school-join-requests/:id/approve', () => {
     describe('Success cases', () => {
-      it('should create the school and its admin, and mark the request APPROVED', async () => {
+      it('should create the school and its admin with an auto-generated password, and mark the request APPROVED', async () => {
         const res = await request(getServer(app))
           .put(`/api/v1/school-join-requests/${pendingToApprove.id}/approve`)
           .set('Authorization', `Bearer ${superAdminToken}`)
-          .send({ sigle: 'TS-JR2', password: 'SecurePass123' });
+          .send({ sigle: 'TS-JR2' });
 
         expect(res.status).toBe(200);
         expect(res.body.data.school.sigle).toBe('TS-JR2');
         expect(res.body.data.school.address).toBe(pendingToApprove.city);
         expect(res.body.data.admin.phone).toBe(pendingToApprove.phone);
         expect(res.body.data.admin.role).toBe(UserRole.SCHOOL_ADMIN);
+        expect(typeof res.body.data.admin.password).toBe('string');
+        expect(res.body.data.admin.password.length).toBeGreaterThanOrEqual(8);
 
         const updatedRequest = await requestRepo.findOne({
           where: { id: pendingToApprove.id },
@@ -249,7 +251,7 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
           .post('/api/v1/auth/signin')
           .send({
             phone: pendingToApprove.phone,
-            password: 'SecurePass123',
+            password: res.body.data.admin.password,
           });
         expect(signinRes.status).toBe(200);
         expect(signinRes.body.data.accessToken).toBeDefined();
@@ -261,7 +263,7 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
         const res = await request(getServer(app))
           .put(`/api/v1/school-join-requests/${pendingToReject.id}/approve`)
           .set('Authorization', `Bearer ${schoolAdminToken}`)
-          .send({ sigle: 'TS-JR4', password: 'SecurePass123' });
+          .send({ sigle: 'TS-JR4' });
         expect(res.status).toBe(403);
       });
 
@@ -271,7 +273,7 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
             `/api/v1/school-join-requests/${duplicateSigleRequest.id}/approve`,
           )
           .set('Authorization', `Bearer ${superAdminToken}`)
-          .send({ sigle: existingSchool.sigle, password: 'SecurePass123' });
+          .send({ sigle: existingSchool.sigle });
 
         expect(res.status).toBe(409);
         expect(res.body.message).toBe(
@@ -288,7 +290,7 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
         const res = await request(getServer(app))
           .put(`/api/v1/school-join-requests/${alreadyProcessed.id}/approve`)
           .set('Authorization', `Bearer ${superAdminToken}`)
-          .send({ sigle: 'TS-JR5', password: 'SecurePass123' });
+          .send({ sigle: 'TS-JR5' });
 
         expect(res.status).toBe(409);
         expect(res.body.message).toBe(
@@ -302,7 +304,7 @@ describe('GET/PUT /api/v1/school-join-requests', () => {
             '/api/v1/school-join-requests/00000000-0000-0000-0000-000000000000/approve',
           )
           .set('Authorization', `Bearer ${superAdminToken}`)
-          .send({ sigle: 'TS-JR9', password: 'SecurePass123' });
+          .send({ sigle: 'TS-JR9' });
         expect(res.status).toBe(404);
       });
     });

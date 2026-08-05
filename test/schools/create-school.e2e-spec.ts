@@ -165,7 +165,7 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
     });
 
     describe('Success cases', () => {
-      it('should allow SUPER_ADMIN to create a school admin', async () => {
+      it('should allow SUPER_ADMIN to create a school admin with an auto-generated password', async () => {
         const res = await request(getServer(app))
           .post(`/api/v1/schools/${schoolId}/admin`)
           .set('Authorization', `Bearer ${superAdminToken}`)
@@ -173,13 +173,14 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
             firstName: 'Kouamé',
             lastName: 'Assi',
             phone: '+2250105000001',
-            password: 'SecurePass123',
           });
 
         expect(res.status).toBe(201);
         expect(res.body.data.role).toBe(UserRole.SCHOOL_ADMIN);
         expect(res.body.data.schoolId).toBe(schoolId);
         expect(res.body.data).not.toHaveProperty('passwordHash');
+        expect(typeof res.body.data.password).toBe('string');
+        expect(res.body.data.password.length).toBeGreaterThanOrEqual(8);
       });
     });
 
@@ -192,7 +193,6 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
             firstName: 'A',
             lastName: 'B',
             phone: '+2250105000002',
-            password: 'Pass123456',
           });
         expect(res.status).toBe(403);
       });
@@ -205,20 +205,18 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
             firstName: 'A',
             lastName: 'B',
             phone: '+2250105000003',
-            password: 'Pass123456',
           });
         expect(res.status).toBe(404);
       });
 
-      it('should return 400 when password is too short', async () => {
+      it('should return 400 when phone is invalid', async () => {
         const res = await request(getServer(app))
           .post(`/api/v1/schools/${schoolId}/admin`)
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({
             firstName: 'A',
             lastName: 'B',
-            phone: '+2250105000004',
-            password: '123',
+            phone: 'not-a-phone',
           });
         expect(res.status).toBe(400);
       });
@@ -231,7 +229,6 @@ describe('POST /api/v1/schools and POST /api/v1/schools/:id/admin', () => {
             firstName: 'Another',
             lastName: 'Admin',
             phone: '+2250105000001',
-            password: 'SecurePass123',
           });
         expect(res.status).toBe(409);
         expect(res.body.message).toBe(ErrorMessages.AUTH.PHONE_ALREADY_EXISTS);

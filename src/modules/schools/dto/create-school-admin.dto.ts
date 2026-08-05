@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, Matches } from 'class-validator';
 import {
   CI_PHONE_REGEX,
   CI_PHONE_MESSAGE,
@@ -20,9 +20,4 @@ export class CreateSchoolAdminDto {
   @IsString()
   @Matches(CI_PHONE_REGEX, { message: CI_PHONE_MESSAGE })
   phone: string;
-
-  @ApiProperty({ example: 'SecurePass123' })
-  @IsString()
-  @MinLength(8)
-  password: string;
 }
