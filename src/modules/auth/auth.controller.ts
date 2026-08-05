@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   Post,
   Put,
@@ -31,6 +32,8 @@ import { ErrorResponse } from '../../common/swagger/api-responses';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 import { UpdateFcmTokenDto } from './dto/update-fcm-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
+import { MeResponseDto } from './dto/me-response.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../users/user.types';
@@ -237,5 +240,43 @@ export class AuthController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.authService.updateFcmToken(currentUser.id, dto.fcmToken);
+  }
+
+  @Get('me')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get the current authenticated user profile' })
+  @ApiSuccessResponse(MeResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.USERS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  getMe(@CurrentUser() currentUser: { id: string; role: UserRole }) {
+    return this.authService.getMe(currentUser.id);
+  }
+
+  @Put('me')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Update the current authenticated user's profile" })
+  @ApiSuccessResponse(MeResponseDto)
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: ErrorMessages.AUTH.PHONE_ALREADY_EXISTS,
+    type: ErrorResponse,
+  })
+  @ApiNotFoundResponse({
+    description: ErrorMessages.USERS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  updateMe(
+    @Body() dto: UpdateMeDto,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.authService.updateMe(currentUser.id, dto);
   }
 }

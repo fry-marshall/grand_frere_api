@@ -35,6 +35,8 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
+import { MeResponseDto } from './dto/me-response.dto';
 import { AuthTokensResponseDto } from './dto/auth-tokens-response.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -578,6 +580,45 @@ export class AuthService {
     fcmToken: string | null | undefined,
   ): Promise<void> {
     await this.userRepo.update(userId, { fcmToken: fcmToken ?? null });
+  }
+
+  async getMe(userId: string): Promise<MeResponseDto> {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['school'],
+    });
+    if (!user) throw new NotFoundException(ErrorMessages.USERS.NOT_FOUND);
+
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      role: user.role,
+      schoolId: user.schoolId ?? null,
+      schoolName: user.school?.name ?? null,
+    };
+  }
+
+  async updateMe(userId: string, dto: UpdateMeDto): Promise<MeResponseDto> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException(ErrorMessages.USERS.NOT_FOUND);
+
+    if (dto.phone !== user.phone) {
+      const existingUser = await this.userRepo.findOne({
+        where: { phone: dto.phone },
+      });
+      if (existingUser)
+        throw new ConflictException(ErrorMessages.AUTH.PHONE_ALREADY_EXISTS);
+    }
+
+    await this.userRepo.update(userId, {
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone,
+    });
+
+    return this.getMe(userId);
   }
 
   private buildRefreshTokenExpiry(): Date {
