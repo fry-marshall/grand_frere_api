@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOperation,
@@ -17,10 +18,13 @@ import {
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { StudentsService } from './students.service';
 import { StudentResponseDto } from './dto/student-response.dto';
+import { StudentListItemResponseDto } from './dto/student-list-item-response.dto';
 import { UpdateStudentProfileDto } from './dto/update-student-profile.dto';
+import { AssignCardDto } from './dto/assign-card.dto';
 import { StudentParentResponseDto } from './dto/student-parents-response.dto';
 import { StudentOrderResponseDto } from './dto/student-order-response.dto';
 import { StudentTransactionResponseDto } from './dto/student-transaction-response.dto';
+import { StudentsSearchQueryDto } from './dto/students-search-query.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -39,10 +43,13 @@ export class StudentsController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'List students' })
-  @ApiSuccessResponse(StudentResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
-    return this.studentsService.findAll(query);
+  @ApiOperation({
+    summary:
+      'Search/filter/paginate students for the back-office (name, school, class)',
+  })
+  @ApiSuccessResponse(StudentListItemResponseDto)
+  findAll(@Query() query: StudentsSearchQueryDto) {
+    return this.studentsService.search(query);
   }
 
   @Get('me')
@@ -152,5 +159,59 @@ export class StudentsController {
     @Query() query: PaginationQueryDto,
   ) {
     return this.studentsService.findTransactions(id, currentUser, query);
+  }
+
+  @Put(':id/block')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: "Block a student's account" })
+  @ApiSuccessResponse(StudentResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.STUDENTS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: ErrorMessages.STUDENTS.NOT_BLOCKABLE,
+    type: ErrorResponse,
+  })
+  block(@Param('id') id: string) {
+    return this.studentsService.block(id);
+  }
+
+  @Put(':id/unblock')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: "Unblock a student's account" })
+  @ApiSuccessResponse(StudentResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.STUDENTS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: ErrorMessages.STUDENTS.NOT_UNBLOCKABLE,
+    type: ErrorResponse,
+  })
+  unblock(@Param('id') id: string) {
+    return this.studentsService.unblock(id);
+  }
+
+  @Put(':id/assign-card')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary:
+      'Assign an unassigned card of the same school to a student without one',
+  })
+  @ApiSuccessResponse(StudentResponseDto)
+  @ApiNotFoundResponse({
+    description: `${ErrorMessages.STUDENTS.NOT_FOUND} | ${ErrorMessages.CARDS.NOT_FOUND}`,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: `${ErrorMessages.STUDENTS.ALREADY_HAS_CARD} | ${ErrorMessages.STUDENTS.CARD_NOT_ASSIGNABLE} | ${ErrorMessages.CARDS.SCHOOL_MISMATCH}`,
+    type: ErrorResponse,
+  })
+  assignCard(@Param('id') id: string, @Body() dto: AssignCardDto) {
+    return this.studentsService.assignCard(id, dto);
   }
 }

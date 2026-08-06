@@ -19,9 +19,11 @@ import {
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { ParentsService } from './parents.service';
 import { ParentResponseDto } from './dto/parent-response.dto';
+import { ParentListItemResponseDto } from './dto/parent-list-item-response.dto';
+import { ParentStudentResponseDto } from './dto/parent-student-response.dto';
 import { UpdateParentProfileDto } from './dto/update-parent-profile.dto';
 import { AddBeneficiaryDto } from './dto/add-beneficiary.dto';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ParentsSearchQueryDto } from './dto/parents-search-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/decorators/role.decorator';
@@ -39,10 +41,13 @@ export class ParentsController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'List parents' })
-  @ApiSuccessResponse(ParentResponseDto)
-  findAll(@Query() query: PaginationQueryDto) {
-    return this.parentsService.findAll(query);
+  @ApiOperation({
+    summary:
+      'Search/filter/paginate parents for the back-office (name, school)',
+  })
+  @ApiSuccessResponse(ParentListItemResponseDto)
+  findAll(@Query() query: ParentsSearchQueryDto) {
+    return this.parentsService.search(query);
   }
 
   @Get('me')
@@ -113,7 +118,7 @@ export class ParentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.SUPER_ADMIN, UserRole.PARENT)
   @ApiOperation({ summary: "List parent's students" })
-  @ApiSuccessResponse(ParentResponseDto)
+  @ApiSuccessResponse(ParentStudentResponseDto)
   @ApiNotFoundResponse({
     description: ErrorMessages.PARENTS.NOT_FOUND,
     type: ErrorResponse,
@@ -124,5 +129,39 @@ export class ParentsController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.parentsService.findStudents(id, currentUser);
+  }
+
+  @Put(':id/block')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: "Block a parent's account" })
+  @ApiSuccessResponse(ParentResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.PARENTS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: ErrorMessages.PARENTS.NOT_BLOCKABLE,
+    type: ErrorResponse,
+  })
+  block(@Param('id') id: string) {
+    return this.parentsService.block(id);
+  }
+
+  @Put(':id/unblock')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: "Unblock a parent's account" })
+  @ApiSuccessResponse(ParentResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.PARENTS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: ErrorMessages.PARENTS.NOT_UNBLOCKABLE,
+    type: ErrorResponse,
+  })
+  unblock(@Param('id') id: string) {
+    return this.parentsService.unblock(id);
   }
 }

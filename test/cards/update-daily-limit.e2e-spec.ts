@@ -198,6 +198,16 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
       expect(res.body.data.dailyLimit).toBe(2500);
     });
 
+    it('should allow SUPER_ADMIN to update the daily limit regardless of ownership', async () => {
+      const res = await request(getServer(app))
+        .put(`/api/v1/cards/${card.code}/daily-limit`)
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({ dailyLimit: 4000 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.dailyLimit).toBe(4000);
+    });
+
     it('should persist the updated daily limit in the database', async () => {
       await request(getServer(app))
         .put(`/api/v1/cards/${card.code}/daily-limit`)
@@ -216,15 +226,6 @@ describe('PUT /api/v1/cards/:code/daily-limit', () => {
         .send({ dailyLimit: 2000 });
 
       expect(res.status).toBe(401);
-    });
-
-    it('should return 403 when user is SUPER_ADMIN', async () => {
-      const res = await request(getServer(app))
-        .put(`/api/v1/cards/${card.code}/daily-limit`)
-        .set('Authorization', `Bearer ${superAdminToken}`)
-        .send({ dailyLimit: 2000 });
-
-      expect(res.status).toBe(403);
     });
 
     it('should return 403 when user is VENDOR', async () => {

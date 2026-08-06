@@ -1,6 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { OrderStatus } from '../../orders/order.types';
 
+class StudentOrderItemDto {
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  quantity: number;
+
+  @ApiProperty()
+  unitPrice: number;
+}
+
 export class StudentOrderResponseDto {
   @ApiProperty()
   id: string;
@@ -16,6 +27,9 @@ export class StudentOrderResponseDto {
 
   @ApiProperty()
   createdAt: Date;
+
+  @ApiProperty({ type: [StudentOrderItemDto] })
+  items: StudentOrderItemDto[];
 
   @ApiProperty()
   vendor: {

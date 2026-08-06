@@ -220,7 +220,9 @@ export class CardsService {
     const card = await this.cardRepo.findOne({ where: { code } });
     if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
 
-    if (currentUser.role === UserRole.PARENT) {
+    if (currentUser.role === UserRole.SUPER_ADMIN) {
+      // No ownership or editability check: the back-office can always adjust the limit.
+    } else if (currentUser.role === UserRole.PARENT) {
       await this.assertParentOwnsCard(currentUser.id, card);
     } else {
       await this.assertStudentOwnsCard(currentUser.id, card);

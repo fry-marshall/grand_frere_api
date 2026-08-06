@@ -46,10 +46,17 @@ export const ErrorMessages = {
   },
   STUDENTS: {
     NOT_FOUND: 'Student not found',
+    NOT_BLOCKABLE: 'Student can only be blocked when validated',
+    NOT_UNBLOCKABLE: 'Student can only be unblocked when blocked',
+    ALREADY_HAS_CARD:
+      'Student already has a card, use the replace action instead',
+    CARD_NOT_ASSIGNABLE: 'Card must be unassigned to be assigned to a student',
   },
   PARENTS: {
     NOT_FOUND: 'Parent not found',
     MAX_STUDENTS_REACHED: 'Parent already has two linked students',
+    NOT_BLOCKABLE: 'Parent can only be blocked when validated',
+    NOT_UNBLOCKABLE: 'Parent can only be unblocked when blocked',
   },
   ITEMS: {
     NOT_FOUND: 'Item not found',

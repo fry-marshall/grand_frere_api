@@ -8,9 +8,12 @@ import { User } from '../../src/modules/users/entities/user.entity';
 import { Student } from '../../src/modules/students/entities/student.entity';
 import { Vendor } from '../../src/modules/vendors/entities/vendor.entity';
 import { Order } from '../../src/modules/orders/entities/order.entity';
+import { OrderItem } from '../../src/modules/orders/entities/order-item.entity';
+import { Item } from '../../src/modules/items/entities/item.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
 import { UserRole } from '../../src/modules/users/user.types';
 import { VendorStatus } from '../../src/modules/vendors/vendor.types';
+import { ItemStatus } from '../../src/modules/items/item.types';
 import { OrderStatus } from '../../src/modules/orders/order.types';
 
 describe('GET /api/v1/students/:id/orders', () => {
@@ -20,11 +23,14 @@ describe('GET /api/v1/students/:id/orders', () => {
   let studentRepo: Repository<Student>;
   let vendorRepo: Repository<Vendor>;
   let orderRepo: Repository<Order>;
+  let orderItemRepo: Repository<OrderItem>;
+  let itemRepo: Repository<Item>;
   let jwtService: JwtService;
 
   let school: School;
   let otherSchool: School;
   let student: Student;
+  let item: Item;
 
   let superAdminToken: string;
   let ownSchoolAdminToken: string;
@@ -42,6 +48,8 @@ describe('GET /api/v1/students/:id/orders', () => {
     studentRepo = ds.getRepository(Student);
     vendorRepo = ds.getRepository(Vendor);
     orderRepo = ds.getRepository(Order);
+    orderItemRepo = ds.getRepository(OrderItem);
+    itemRepo = ds.getRepository(Item);
     jwtService = moduleRef.get(JwtService, { strict: false });
 
     for (const sigle of ['TS-SO', 'TS-SO2']) {
@@ -173,7 +181,14 @@ describe('GET /api/v1/students/:id/orders', () => {
       status: VendorStatus.ACTIVE,
     });
 
-    await orderRepo.save({
+    item = await itemRepo.save({
+      vendorId: vendor.id,
+      name: 'Riz sauce graine',
+      price: 750,
+      status: ItemStatus.ACTIVE,
+    });
+
+    const order = await orderRepo.save({
       studentId: student.id,
       vendorId: vendor.id,
       status: OrderStatus.VALIDATED,
@@ -181,9 +196,17 @@ describe('GET /api/v1/students/:id/orders', () => {
       expiresAt: new Date(Date.now() + 3600000),
       scheduledFor: new Date().toISOString().slice(0, 10),
     });
+    await orderItemRepo.save({
+      orderId: order.id,
+      itemId: item.id,
+      quantity: 1,
+      unitPrice: 750,
+    });
   });
 
   afterAll(async () => {
+    await orderItemRepo.delete({ itemId: item.id });
+    await itemRepo.delete({ id: item.id });
     await orderRepo.delete({ studentId: student.id });
     await vendorRepo.delete({ schoolId: school.id });
     await studentRepo.delete({ schoolId: school.id });
@@ -216,6 +239,9 @@ describe('GET /api/v1/students/:id/orders', () => {
       expect(res.body.data.data.length).toBe(1);
       expect(res.body.data.data[0].totalAmount).toBe(750);
       expect(res.body.data.data[0].vendor).toBeDefined();
+      expect(res.body.data.data[0].items).toEqual([
+        { name: 'Riz sauce graine', quantity: 1, unitPrice: 750 },
+      ]);
       expect(res.body.data.meta.total).toBe(1);
     });
 

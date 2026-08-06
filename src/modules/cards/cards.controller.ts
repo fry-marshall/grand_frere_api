@@ -138,7 +138,7 @@ export class CardsController {
 
   @Put(':code/daily-limit')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.PARENT, UserRole.STUDENT)
+  @Role(UserRole.SUPER_ADMIN, UserRole.PARENT, UserRole.STUDENT)
   @HttpCode(200)
   @ApiOperation({
     summary: "Update the daily spending limit on a student's card",

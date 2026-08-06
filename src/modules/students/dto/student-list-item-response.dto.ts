@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { UserStatus } from '../../users/user.types';
 import { CardStatus } from '../../cards/card.types';
 
-export class StudentResponseDto {
+export class StudentListItemResponseDto {
   @ApiProperty()
   id: string;
 
@@ -23,6 +23,12 @@ export class StudentResponseDto {
   })
   balance: number;
 
+  @ApiProperty({ nullable: true })
+  cardCode: string | null;
+
+  @ApiProperty({ enum: CardStatus, nullable: true })
+  cardStatus: CardStatus | null;
+
   @ApiProperty()
   user: {
     id: string;
@@ -30,11 +36,4 @@ export class StudentResponseDto {
     lastName: string;
     phone: string;
   };
-
-  @ApiProperty({ nullable: true })
-  card: {
-    id: string;
-    code: string;
-    status: CardStatus;
-  } | null;
 }

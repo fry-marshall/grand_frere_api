@@ -206,15 +206,55 @@ describe('GET /api/v1/parents', () => {
       expect(res.body.data.meta.total).toBeGreaterThanOrEqual(2);
     });
 
-    it('should include user field in response', async () => {
+    it('should include user, status and childrenCount fields in response', async () => {
       const res = await request(getServer(app))
         .get('/api/v1/parents')
         .set('Authorization', `Bearer ${superAdminToken}`);
 
       expect(res.status).toBe(200);
-      const parent = res.body.data.data[0] as { user: { firstName: string } };
+      const parent = res.body.data.data[0] as {
+        user: { firstName: string };
+        status: string;
+        childrenCount: number;
+      };
       expect(parent.user).toBeDefined();
       expect(parent.user.firstName).toBeDefined();
+      expect(parent.status).toBeDefined();
+      expect(parent.childrenCount).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should filter by school', async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/parents?schoolId=${school.id}`)
+        .set('Authorization', `Bearer ${superAdminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(
+        res.body.data.data.some(
+          (p: { user: { lastName: string } }) =>
+            p.user.lastName === 'Ouédraogo',
+        ),
+      ).toBe(true);
+      expect(
+        res.body.data.data.some(
+          (p: { user: { lastName: string } }) => p.user.lastName === 'Traoré',
+        ),
+      ).toBe(false);
+    });
+
+    it('should search by name', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/parents?search=Aminata')
+        .set('Authorization', `Bearer ${superAdminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.data.length).toBeGreaterThanOrEqual(1);
+      expect(
+        res.body.data.data.every(
+          (p: { user: { firstName: string } }) =>
+            p.user.firstName === 'Aminata',
+        ),
+      ).toBe(true);
     });
 
     it('should support pagination', async () => {

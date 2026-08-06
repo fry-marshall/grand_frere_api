@@ -9,6 +9,7 @@ import { User } from '../users/entities/user.entity';
 import { Order } from '../orders/entities/order.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import { Transaction } from '../wallets/entities/transaction.entity';
+import { Card } from '../cards/entities/card.entity';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { Transaction } from '../wallets/entities/transaction.entity';
       Order,
       Wallet,
       Transaction,
+      Card,
     ]),
   ],
   controllers: [StudentsController],

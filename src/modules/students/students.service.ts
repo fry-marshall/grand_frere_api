@@ -1,23 +1,29 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Student } from './entities/student.entity';
 import { StudentParent } from './entities/student-parent.entity';
 import { User } from '../users/entities/user.entity';
 import { Parent } from '../parents/entities/parent.entity';
+import { Card } from '../cards/entities/card.entity';
 import { Order } from '../orders/entities/order.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
 import { Transaction } from '../wallets/entities/transaction.entity';
-import { UserRole } from '../users/user.types';
+import { UserRole, UserStatus } from '../users/user.types';
+import { CardStatus } from '../cards/card.types';
 import { StudentResponseDto } from './dto/student-response.dto';
+import { StudentListItemResponseDto } from './dto/student-list-item-response.dto';
 import { StudentParentResponseDto } from './dto/student-parents-response.dto';
 import { StudentOrderResponseDto } from './dto/student-order-response.dto';
 import { StudentTransactionResponseDto } from './dto/student-transaction-response.dto';
 import { UpdateStudentProfileDto } from './dto/update-student-profile.dto';
+import { AssignCardDto } from './dto/assign-card.dto';
+import { StudentsSearchQueryDto } from './dto/students-search-query.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
@@ -32,6 +38,8 @@ export class StudentsService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Parent)
     private readonly parentRepo: Repository<Parent>,
+    @InjectRepository(Card)
+    private readonly cardRepo: Repository<Card>,
     @InjectRepository(Order)
     private readonly orderRepo: Repository<Order>,
     @InjectRepository(Wallet)
@@ -40,20 +48,61 @@ export class StudentsService {
     private readonly transactionRepo: Repository<Transaction>,
   ) {}
 
-  async findAll(
-    query: PaginationQueryDto,
-  ): Promise<{ data: StudentResponseDto[]; meta: object }> {
-    const { page, limit } = query;
+  async search(
+    query: StudentsSearchQueryDto,
+  ): Promise<{ data: StudentListItemResponseDto[]; meta: object }> {
+    const { search, schoolId, class: className, page, limit } = query;
 
-    const [students, total] = await this.studentRepo.findAndCount({
-      relations: ['user', 'card'],
-      order: { user: { lastName: 'ASC' } },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const qb = this.studentRepo
+      .createQueryBuilder('student')
+      .innerJoinAndSelect('student.user', 'user')
+      .innerJoinAndSelect('student.school', 'school')
+      .leftJoinAndSelect('student.card', 'card');
+
+    if (schoolId) {
+      qb.andWhere('student.schoolId = :schoolId', { schoolId });
+    }
+    if (className) {
+      qb.andWhere('student.class = :className', { className });
+    }
+    if (search) {
+      qb.andWhere(
+        "(user.firstName ILIKE :search OR user.lastName ILIKE :search OR CONCAT(user.firstName, ' ', user.lastName) ILIKE :search)",
+        { search: `%${search}%` },
+      );
+    }
+
+    const [students, total] = await qb
+      .orderBy('user.lastName', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    const studentIds = students.map((s) => s.id);
+    const wallets = studentIds.length
+      ? await this.walletRepo.find({ where: { studentId: In(studentIds) } })
+      : [];
+    const balanceByStudentId = new Map(
+      wallets.map((w) => [w.studentId, w.balance]),
+    );
 
     return {
-      data: students.map((s) => this.toDto(s)),
+      data: students.map((s) => ({
+        id: s.id,
+        class: s.class,
+        status: s.user.status,
+        schoolId: s.schoolId,
+        schoolName: s.school.name,
+        balance: balanceByStudentId.get(s.id) ?? 0,
+        cardCode: s.card?.code ?? null,
+        cardStatus: s.card?.status ?? null,
+        user: {
+          id: s.user.id,
+          firstName: s.user.firstName,
+          lastName: s.user.lastName,
+          phone: s.user.phone,
+        },
+      })),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
@@ -61,7 +110,7 @@ export class StudentsService {
   async findMe(userId: string): Promise<StudentResponseDto> {
     const student = await this.studentRepo.findOne({
       where: { userId },
-      relations: ['user', 'card'],
+      relations: ['user', 'card', 'school'],
     });
     if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
     return this.toDto(student);
@@ -73,7 +122,7 @@ export class StudentsService {
   ): Promise<StudentResponseDto> {
     const student = await this.studentRepo.findOne({
       where: { id },
-      relations: ['user', 'card'],
+      relations: ['user', 'card', 'school'],
     });
     if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
 
@@ -135,7 +184,7 @@ export class StudentsService {
     const { page, limit } = query;
     const [orders, total] = await this.orderRepo.findAndCount({
       where: { studentId: id },
-      relations: ['vendor'],
+      relations: ['vendor', 'items', 'items.item'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
@@ -148,6 +197,11 @@ export class StudentsService {
         totalAmount: o.totalAmount,
         expiresAt: o.expiresAt,
         createdAt: o.createdAt,
+        items: o.items.map((i) => ({
+          name: i.item?.name ?? '',
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
         vendor: {
           id: o.vendor.id,
           shopName: o.vendor.shopName,
@@ -222,7 +276,7 @@ export class StudentsService {
   ): Promise<StudentResponseDto> {
     const student = await this.studentRepo.findOne({
       where: { id },
-      relations: ['user', 'card'],
+      relations: ['user', 'card', 'school'],
     });
     if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
 
@@ -252,7 +306,7 @@ export class StudentsService {
   ): Promise<StudentResponseDto> {
     const student = await this.studentRepo.findOne({
       where: { userId },
-      relations: ['user', 'card'],
+      relations: ['user', 'card', 'school'],
     });
     if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
 
@@ -263,11 +317,92 @@ export class StudentsService {
     return this.toDto(student);
   }
 
-  private toDto(student: Student): StudentResponseDto {
+  async block(id: string): Promise<StudentResponseDto> {
+    const student = await this.studentRepo.findOne({
+      where: { id },
+      relations: ['user', 'card', 'school'],
+    });
+    if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
+
+    if (student.user.status !== UserStatus.VALIDATED) {
+      throw new ConflictException(ErrorMessages.STUDENTS.NOT_BLOCKABLE);
+    }
+
+    await this.userRepo.update(student.userId, { status: UserStatus.BLOCKED });
+    student.user.status = UserStatus.BLOCKED;
+    return this.toDto(student);
+  }
+
+  async unblock(id: string): Promise<StudentResponseDto> {
+    const student = await this.studentRepo.findOne({
+      where: { id },
+      relations: ['user', 'card', 'school'],
+    });
+    if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
+
+    if (student.user.status !== UserStatus.BLOCKED) {
+      throw new ConflictException(ErrorMessages.STUDENTS.NOT_UNBLOCKABLE);
+    }
+
+    await this.userRepo.update(student.userId, {
+      status: UserStatus.VALIDATED,
+    });
+    student.user.status = UserStatus.VALIDATED;
+    return this.toDto(student);
+  }
+
+  async assignCard(
+    id: string,
+    dto: AssignCardDto,
+  ): Promise<StudentResponseDto> {
+    const student = await this.studentRepo.findOne({
+      where: { id },
+      relations: ['user', 'card', 'school'],
+    });
+    if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
+
+    if (student.cardId) {
+      throw new ConflictException(ErrorMessages.STUDENTS.ALREADY_HAS_CARD);
+    }
+
+    const card = await this.cardRepo.findOne({ where: { code: dto.cardCode } });
+    if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
+
+    if (card.status !== CardStatus.UNASSIGNED) {
+      throw new ConflictException(ErrorMessages.STUDENTS.CARD_NOT_ASSIGNABLE);
+    }
+
+    if (card.schoolId !== student.schoolId) {
+      throw new ConflictException(ErrorMessages.CARDS.SCHOOL_MISMATCH);
+    }
+
+    await this.cardRepo.update(card.id, {
+      status: CardStatus.ACTIVE,
+      studentId: student.id,
+    });
+    await this.studentRepo.update(student.id, { cardId: card.id });
+
+    student.cardId = card.id;
+    student.card = {
+      ...card,
+      status: CardStatus.ACTIVE,
+      studentId: student.id,
+    };
+    return this.toDto(student);
+  }
+
+  private async toDto(student: Student): Promise<StudentResponseDto> {
+    const wallet = await this.walletRepo.findOne({
+      where: { studentId: student.id },
+    });
+
     return {
       id: student.id,
       class: student.class,
+      status: student.user.status,
       schoolId: student.schoolId,
+      schoolName: student.school.name,
+      balance: wallet?.balance ?? 0,
       user: {
         id: student.user.id,
         firstName: student.user.firstName,
@@ -275,7 +410,11 @@ export class StudentsService {
         phone: student.user.phone,
       },
       card: student.card
-        ? { id: student.card.id, code: student.card.code }
+        ? {
+            id: student.card.id,
+            code: student.card.code,
+            status: student.card.status,
+          }
         : null,
     };
   }

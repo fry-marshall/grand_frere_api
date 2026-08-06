@@ -153,7 +153,7 @@ describe('GET /api/v1/students', () => {
       expect(res.body.data.meta.total).toBeGreaterThanOrEqual(2);
     });
 
-    it('should include user and card fields in response', async () => {
+    it('should include user, school, card and balance fields in response', async () => {
       const res = await request(getServer(app))
         .get('/api/v1/students')
         .set('Authorization', `Bearer ${superAdminToken}`);
@@ -161,13 +161,62 @@ describe('GET /api/v1/students', () => {
       expect(res.status).toBe(200);
       const student = res.body.data.data[0] as {
         user: { firstName: string };
-        card: unknown;
+        schoolName: string;
+        status: string;
+        balance: number;
+        cardCode: string | null;
+        cardStatus: string | null;
         class: string;
       };
       expect(student.user).toBeDefined();
       expect(student.user.firstName).toBeDefined();
-      expect('card' in student).toBe(true);
+      expect(student.schoolName).toBeDefined();
+      expect(student.status).toBeDefined();
+      expect(student.balance).toBe(0);
+      expect(student.cardCode).toBeNull();
+      expect(student.cardStatus).toBeNull();
       expect(student.class).toBeDefined();
+    });
+
+    it('should filter by school', async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/students?schoolId=${school.id}`)
+        .set('Authorization', `Bearer ${superAdminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(
+        res.body.data.data.every(
+          (s: { schoolId: string }) => s.schoolId === school.id,
+        ),
+      ).toBe(true);
+    });
+
+    it('should filter by class', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/students?class=6ème A')
+        .set('Authorization', `Bearer ${superAdminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.data.length).toBeGreaterThanOrEqual(1);
+      expect(
+        res.body.data.data.every(
+          (s: { class: string }) => s.class === '6ème A',
+        ),
+      ).toBe(true);
+    });
+
+    it('should search by name', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/students?search=Awa')
+        .set('Authorization', `Bearer ${superAdminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.data.length).toBeGreaterThanOrEqual(1);
+      expect(
+        res.body.data.data.every(
+          (s: { user: { lastName: string } }) => s.user.lastName === 'Awa',
+        ),
+      ).toBe(true);
     });
 
     it('should support pagination', async () => {

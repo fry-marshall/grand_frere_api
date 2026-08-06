@@ -1,22 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { UserStatus } from '../../users/user.types';
-import { CardStatus } from '../../cards/card.types';
 
-export class StudentResponseDto {
+export class ParentStudentResponseDto {
   @ApiProperty()
   id: string;
 
   @ApiProperty({ nullable: true })
   class: string;
 
-  @ApiProperty({ enum: UserStatus })
-  status: UserStatus;
-
   @ApiProperty()
   schoolId: string;
-
-  @ApiProperty()
-  schoolName: string;
 
   @ApiProperty({
     description: 'Wallet balance, 0 if the student has no card yet',
@@ -28,13 +20,11 @@ export class StudentResponseDto {
     id: string;
     firstName: string;
     lastName: string;
-    phone: string;
   };
 
   @ApiProperty({ nullable: true })
   card: {
-    id: string;
     code: string;
-    status: CardStatus;
+    dailyLimit: number;
   } | null;
 }
