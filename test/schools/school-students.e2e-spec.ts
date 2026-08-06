@@ -136,6 +136,9 @@ describe('GET /api/v1/schools/:id/students', () => {
       expect(res.body.data.data.length).toBe(1);
       expect(res.body.data.data[0].class).toBe('3ème A');
       expect(res.body.data.data[0].user.firstName).toBe('Kouamé');
+      expect(res.body.data.data[0].cardCode).toBeNull();
+      expect(res.body.data.data[0].cardStatus).toBeNull();
+      expect(res.body.data.data[0].balance).toBe(0);
       expect(res.body.data.meta.total).toBe(1);
     });
 

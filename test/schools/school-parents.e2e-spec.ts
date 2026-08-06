@@ -159,6 +159,7 @@ describe('GET /api/v1/schools/:id/parents', () => {
       expect(Array.isArray(res.body.data.data)).toBe(true);
       expect(res.body.data.data.length).toBe(1);
       expect(res.body.data.data[0].user.firstName).toBe('Mama');
+      expect(res.body.data.data[0].childrenCount).toBe(1);
       expect(res.body.data.meta.total).toBe(1);
     });
 

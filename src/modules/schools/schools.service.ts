@@ -6,8 +6,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Transaction } from '../wallets/entities/transaction.entity';
+import { Wallet } from '../wallets/entities/wallet.entity';
 import { TransactionType } from '../wallets/wallet.types';
 import * as bcrypt from 'bcrypt';
 import { School } from './entities/school.entity';
@@ -15,6 +16,7 @@ import { User } from '../users/entities/user.entity';
 import { Vendor } from '../vendors/entities/vendor.entity';
 import { Student } from '../students/entities/student.entity';
 import { Parent } from '../parents/entities/parent.entity';
+import { StudentParent } from '../students/entities/student-parent.entity';
 import { Order } from '../orders/entities/order.entity';
 import { OrderStatus } from '../orders/order.types';
 import { SchoolStatus } from './school.types';
@@ -50,8 +52,11 @@ export class SchoolsService {
     private readonly studentRepo: Repository<Student>,
     @InjectRepository(Parent)
     private readonly parentRepo: Repository<Parent>,
+    @InjectRepository(StudentParent)
+    private readonly studentParentRepo: Repository<StudentParent>,
     @InjectRepository(Transaction)
     private readonly transactionRepo: Repository<Transaction>,
+    @InjectRepository(Wallet) private readonly walletRepo: Repository<Wallet>,
     @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
     @Inject(STORAGE_SERVICE) private readonly storageService: IStorageService,
   ) {}
@@ -271,17 +276,28 @@ export class SchoolsService {
     const { page, limit } = query;
     const [students, total] = await this.studentRepo.findAndCount({
       where: { schoolId: id },
-      relations: ['user'],
+      relations: ['user', 'card'],
       order: { user: { lastName: 'ASC' } },
       skip: (page - 1) * limit,
       take: limit,
     });
+
+    const studentIds = students.map((s) => s.id);
+    const wallets = studentIds.length
+      ? await this.walletRepo.find({ where: { studentId: In(studentIds) } })
+      : [];
+    const balanceByStudentId = new Map(
+      wallets.map((w) => [w.studentId, w.balance]),
+    );
 
     return {
       data: students.map((s) => ({
         id: s.id,
         class: s.class,
         cardId: s.cardId,
+        cardCode: s.card?.code ?? null,
+        cardStatus: s.card?.status ?? null,
+        balance: balanceByStudentId.get(s.id) ?? 0,
         user: {
           id: s.user.id,
           firstName: s.user.firstName,
@@ -317,9 +333,30 @@ export class SchoolsService {
       .take(limit)
       .getManyAndCount();
 
+    const parentIds = parents.map((p) => p.id);
+    const counts = parentIds.length
+      ? await this.studentParentRepo
+          .createQueryBuilder('sp')
+          .innerJoin(
+            'students',
+            's',
+            's.id = sp.studentId AND s.schoolId = :schoolId',
+            { schoolId: id },
+          )
+          .select('sp.parentId', 'parentId')
+          .addSelect('COUNT(DISTINCT sp.studentId)', 'count')
+          .where('sp.parentId IN (:...parentIds)', { parentIds })
+          .groupBy('sp.parentId')
+          .getRawMany<{ parentId: string; count: string }>()
+      : [];
+    const childrenCountByParentId = new Map(
+      counts.map((c) => [c.parentId, Number(c.count)]),
+    );
+
     return {
       data: parents.map((p) => ({
         id: p.id,
+        childrenCount: childrenCountByParentId.get(p.id) ?? 0,
         user: {
           id: p.user.id,
           firstName: p.user.firstName,

@@ -4,6 +4,11 @@ export class SchoolParentResponseDto {
   @ApiProperty()
   id: string;
 
+  @ApiProperty({
+    description: "Number of the parent's children enrolled in this school",
+  })
+  childrenCount: number;
+
   @ApiProperty()
   user: {
     id: string;
