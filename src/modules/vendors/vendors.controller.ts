@@ -34,6 +34,7 @@ import { VendorBalanceResponseDto } from './dto/vendor-balance-response.dto';
 import { VendorStatsResponseDto } from './dto/vendor-stats-response.dto';
 import { ItemResponseDto } from '../items/dto/item-response.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
+import { VendorsQueryDto } from './dto/vendors-query.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import {
   FILE_CONFIGS,
@@ -62,7 +63,7 @@ export class VendorsController {
   @ApiSuccessResponse(VendorResponseDto)
   findAll(
     @CurrentUser() currentUser: { id: string; role: UserRole },
-    @Query() query: PaginationQueryDto,
+    @Query() query: VendorsQueryDto,
   ) {
     return this.vendorsService.findAll(currentUser, query);
   }
@@ -286,5 +287,39 @@ export class VendorsController {
   })
   reject(@Param('id') id: string) {
     return this.vendorsService.reject(id);
+  }
+
+  @Put(':id/suspend')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Suspend an active vendor' })
+  @ApiSuccessResponse(VendorResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.VENDORS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: ErrorMessages.VENDORS.NOT_SUSPENDABLE,
+    type: ErrorResponse,
+  })
+  suspend(@Param('id') id: string) {
+    return this.vendorsService.suspend(id);
+  }
+
+  @Put(':id/activate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Reactivate a suspended vendor' })
+  @ApiSuccessResponse(VendorResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.VENDORS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: ErrorMessages.VENDORS.NOT_ACTIVATABLE,
+    type: ErrorResponse,
+  })
+  activate(@Param('id') id: string) {
+    return this.vendorsService.activate(id);
   }
 }

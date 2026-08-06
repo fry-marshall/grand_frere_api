@@ -86,6 +86,8 @@ export const ErrorMessages = {
     NOT_FOUND: 'Vendor not found',
     NOT_APPROVABLE: 'Vendor can only be approved when pending',
     NOT_REJECTABLE: 'Vendor can only be rejected when pending',
+    NOT_SUSPENDABLE: 'Vendor can only be suspended when active',
+    NOT_ACTIVATABLE: 'Vendor can only be reactivated when suspended',
     WALLET_NOT_FOUND: 'Vendor wallet not found',
     NOT_ACTIVE: 'Vendor account must be approved before accessing orders',
   },

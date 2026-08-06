@@ -30,6 +30,7 @@ import { VendorStatsResponseDto } from './dto/vendor-stats-response.dto';
 import { ItemResponseDto } from '../items/dto/item-response.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { VendorsQueryDto } from './dto/vendors-query.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/notification.types';
 import { ErrorMessages } from '../../common/swagger/error-messages';
@@ -58,26 +59,34 @@ export class VendorsService {
 
   async findAll(
     currentUser: { id: string; role: UserRole },
-    query: PaginationQueryDto,
+    query: VendorsQueryDto,
   ): Promise<{ data: VendorResponseDto[]; meta: object }> {
-    const { page, limit } = query;
+    const { page, limit, search, status } = query;
 
-    const whereClause: Record<string, unknown> = {};
+    const qb = this.vendorRepo
+      .createQueryBuilder('vendor')
+      .leftJoinAndSelect('vendor.user', 'user');
+
     if (currentUser.role === UserRole.SCHOOL_ADMIN) {
       const admin = await this.userRepo.findOne({
         where: { id: currentUser.id },
       });
       if (!admin?.schoolId) throw new ForbiddenException();
-      whereClause.schoolId = admin.schoolId;
+      qb.andWhere('vendor.schoolId = :schoolId', { schoolId: admin.schoolId });
     }
 
-    const [vendors, total] = await this.vendorRepo.findAndCount({
-      where: whereClause,
-      relations: ['user'],
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    if (search) {
+      qb.andWhere('vendor.shopName ILIKE :search', { search: `%${search}%` });
+    }
+    if (status) {
+      qb.andWhere('vendor.status = :status', { status });
+    }
+
+    const [vendors, total] = await qb
+      .orderBy('vendor.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
 
     return {
       data: vendors.map((v) => this.toDto(v)),
@@ -452,6 +461,38 @@ export class VendorsService {
         this.logger.error(`Notification failed for vendor ${id}`, err.stack),
       );
 
+    return this.toDto(vendor);
+  }
+
+  async suspend(id: string): Promise<VendorResponseDto> {
+    const vendor = await this.vendorRepo.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+    if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
+
+    if (vendor.status !== VendorStatus.ACTIVE) {
+      throw new ConflictException(ErrorMessages.VENDORS.NOT_SUSPENDABLE);
+    }
+
+    await this.vendorRepo.update(id, { status: VendorStatus.SUSPENDED });
+    vendor.status = VendorStatus.SUSPENDED;
+    return this.toDto(vendor);
+  }
+
+  async activate(id: string): Promise<VendorResponseDto> {
+    const vendor = await this.vendorRepo.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+    if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
+
+    if (vendor.status !== VendorStatus.SUSPENDED) {
+      throw new ConflictException(ErrorMessages.VENDORS.NOT_ACTIVATABLE);
+    }
+
+    await this.vendorRepo.update(id, { status: VendorStatus.ACTIVE });
+    vendor.status = VendorStatus.ACTIVE;
     return this.toDto(vendor);
   }
 

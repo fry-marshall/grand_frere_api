@@ -175,6 +175,29 @@ describe('GET/PUT/DELETE /api/v1/vendors', () => {
         const vendors = res.body.data.data as { schoolId: string }[];
         expect(vendors.every((v) => v.schoolId === school.id)).toBe(true);
       });
+
+      it('should filter by shop name search', async () => {
+        const res = await request(getServer(app))
+          .get('/api/v1/vendors?search=Amara')
+          .set('Authorization', `Bearer ${superAdminToken}`);
+
+        expect(res.status).toBe(200);
+        const vendors = res.body.data.data as { shopName: string }[];
+        expect(vendors.length).toBeGreaterThanOrEqual(1);
+        expect(vendors.every((v) => v.shopName.includes('Amara'))).toBe(true);
+      });
+
+      it('should filter by status', async () => {
+        const res = await request(getServer(app))
+          .get('/api/v1/vendors?status=ACTIVE')
+          .set('Authorization', `Bearer ${superAdminToken}`);
+
+        expect(res.status).toBe(200);
+        const vendors = res.body.data.data as { status: VendorStatus }[];
+        expect(vendors.some((v) => v.status !== VendorStatus.ACTIVE)).toBe(
+          false,
+        );
+      });
     });
 
     describe('Failure cases', () => {
