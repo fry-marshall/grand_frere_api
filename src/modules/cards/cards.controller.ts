@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
   HttpCode,
 } from '@nestjs/common';
@@ -22,7 +23,9 @@ import {
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { CardsService } from './cards.service';
 import { CreateCardsBatchDto } from './dto/create-cards-batch.dto';
+import { CardsSearchQueryDto } from './dto/cards-search-query.dto';
 import { CardResponseDto } from './dto/card-response.dto';
+import { CardListItemResponseDto } from './dto/card-list-item-response.dto';
 import { UpdateDailyLimitDto } from './dto/update-daily-limit.dto';
 import { UpdateDailyLimitPermissionDto } from './dto/update-daily-limit-permission.dto';
 import { VerifyPinDto } from './dto/verify-pin.dto';
@@ -59,6 +62,22 @@ export class CardsController {
   })
   createBatch(@Body() dto: CreateCardsBatchDto) {
     return this.cardsService.createBatch(dto);
+  }
+
+  @Get('search')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary:
+      'Search/filter/paginate cards for the back-office (school, status, code search)',
+  })
+  @ApiSuccessResponse(CardListItemResponseDto)
+  @ApiForbiddenResponse({
+    description: 'Insufficient role',
+    type: ErrorResponse,
+  })
+  search(@Query() query: CardsSearchQueryDto) {
+    return this.cardsService.search(query);
   }
 
   @Get(':code')

@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Card } from './entities/card.entity';
 import { School } from '../schools/entities/school.entity';
@@ -20,7 +20,9 @@ import { StudentParent } from '../students/entities/student-parent.entity';
 import { CardStatus } from './card.types';
 import { UserRole } from '../users/user.types';
 import { CreateCardsBatchDto } from './dto/create-cards-batch.dto';
+import { CardsSearchQueryDto } from './dto/cards-search-query.dto';
 import { CardResponseDto } from './dto/card-response.dto';
+import { CardListItemResponseDto } from './dto/card-list-item-response.dto';
 import { UpdateDailyLimitDto } from './dto/update-daily-limit.dto';
 import { UpdateDailyLimitPermissionDto } from './dto/update-daily-limit-permission.dto';
 import { VerifyPinDto } from './dto/verify-pin.dto';
@@ -107,6 +109,61 @@ export class CardsService {
     }
 
     return savedCards.map((card) => this.toDto(card));
+  }
+
+  async search(
+    query: CardsSearchQueryDto,
+  ): Promise<{ data: CardListItemResponseDto[]; meta: object }> {
+    const { schoolId, status, search, page, limit } = query;
+
+    const qb = this.cardRepo
+      .createQueryBuilder('card')
+      .leftJoinAndSelect('card.school', 'school');
+
+    if (schoolId) {
+      qb.andWhere('card.schoolId = :schoolId', { schoolId });
+    }
+    if (status) {
+      qb.andWhere('card.status = :status', { status });
+    }
+    if (search) {
+      qb.andWhere('card.code ILIKE :search', { search: `%${search}%` });
+    }
+
+    const [cards, total] = await qb
+      .orderBy('card.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    const studentIds = cards
+      .map((c) => c.studentId)
+      .filter((id): id is string => !!id);
+    const students = studentIds.length
+      ? await this.studentRepo.find({
+          where: { id: In(studentIds) },
+          relations: ['user'],
+        })
+      : [];
+    const studentNameById = new Map(
+      students.map((s) => [s.id, `${s.user.firstName} ${s.user.lastName}`]),
+    );
+
+    return {
+      data: cards.map((card) => ({
+        id: card.id,
+        code: card.code,
+        status: card.status,
+        schoolId: card.schoolId,
+        schoolName: card.school.name,
+        studentId: card.studentId ?? null,
+        studentName: card.studentId
+          ? (studentNameById.get(card.studentId) ?? null)
+          : null,
+        createdAt: card.createdAt,
+      })),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async findOne(
