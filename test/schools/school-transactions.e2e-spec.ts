@@ -178,6 +178,10 @@ describe('GET /api/v1/schools/:id/transactions', () => {
       expect(res.body.data.transactions.data[0].student.user.firstName).toBe(
         'Élève',
       );
+      expect(res.body.data.transactions.data[0].school).toEqual({
+        id: school.id,
+        name: school.name,
+      });
     });
 
     it('should return empty for school with no transactions', async () => {

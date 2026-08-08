@@ -688,6 +688,7 @@ export class SchoolsService {
               lastName: t.wallet.student.user.lastName,
             },
           },
+          school: { id: school.id, name: school.name },
         })),
         meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
       },

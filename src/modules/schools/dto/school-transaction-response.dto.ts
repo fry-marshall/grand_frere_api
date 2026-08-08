@@ -36,4 +36,10 @@ export class SchoolTransactionResponseDto {
     class: string;
     user: { id: string; firstName: string; lastName: string };
   };
+
+  @ApiProperty()
+  school: {
+    id: string;
+    name: string;
+  };
 }

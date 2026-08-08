@@ -55,7 +55,8 @@ export class TransactionsService {
       .createQueryBuilder('t')
       .innerJoinAndSelect('t.wallet', 'w')
       .innerJoinAndSelect('w.student', 's')
-      .innerJoinAndSelect('s.user', 'u');
+      .innerJoinAndSelect('s.user', 'u')
+      .innerJoinAndSelect('s.school', 'sc');
 
     const statsQb = this.transactionRepo
       .createQueryBuilder('t')
@@ -91,6 +92,10 @@ export class TransactionsService {
         `SUM(CASE WHEN t.type = '${TransactionType.DEBIT}' THEN t.amount ELSE 0 END)`,
         'totalDebits',
       )
+      .addSelect(
+        `COUNT(CASE WHEN t.type = '${TransactionType.CREDIT}' THEN 1 END)`,
+        'rechargeCount',
+      )
       .getRawOne();
 
     return {
@@ -114,6 +119,10 @@ export class TransactionsService {
               lastName: t.wallet.student.user.lastName,
             },
           },
+          school: {
+            id: t.wallet.student.school.id,
+            name: t.wallet.student.school.name,
+          },
         })),
         meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
       },
@@ -121,6 +130,7 @@ export class TransactionsService {
         totalTransactions: Number(statsRaw.totalTransactions),
         totalCredits: Number(statsRaw.totalCredits) || 0,
         totalDebits: Number(statsRaw.totalDebits) || 0,
+        rechargeCount: Number(statsRaw.rechargeCount) || 0,
       },
     };
   }

@@ -210,6 +210,37 @@ describe('GET /api/v1/transactions', () => {
       expect(res.body.data.transactions.meta.total).toBe(2);
       expect(res.body.data.stats.totalTransactions).toBe(2);
       expect(res.body.data.stats.totalCredits).toBe(5500);
+      expect(res.body.data.stats.rechargeCount).toBe(2);
+
+      const rows = res.body.data.transactions.data as {
+        amount: number;
+        school: { id: string; name: string };
+      }[];
+      const rowA = rows.find((r) => r.amount === 4000);
+      expect(rowA?.school).toEqual({ id: schoolA.id, name: schoolA.name });
+      const rowB = rows.find((r) => r.amount === 1500);
+      expect(rowB?.school).toEqual({ id: schoolB.id, name: schoolB.name });
+    });
+
+    it('should only count CREDIT transactions towards rechargeCount, unlike totalTransactions', async () => {
+      const debit = await transactionRepo.save({
+        walletId: walletA.id,
+        type: TransactionType.DEBIT,
+        amount: 300,
+        currency: Currency.XOF,
+        balanceBefore: 4000,
+        balanceAfter: 3700,
+      });
+
+      const res = await request(getServer(app))
+        .get(`/api/v1/transactions?schoolId=${schoolA.id}`)
+        .set('Authorization', `Bearer ${superAdminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.stats.totalTransactions).toBe(2);
+      expect(res.body.data.stats.rechargeCount).toBe(1);
+
+      await transactionRepo.delete({ id: debit.id });
     });
 
     it('should scope SUPER_ADMIN results to schoolId when provided', async () => {

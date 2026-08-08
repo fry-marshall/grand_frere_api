@@ -9,7 +9,7 @@ import {
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { TransactionsService } from './transactions.service';
 import { TransactionsQueryDto } from './dto/transactions-query.dto';
-import { SchoolTransactionResponseDto } from '../schools/dto/school-transaction-response.dto';
+import { TransactionsListResponseDto } from '../schools/dto/transactions-list-response.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/decorators/role.decorator';
@@ -31,7 +31,7 @@ export class TransactionsController {
     summary:
       'List transactions with stats. schoolId is optional: omitted = all schools for SUPER_ADMIN, auto-scoped for SCHOOL_ADMIN',
   })
-  @ApiSuccessResponse(SchoolTransactionResponseDto)
+  @ApiSuccessResponse(TransactionsListResponseDto)
   @ApiNotFoundResponse({
     description: ErrorMessages.SCHOOLS.NOT_FOUND,
     type: ErrorResponse,

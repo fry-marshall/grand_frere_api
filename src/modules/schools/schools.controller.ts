@@ -27,7 +27,7 @@ import { SchoolAdminResponseDto } from './dto/school-admin-response.dto';
 import { SchoolVendorResponseDto } from './dto/school-vendor-response.dto';
 import { SchoolStudentResponseDto } from './dto/school-student-response.dto';
 import { SchoolParentResponseDto } from './dto/school-parent-response.dto';
-import { SchoolTransactionResponseDto } from './dto/school-transaction-response.dto';
+import { TransactionsListResponseDto } from './dto/transactions-list-response.dto';
 import { SchoolTransactionsQueryDto } from './dto/school-transactions-query.dto';
 import { StatsQueryDto } from './dto/stats-query.dto';
 import { SchoolsSearchQueryDto } from './dto/schools-search-query.dto';
@@ -292,7 +292,7 @@ export class SchoolsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'List transactions of a school with stats' })
-  @ApiSuccessResponse(SchoolTransactionResponseDto)
+  @ApiSuccessResponse(TransactionsListResponseDto)
   @ApiNotFoundResponse({
     description: ErrorMessages.SCHOOLS.NOT_FOUND,
     type: ErrorResponse,
