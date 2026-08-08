@@ -33,6 +33,8 @@ import { StatsQueryDto } from './dto/stats-query.dto';
 import { SchoolsSearchQueryDto } from './dto/schools-search-query.dto';
 import { NetworkStatsResponseDto } from './dto/network-stats-response.dto';
 import { SchoolStatsResponseDto } from './dto/school-stats-response.dto';
+import { StatsTimeseriesQueryDto } from './dto/stats-timeseries-query.dto';
+import { StatsTimeseriesResponseDto } from './dto/stats-timeseries-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -107,6 +109,22 @@ export class SchoolsController {
   })
   getNetworkStats(@Query() query: StatsQueryDto) {
     return this.schoolsService.getNetworkStats(query);
+  }
+
+  @Get('stats/timeseries')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary:
+      'Completed order revenue/volume bucketed by day, week or month, for the network dashboard chart. Optionally scoped to a single school.',
+  })
+  @ApiSuccessResponse(StatsTimeseriesResponseDto)
+  @ApiForbiddenResponse({
+    description: 'Insufficient role',
+    type: ErrorResponse,
+  })
+  getStatsTimeseries(@Query() query: StatsTimeseriesQueryDto) {
+    return this.schoolsService.getStatsTimeseries(query);
   }
 
   @Get('search')

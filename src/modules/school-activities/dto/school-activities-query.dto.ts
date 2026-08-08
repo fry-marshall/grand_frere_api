@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsOptional, IsUUID } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 
 export class SchoolActivitiesQueryDto extends PaginationQueryDto {
@@ -7,4 +8,12 @@ export class SchoolActivitiesQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsUUID()
   schoolId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by draft (false) or published (true) activities',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  @IsBoolean()
+  isVisible?: boolean;
 }

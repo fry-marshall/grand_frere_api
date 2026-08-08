@@ -144,7 +144,7 @@ export class SchoolActivitiesService {
     query: SchoolActivitiesQueryDto,
     currentUser: { id: string; role: UserRole },
   ): Promise<{ data: SchoolActivityResponseDto[]; meta: object }> {
-    const { page, limit, schoolId } = query;
+    const { page, limit, schoolId, isVisible } = query;
 
     let targetSchoolId: string | undefined;
     if (currentUser.role === UserRole.SCHOOL_ADMIN) {
@@ -157,7 +157,10 @@ export class SchoolActivitiesService {
     }
 
     const [activities, total] = await this.activityRepo.findAndCount({
-      where: targetSchoolId ? { schoolId: targetSchoolId } : {},
+      where: {
+        ...(targetSchoolId ? { schoolId: targetSchoolId } : {}),
+        ...(isVisible !== undefined ? { isVisible } : {}),
+      },
       relations: ['school'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,

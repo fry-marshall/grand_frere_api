@@ -19,7 +19,7 @@ import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { Order } from '../orders/entities/order.entity';
 import { OrderStatus } from '../orders/order.types';
-import { SchoolStatus } from './school.types';
+import { SchoolStatus, StatsGranularity } from './school.types';
 import { VendorStatus } from '../vendors/vendor.types';
 import { UserRole, UserStatus } from '../users/user.types';
 import { CreateSchoolDto } from './dto/create-school.dto';
@@ -36,6 +36,8 @@ import { SchoolTransactionsQueryDto } from './dto/school-transactions-query.dto'
 import { StatsQueryDto } from './dto/stats-query.dto';
 import { NetworkStatsResponseDto } from './dto/network-stats-response.dto';
 import { SchoolStatsResponseDto } from './dto/school-stats-response.dto';
+import { StatsTimeseriesQueryDto } from './dto/stats-timeseries-query.dto';
+import { StatsTimeseriesResponseDto } from './dto/stats-timeseries-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 import { generateRandomPassword } from '../../common/utils/generate-password.util';
@@ -408,16 +410,24 @@ export class SchoolsService {
       .where('u.status = :status', { status: UserStatus.VALIDATED })
       .getCount();
 
-    const schools = await this.schoolRepo.find({ order: { name: 'ASC' } });
+    const [activeSchoolsCount, suspendedSchoolsCount, schools] =
+      await Promise.all([
+        this.schoolRepo.count({ where: { status: SchoolStatus.ACTIVE } }),
+        this.schoolRepo.count({ where: { status: SchoolStatus.SUSPENDED } }),
+        this.schoolRepo.find({ order: { name: 'ASC' } }),
+      ]);
 
     return {
       totalRevenue: Number(totalsRaw?.revenue) || 0,
       orderVolume: Number(totalsRaw?.volume) || 0,
       activeStudentsCount,
+      activeSchoolsCount,
+      suspendedSchoolsCount,
       schools: schools.map((sc) => ({
         schoolId: sc.id,
         name: sc.name,
         sigle: sc.sigle,
+        status: sc.status,
         revenue: perSchoolMap.get(sc.id)?.revenue ?? 0,
         volume: perSchoolMap.get(sc.id)?.volume ?? 0,
       })),
@@ -454,9 +464,24 @@ export class SchoolsService {
       .addSelect('COUNT(o.id)', 'volume')
       .getRawOne<{ revenue: string; volume: string }>();
 
-    const [studentsCount, vendorsCount, parentsCount] = await Promise.all([
+    const [
+      studentsCount,
+      activeStudentsCount,
+      vendorsCount,
+      activeVendorsCount,
+      parentsCount,
+    ] = await Promise.all([
       this.studentRepo.count({ where: { schoolId: id } }),
+      this.studentRepo
+        .createQueryBuilder('s')
+        .innerJoin('s.user', 'u')
+        .where('s.schoolId = :schoolId', { schoolId: id })
+        .andWhere('u.status = :status', { status: UserStatus.VALIDATED })
+        .getCount(),
       this.vendorRepo.count({ where: { schoolId: id } }),
+      this.vendorRepo.count({
+        where: { schoolId: id, status: VendorStatus.ACTIVE },
+      }),
       this.parentRepo
         .createQueryBuilder('parent')
         .innerJoin('student_parents', 'sp', 'sp.parentId = parent.id')
@@ -475,9 +500,119 @@ export class SchoolsService {
       revenue: Number(statsRaw?.revenue) || 0,
       volume: Number(statsRaw?.volume) || 0,
       studentsCount,
+      activeStudentsCount,
       vendorsCount,
+      activeVendorsCount,
       parentsCount,
     };
+  }
+
+  async getStatsTimeseries(
+    query: StatsTimeseriesQueryDto,
+  ): Promise<StatsTimeseriesResponseDto> {
+    const schoolId = query.schoolId;
+    const granularity = query.granularity ?? StatsGranularity.DAY;
+    const bucketCount =
+      granularity === StatsGranularity.DAY
+        ? 7
+        : granularity === StatsGranularity.WEEK
+          ? 8
+          : 6;
+    const buckets = this.buildStatsBuckets(
+      granularity,
+      bucketCount,
+      new Date(),
+    );
+
+    const qb = this.orderRepo
+      .createQueryBuilder('o')
+      .innerJoin('o.student', 's')
+      .select('o.createdAt', 'createdAt')
+      .addSelect('o.totalAmount', 'totalAmount')
+      .where('o.status = :status', { status: OrderStatus.COMPLETED })
+      .andWhere('o.createdAt >= :from', { from: buckets[0].start });
+    if (schoolId) {
+      qb.andWhere('s.schoolId = :schoolId', { schoolId });
+    }
+
+    const orders = await qb.getRawMany<{
+      createdAt: Date;
+      totalAmount: number;
+    }>();
+
+    for (const order of orders) {
+      const bucket = buckets.find(
+        (b) => order.createdAt >= b.start && order.createdAt < b.end,
+      );
+      if (bucket) {
+        bucket.revenue += Number(order.totalAmount);
+        bucket.volume += 1;
+      }
+    }
+
+    return {
+      buckets: buckets.map((b) => ({
+        label: b.label,
+        revenue: b.revenue,
+        volume: b.volume,
+      })),
+    };
+  }
+
+  private buildStatsBuckets(
+    granularity: StatsGranularity,
+    count: number,
+    now: Date,
+  ): {
+    start: Date;
+    end: Date;
+    label: string;
+    revenue: number;
+    volume: number;
+  }[] {
+    const buckets: {
+      start: Date;
+      end: Date;
+      label: string;
+      revenue: number;
+      volume: number;
+    }[] = [];
+
+    for (let i = count - 1; i >= 0; i--) {
+      let start: Date;
+      let end: Date;
+      let label: string;
+
+      if (granularity === StatsGranularity.DAY) {
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        end = new Date(start);
+        end.setDate(end.getDate() + 1);
+        label = start.toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+        });
+      } else if (granularity === StatsGranularity.WEEK) {
+        end = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() - i * 7 + 1,
+        );
+        start = new Date(end);
+        start.setDate(start.getDate() - 7);
+        label = start.toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+        });
+      } else {
+        start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+        label = start.toLocaleDateString('fr-FR', { month: 'short' });
+      }
+
+      buckets.push({ start, end, label, revenue: 0, volume: 0 });
+    }
+
+    return buckets;
   }
 
   async findTransactions(

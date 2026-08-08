@@ -150,6 +150,28 @@ describe('GET /api/v1/school-activities', () => {
         expect(ids).toContain(publishedActivity.id);
         expect(ids).toContain(draftActivity.id);
       });
+
+      it('should filter to only draft activities when isVisible=false', async () => {
+        const res = await request(getServer(app))
+          .get('/api/v1/school-activities/mine?isVisible=false')
+          .set('Authorization', `Bearer ${schoolAdminToken}`);
+
+        expect(res.status).toBe(200);
+        const ids = res.body.data.data.map((a: { id: string }) => a.id);
+        expect(ids).toContain(draftActivity.id);
+        expect(ids).not.toContain(publishedActivity.id);
+      });
+
+      it('should filter to only published activities when isVisible=true', async () => {
+        const res = await request(getServer(app))
+          .get('/api/v1/school-activities/mine?isVisible=true')
+          .set('Authorization', `Bearer ${schoolAdminToken}`);
+
+        expect(res.status).toBe(200);
+        const ids = res.body.data.data.map((a: { id: string }) => a.id);
+        expect(ids).toContain(publishedActivity.id);
+        expect(ids).not.toContain(draftActivity.id);
+      });
     });
 
     describe('Failure cases', () => {

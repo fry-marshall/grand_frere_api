@@ -178,6 +178,7 @@ describe('GET /api/v1/schools/stats', () => {
       expect(schoolEntry.volume).toBe(1);
       expect(schoolEntry.name).toBe('School NetworkStats');
       expect(schoolEntry.sigle).toBe('TS-NST');
+      expect(schoolEntry.status).toBe(SchoolStatus.ACTIVE);
     });
 
     it('should count the active student created for this test', async () => {
@@ -187,6 +188,16 @@ describe('GET /api/v1/schools/stats', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.activeStudentsCount).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should count active and suspended schools network-wide', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/schools/stats')
+        .set('Authorization', `Bearer ${superAdminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.activeSchoolsCount).toBeGreaterThanOrEqual(1);
+      expect(typeof res.body.data.suspendedSchoolsCount).toBe('number');
     });
 
     it('should return zero revenue/volume for a window with no orders', async () => {

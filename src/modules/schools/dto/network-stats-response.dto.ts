@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { SchoolStatus } from '../school.types';
 
 export class SchoolStatsBreakdownDto {
   @ApiProperty()
@@ -9,6 +10,9 @@ export class SchoolStatsBreakdownDto {
 
   @ApiProperty()
   sigle: string;
+
+  @ApiProperty({ enum: SchoolStatus })
+  status: SchoolStatus;
 
   @ApiProperty({ description: 'Sum of completed order amounts (revenue)' })
   revenue: number;
@@ -26,6 +30,12 @@ export class NetworkStatsResponseDto {
 
   @ApiProperty({ description: 'Count of students with a validated account' })
   activeStudentsCount: number;
+
+  @ApiProperty()
+  activeSchoolsCount: number;
+
+  @ApiProperty()
+  suspendedSchoolsCount: number;
 
   @ApiProperty({ type: [SchoolStatsBreakdownDto] })
   schools: SchoolStatsBreakdownDto[];
