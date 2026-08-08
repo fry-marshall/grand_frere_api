@@ -14,7 +14,10 @@ import { UserRole } from '../users/user.types';
 import { Currency } from '../../common/enums/currency.enum';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 import { WithdrawalResponseDto } from './dto/withdrawal-response.dto';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { WithdrawalListItemResponseDto } from './dto/withdrawal-list-item-response.dto';
+import { WithdrawalStatsResponseDto } from './dto/withdrawal-stats-response.dto';
+import { WithdrawalsSearchQueryDto } from './dto/withdrawals-search-query.dto';
+import { WithdrawalStatsQueryDto } from './dto/withdrawal-stats-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
 @Injectable()
@@ -76,38 +79,91 @@ export class WithdrawalsService {
 
   async findAll(
     currentUser: { id: string; role: UserRole },
-    query: PaginationQueryDto,
-  ): Promise<{ data: WithdrawalResponseDto[]; meta: object }> {
-    const { page, limit } = query;
+    query: WithdrawalsSearchQueryDto,
+  ): Promise<{ data: WithdrawalListItemResponseDto[]; meta: object }> {
+    const { schoolId, status, page, limit } = query;
+
+    const qb = this.withdrawalRepo
+      .createQueryBuilder('withdrawal')
+      .leftJoinAndSelect('withdrawal.vendor', 'vendor')
+      .leftJoinAndSelect('vendor.school', 'school');
 
     if (currentUser.role === UserRole.VENDOR) {
       const vendor = await this.vendorRepo.findOne({
         where: { userId: currentUser.id },
       });
       if (!vendor) throw new ForbiddenException();
-
-      const [withdrawals, total] = await this.withdrawalRepo.findAndCount({
-        where: { vendorId: vendor.id },
-        order: { createdAt: 'DESC' },
-        skip: (page - 1) * limit,
-        take: limit,
-      });
-
-      return {
-        data: withdrawals.map((w) => this.toDto(w)),
-        meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
-      };
+      qb.andWhere('withdrawal.vendorId = :vendorId', { vendorId: vendor.id });
     }
 
-    const [withdrawals, total] = await this.withdrawalRepo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    if (schoolId) {
+      qb.andWhere('vendor.schoolId = :schoolId', { schoolId });
+    }
+    if (status) {
+      qb.andWhere('withdrawal.status = :status', { status });
+    }
+
+    const [withdrawals, total] = await qb
+      .orderBy('withdrawal.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
 
     return {
-      data: withdrawals.map((w) => this.toDto(w)),
+      data: withdrawals.map((w) => this.toListItemDto(w)),
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async findOne(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<WithdrawalListItemResponseDto> {
+    const withdrawal = await this.withdrawalRepo.findOne({
+      where: { id },
+      relations: ['vendor', 'vendor.school'],
+    });
+    if (!withdrawal)
+      throw new NotFoundException(ErrorMessages.WITHDRAWALS.NOT_FOUND);
+
+    if (
+      currentUser.role === UserRole.VENDOR &&
+      withdrawal.vendor.userId !== currentUser.id
+    ) {
+      throw new ForbiddenException();
+    }
+
+    return this.toListItemDto(withdrawal);
+  }
+
+  async getStats(
+    query: WithdrawalStatsQueryDto,
+  ): Promise<WithdrawalStatsResponseDto> {
+    const qb = this.withdrawalRepo
+      .createQueryBuilder('withdrawal')
+      .innerJoin('withdrawal.vendor', 'vendor');
+
+    if (query.schoolId) {
+      qb.andWhere('vendor.schoolId = :schoolId', { schoolId: query.schoolId });
+    }
+
+    const rows = await qb
+      .select('withdrawal.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect('COALESCE(SUM(withdrawal.amount), 0)', 'amount')
+      .groupBy('withdrawal.status')
+      .getRawMany<{
+        status: WithdrawalStatus;
+        count: string;
+        amount: string;
+      }>();
+
+    return {
+      byStatus: rows.map((row) => ({
+        status: row.status,
+        count: Number(row.count),
+        amount: Number(row.amount),
+      })),
     };
   }
 
@@ -174,6 +230,26 @@ export class WithdrawalsService {
     });
 
     return this.toDto({ ...withdrawal, status: WithdrawalStatus.FAILED });
+  }
+
+  private toListItemDto(withdrawal: Withdrawal): WithdrawalListItemResponseDto {
+    return {
+      id: withdrawal.id,
+      amount: withdrawal.amount,
+      currency: withdrawal.currency,
+      waveNumber: withdrawal.waveNumber,
+      paystackRef: withdrawal.paystackRef ?? null,
+      status: withdrawal.status,
+      createdAt: withdrawal.createdAt,
+      vendor: {
+        id: withdrawal.vendor.id,
+        shopName: withdrawal.vendor.shopName,
+      },
+      school: {
+        id: withdrawal.vendor.school.id,
+        name: withdrawal.vendor.school.name,
+      },
+    };
   }
 
   private toDto(withdrawal: Withdrawal): WithdrawalResponseDto {

@@ -21,7 +21,10 @@ import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator
 import { WithdrawalsService } from './withdrawals.service';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 import { WithdrawalResponseDto } from './dto/withdrawal-response.dto';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { WithdrawalListItemResponseDto } from './dto/withdrawal-list-item-response.dto';
+import { WithdrawalStatsResponseDto } from './dto/withdrawal-stats-response.dto';
+import { WithdrawalsSearchQueryDto } from './dto/withdrawals-search-query.dto';
+import { WithdrawalStatsQueryDto } from './dto/withdrawal-stats-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Role } from '../../common/decorators/role.decorator';
@@ -40,15 +43,47 @@ export class WithdrawalsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.VENDOR, UserRole.SUPER_ADMIN)
   @ApiOperation({
-    summary: 'List withdrawals (VENDOR sees own, SUPER_ADMIN sees all)',
+    summary:
+      'List withdrawals (VENDOR sees own, SUPER_ADMIN sees all, filterable by school/status)',
   })
-  @ApiSuccessResponse(WithdrawalResponseDto)
+  @ApiSuccessResponse(WithdrawalListItemResponseDto)
   @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
   findAll(
     @CurrentUser() currentUser: { id: string; role: UserRole },
-    @Query() query: PaginationQueryDto,
+    @Query() query: WithdrawalsSearchQueryDto,
   ) {
     return this.withdrawalsService.findAll(currentUser, query);
+  }
+
+  @Get('stats')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary:
+      'Withdrawal count and total amount grouped by status, optionally scoped to a school',
+  })
+  @ApiSuccessResponse(WithdrawalStatsResponseDto)
+  getStats(@Query() query: WithdrawalStatsQueryDto) {
+    return this.withdrawalsService.getStats(query);
+  }
+
+  @Get(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.VENDOR, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get withdrawal details by id' })
+  @ApiSuccessResponse(WithdrawalListItemResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.WITHDRAWALS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.withdrawalsService.findOne(id, currentUser);
   }
 
   @Put(':id/process')

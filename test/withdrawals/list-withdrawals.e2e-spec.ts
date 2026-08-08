@@ -202,7 +202,7 @@ describe('GET /api/v1/withdrawals', () => {
 
       expect(res.status).toBe(200);
       const ids = res.body.data.data.map(
-        (w: { vendorId: string }) => w.vendorId,
+        (w: { vendor: { id: string } }) => w.vendor.id,
       );
       expect(ids.every((id: string) => id === vendor.id)).toBe(true);
       expect(res.body.data.data.length).toBe(2);
@@ -215,10 +215,47 @@ describe('GET /api/v1/withdrawals', () => {
 
       expect(res.status).toBe(200);
       const ids = res.body.data.data.map(
-        (w: { vendorId: string }) => w.vendorId,
+        (w: { vendor: { id: string } }) => w.vendor.id,
       );
       expect(ids.every((id: string) => id === otherVendor.id)).toBe(true);
       expect(res.body.data.data.length).toBe(1);
+    });
+
+    it('should include vendor and school in the response', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/withdrawals')
+        .set('Authorization', `Bearer ${superAdminToken}`);
+
+      expect(res.status).toBe(200);
+      const item = res.body.data.data[0] as {
+        vendor: { id: string; shopName: string };
+        school: { id: string; name: string };
+      };
+      expect(item.vendor.shopName).toBeDefined();
+      expect(item.school.id).toBe(school.id);
+    });
+
+    it('should filter by school', async () => {
+      const res = await request(getServer(app))
+        .get(`/api/v1/withdrawals?schoolId=${school.id}`)
+        .set('Authorization', `Bearer ${superAdminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.data.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('should filter by status', async () => {
+      const res = await request(getServer(app))
+        .get('/api/v1/withdrawals?status=SUCCESS')
+        .set('Authorization', `Bearer ${superAdminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(
+        res.body.data.data.every(
+          (w: { status: WithdrawalStatus }) =>
+            w.status === WithdrawalStatus.SUCCESS,
+        ),
+      ).toBe(true);
     });
 
     it('should respect pagination (limit=1)', async () => {
