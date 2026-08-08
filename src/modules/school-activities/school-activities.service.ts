@@ -173,6 +173,14 @@ export class SchoolActivitiesService {
     };
   }
 
+  async findMineOne(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<SchoolActivityResponseDto> {
+    const activity = await this.findActivityScoped(id, currentUser);
+    return this.toDto(activity);
+  }
+
   private async resolveTargetSchool(
     schoolIdFromBody: string | undefined,
     currentUser: { id: string; role: UserRole },

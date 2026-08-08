@@ -265,4 +265,52 @@ describe('PUT/DELETE /api/v1/school-activities/:id', () => {
       });
     });
   });
+
+  describe('GET /school-activities/mine/:id', () => {
+    describe('Success cases', () => {
+      it('should return a draft activity for the owning SCHOOL_ADMIN', async () => {
+        const res = await request(getServer(app))
+          .get(`/api/v1/school-activities/mine/${activity.id}`)
+          .set('Authorization', `Bearer ${schoolAdminToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.id).toBe(activity.id);
+        expect(res.body.data.isVisible).toBe(false);
+      });
+
+      it('should return a draft activity for SUPER_ADMIN', async () => {
+        const res = await request(getServer(app))
+          .get(`/api/v1/school-activities/mine/${activity.id}`)
+          .set('Authorization', `Bearer ${superAdminToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.id).toBe(activity.id);
+      });
+    });
+
+    describe('Failure cases', () => {
+      it('should return 401 without authentication', async () => {
+        const res = await request(getServer(app)).get(
+          `/api/v1/school-activities/mine/${activity.id}`,
+        );
+        expect(res.status).toBe(401);
+      });
+
+      it('should return 403 when another school admin tries to access it', async () => {
+        const res = await request(getServer(app))
+          .get(`/api/v1/school-activities/mine/${activity.id}`)
+          .set('Authorization', `Bearer ${otherSchoolAdminToken}`);
+        expect(res.status).toBe(403);
+      });
+
+      it('should return 404 when activity does not exist', async () => {
+        const res = await request(getServer(app))
+          .get(
+            '/api/v1/school-activities/mine/00000000-0000-0000-0000-000000000000',
+          )
+          .set('Authorization', `Bearer ${superAdminToken}`);
+        expect(res.status).toBe(404);
+      });
+    });
+  });
 });

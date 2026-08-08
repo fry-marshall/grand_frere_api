@@ -202,6 +202,27 @@ export class SchoolActivitiesController {
     return this.schoolActivitiesService.findMine(query, currentUser);
   }
 
+  @Get('mine/:id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({
+    summary:
+      'Get a school activity for management (draft or published). SCHOOL_ADMIN is scoped to their own school.',
+  })
+  @ApiSuccessResponse(SchoolActivityResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.SCHOOL_ACTIVITIES.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
+  findMineOne(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.schoolActivitiesService.findMineOne(id, currentUser);
+  }
+
   @Get()
   @ApiOperation({
     summary:
