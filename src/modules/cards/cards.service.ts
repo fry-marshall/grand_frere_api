@@ -12,6 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import * as QRCode from 'qrcode';
 import { Card } from './entities/card.entity';
+import { CardBatch } from './entities/card-batch.entity';
 import { School } from '../schools/entities/school.entity';
 import { User } from '../users/entities/user.entity';
 import { Student } from '../students/entities/student.entity';
@@ -20,6 +21,8 @@ import { StudentParent } from '../students/entities/student-parent.entity';
 import { CardStatus } from './card.types';
 import { UserRole } from '../users/user.types';
 import { CreateCardsBatchDto } from './dto/create-cards-batch.dto';
+import { CreateCardsBatchResponseDto } from './dto/create-cards-batch-response.dto';
+import { UploadBatchPdfResponseDto } from './dto/upload-batch-pdf-response.dto';
 import { CardsSearchQueryDto } from './dto/cards-search-query.dto';
 import { CardResponseDto } from './dto/card-response.dto';
 import { CardListItemResponseDto } from './dto/card-list-item-response.dto';
@@ -37,6 +40,8 @@ export class CardsService {
 
   constructor(
     @InjectRepository(Card) private readonly cardRepo: Repository<Card>,
+    @InjectRepository(CardBatch)
+    private readonly cardBatchRepo: Repository<CardBatch>,
     @InjectRepository(School) private readonly schoolRepo: Repository<School>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Student)
@@ -49,7 +54,9 @@ export class CardsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async createBatch(dto: CreateCardsBatchDto): Promise<CardResponseDto[]> {
+  async createBatch(
+    dto: CreateCardsBatchDto,
+  ): Promise<CreateCardsBatchResponseDto> {
     const school = await this.schoolRepo.findOne({
       where: { id: dto.schoolId },
     });
@@ -108,7 +115,37 @@ export class CardsService {
       throw error;
     }
 
-    return savedCards.map((card) => this.toDto(card));
+    const batch = await this.cardBatchRepo.save({
+      schoolId: dto.schoolId,
+      template: dto.template,
+      count: dto.count,
+    });
+
+    return {
+      batchId: batch.id,
+      template: batch.template,
+      cards: savedCards.map((card) => this.toDto(card)),
+    };
+  }
+
+  async uploadBatchPdf(
+    batchId: string,
+    file: Express.Multer.File,
+  ): Promise<UploadBatchPdfResponseDto> {
+    const batch = await this.cardBatchRepo.findOne({ where: { id: batchId } });
+    if (!batch)
+      throw new NotFoundException(ErrorMessages.CARDS.BATCH_NOT_FOUND);
+
+    const key = `cards/${batch.schoolId}/batches/${batch.id}.pdf`;
+    const pdfUrl = await this.storageService.uploadBuffer(
+      file.buffer,
+      key,
+      'application/pdf',
+    );
+
+    await this.cardBatchRepo.update(batch.id, { pdfUrl });
+
+    return { pdfUrl };
   }
 
   async search(

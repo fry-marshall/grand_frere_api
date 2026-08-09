@@ -5,3 +5,10 @@ export enum CardStatus {
   BLOCKED = 'BLOCKED',
   LOST = 'LOST',
 }
+
+export enum CardTemplate {
+  DROGBA = 'DROGBA',
+  LUFFY = 'LUFFY',
+  NARUTO = 'NARUTO',
+  ZORO = 'ZORO',
+}

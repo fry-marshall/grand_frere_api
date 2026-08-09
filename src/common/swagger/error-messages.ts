@@ -37,6 +37,7 @@ export const ErrorMessages = {
     SAME_CARD: 'Replacement card must be different from the lost card',
     NEW_CARD_NOT_BLANK: 'Replacement card must be a blank, unassigned card',
     SCHOOL_MISMATCH: 'Replacement card must belong to the same school',
+    BATCH_NOT_FOUND: 'Card batch not found',
   },
   SCHOOLS: {
     NOT_FOUND: 'School not found',

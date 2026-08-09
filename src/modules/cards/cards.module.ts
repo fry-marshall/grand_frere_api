@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CardsController } from './cards.controller';
 import { CardsService } from './cards.service';
 import { Card } from './entities/card.entity';
+import { CardBatch } from './entities/card-batch.entity';
 import { School } from '../schools/entities/school.entity';
 import { User } from '../users/entities/user.entity';
 import { Student } from '../students/entities/student.entity';
@@ -13,6 +14,7 @@ import { StudentParent } from '../students/entities/student-parent.entity';
   imports: [
     TypeOrmModule.forFeature([
       Card,
+      CardBatch,
       School,
       User,
       Student,

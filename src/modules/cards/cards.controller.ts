@@ -6,26 +6,39 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
+  UseFilters,
   UseGuards,
+  UseInterceptors,
   HttpCode,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
   ApiConflictResponse,
+  ApiConsumes,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOperation,
-  ApiResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { CardsService } from './cards.service';
 import { CreateCardsBatchDto } from './dto/create-cards-batch.dto';
+import { CreateCardsBatchResponseDto } from './dto/create-cards-batch-response.dto';
+import { UploadBatchPdfResponseDto } from './dto/upload-batch-pdf-response.dto';
 import { CardsSearchQueryDto } from './dto/cards-search-query.dto';
 import { CardResponseDto } from './dto/card-response.dto';
 import { CardListItemResponseDto } from './dto/card-list-item-response.dto';
+import {
+  FILE_CONFIGS,
+  createMulterOptions,
+} from '../../common/multer/multer.config';
+import { MulterExceptionFilter } from '../../common/multer/multer-exception.filter';
+import { FileValidationPipe } from '../../common/multer/file-validation.pipe';
 import { UpdateDailyLimitDto } from './dto/update-daily-limit.dto';
 import { UpdateDailyLimitPermissionDto } from './dto/update-daily-limit-permission.dto';
 import { VerifyPinDto } from './dto/verify-pin.dto';
@@ -45,13 +58,13 @@ import { UserRole } from '../users/user.types';
 export class CardsController {
   constructor(private readonly cardsService: CardsService) {}
 
-  @Post()
+  @Post('batches')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.SUPER_ADMIN)
   @ApiOperation({
     summary: 'Generate a batch of cards with QR codes for a school',
   })
-  @ApiResponse({ status: 201, type: [CardResponseDto] })
+  @ApiSuccessResponse(CreateCardsBatchResponseDto, 201)
   @ApiBadRequestResponse({
     description: 'Validation failed',
     type: ErrorResponse,
@@ -62,6 +75,41 @@ export class CardsController {
   })
   createBatch(@Body() dto: CreateCardsBatchDto) {
     return this.cardsService.createBatch(dto);
+  }
+
+  @Post('batches/:batchId/pdf')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN)
+  @UseInterceptors(
+    FileInterceptor('file', createMulterOptions(FILE_CONFIGS.CARD_BATCH_PDF)),
+  )
+  @UseFilters(MulterExceptionFilter)
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiOperation({
+    summary:
+      'Store the front-end-assembled PDF for a card batch (recto/verso composited with QR codes)',
+  })
+  @ApiSuccessResponse(UploadBatchPdfResponseDto, 201)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.CARDS.BATCH_NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  uploadBatchPdf(
+    @Param('batchId') batchId: string,
+    @UploadedFile(new FileValidationPipe({ required: true }))
+    file: Express.Multer.File,
+  ) {
+    return this.cardsService.uploadBatchPdf(batchId, file);
   }
 
   @Get('search')
