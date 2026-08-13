@@ -20,12 +20,7 @@ async function bootstrap() {
 
   app.useGlobalInterceptors(new ResponseInterceptor());
 
-  app.enableCors({
-    origin:
-      process.env.NODE_ENV === 'prod'
-        ? process.env.ALLOWED_ORIGINS?.split(',')
-        : '*',
-  });
+  app.enableCors({ origin: '*' });
 
   const config = new DocumentBuilder()
     .setTitle('Grand Frere API')
