@@ -18,7 +18,7 @@ import { User } from '../users/entities/user.entity';
 import { Student } from '../students/entities/student.entity';
 import { Parent } from '../parents/entities/parent.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
-import { CardStatus } from './card.types';
+import { CARD_TEMPLATE_QR_COLOR, CardStatus } from './card.types';
 import { UserRole } from '../users/user.types';
 import { CreateCardsBatchDto } from './dto/create-cards-batch.dto';
 import { CreateCardsBatchResponseDto } from './dto/create-cards-batch-response.dto';
@@ -64,9 +64,15 @@ export class CardsService {
 
     const codes = await this.generateUniqueCodes(school.sigle, dto.count);
 
+    const qrColor = CARD_TEMPLATE_QR_COLOR[dto.template];
     const qrBuffers = await Promise.all(
       codes.map((code) =>
-        QRCode.toBuffer(code, { type: 'png', width: 400, margin: 2 }),
+        QRCode.toBuffer(code, {
+          type: 'png',
+          width: 400,
+          margin: 2,
+          color: { dark: qrColor, light: '#FFFFFFFF' },
+        }),
       ),
     );
 
