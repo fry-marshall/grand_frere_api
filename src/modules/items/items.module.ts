@@ -4,10 +4,9 @@ import { ItemsController } from './items.controller';
 import { ItemsService } from './items.service';
 import { Item } from './entities/item.entity';
 import { Vendor } from '../vendors/entities/vendor.entity';
-import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Item, Vendor]), NotificationsModule],
+  imports: [TypeOrmModule.forFeature([Item, Vendor])],
   controllers: [ItemsController],
   providers: [ItemsService],
 })

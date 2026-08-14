@@ -61,7 +61,6 @@ export const ErrorMessages = {
   },
   ITEMS: {
     NOT_FOUND: 'Item not found',
-    NO_PENDING_IMAGE: 'Item has no pending image to review',
   },
   WALLETS: {
     NOT_FOUND: 'Wallet not found',

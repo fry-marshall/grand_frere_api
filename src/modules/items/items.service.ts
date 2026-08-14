@@ -1,8 +1,6 @@
 import {
-  ConflictException,
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
@@ -17,14 +15,10 @@ import { ItemResponseDto } from './dto/item-response.dto';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationType } from '../notifications/notification.types';
 import { ErrorMessages } from '../../common/swagger/error-messages';
 
 @Injectable()
 export class ItemsService {
-  private readonly logger = new Logger(ItemsService.name);
-
   constructor(
     @InjectRepository(Item)
     private readonly itemRepo: Repository<Item>,
@@ -32,7 +26,6 @@ export class ItemsService {
     private readonly vendorRepo: Repository<Vendor>,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
-    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findAll(
@@ -150,106 +143,22 @@ export class ItemsService {
       if (vendor?.id !== item.vendorId) throw new ForbiddenException();
     }
 
-    // The live imageUrl is left untouched so the item stays visible/orderable
-    // with its current photo while the new one awaits admin approval.
-    if (item.pendingImageUrl) {
-      await this.storageService
-        .deleteFile(`items/${id}/${item.pendingImageUrl}`)
-        .catch(() => undefined);
-    }
-
-    const ext = file.mimetype.split('/')[1];
-    const pendingImageUrl = `pending-${Date.now()}.${ext}`;
-    await this.storageService.uploadBuffer(
-      file.buffer,
-      `items/${id}/${pendingImageUrl}`,
-      file.mimetype,
-    );
-
-    await this.itemRepo.update(id, { pendingImageUrl });
-    return this.toDto({ ...item, pendingImageUrl });
-  }
-
-  async approveImage(id: string): Promise<ItemResponseDto> {
-    const item = await this.itemRepo.findOne({ where: { id } });
-    if (!item) throw new NotFoundException(ErrorMessages.ITEMS.NOT_FOUND);
-
-    if (!item.pendingImageUrl) {
-      throw new ConflictException(ErrorMessages.ITEMS.NO_PENDING_IMAGE);
-    }
-
     if (item.imageUrl) {
       await this.storageService
         .deleteFile(`items/${id}/${item.imageUrl}`)
         .catch(() => undefined);
     }
 
-    const imageUrl = item.pendingImageUrl;
-    await this.itemRepo.update(id, {
-      imageUrl,
-      pendingImageUrl: null as unknown as string,
-    });
+    const ext = file.mimetype.split('/')[1];
+    const imageUrl = `${Date.now()}.${ext}`;
+    await this.storageService.uploadBuffer(
+      file.buffer,
+      `items/${id}/${imageUrl}`,
+      file.mimetype,
+    );
 
-    const vendor = await this.vendorRepo.findOne({
-      where: { id: item.vendorId },
-    });
-    if (vendor) {
-      this.notificationsService
-        .createNotification(
-          NotificationType.ITEM_IMAGE_APPROVED,
-          vendor.userId,
-          {
-            title: 'Photo approuvée',
-            body: `La nouvelle photo de "${item.name}" a été approuvée et est maintenant visible.`,
-          },
-        )
-        .catch((err) =>
-          this.logger.error(`Notification failed for item ${id}`, err.stack),
-        );
-    }
-
-    return this.toDto({
-      ...item,
-      imageUrl,
-      pendingImageUrl: null as unknown as string,
-    });
-  }
-
-  async rejectImage(id: string): Promise<ItemResponseDto> {
-    const item = await this.itemRepo.findOne({ where: { id } });
-    if (!item) throw new NotFoundException(ErrorMessages.ITEMS.NOT_FOUND);
-
-    if (!item.pendingImageUrl) {
-      throw new ConflictException(ErrorMessages.ITEMS.NO_PENDING_IMAGE);
-    }
-
-    await this.storageService
-      .deleteFile(`items/${id}/${item.pendingImageUrl}`)
-      .catch(() => undefined);
-
-    await this.itemRepo.update(id, {
-      pendingImageUrl: null as unknown as string,
-    });
-
-    const vendor = await this.vendorRepo.findOne({
-      where: { id: item.vendorId },
-    });
-    if (vendor) {
-      this.notificationsService
-        .createNotification(
-          NotificationType.ITEM_IMAGE_REJECTED,
-          vendor.userId,
-          {
-            title: 'Photo rejetée',
-            body: `La nouvelle photo de "${item.name}" a été rejetée. La photo actuelle reste inchangée.`,
-          },
-        )
-        .catch((err) =>
-          this.logger.error(`Notification failed for item ${id}`, err.stack),
-        );
-    }
-
-    return this.toDto({ ...item, pendingImageUrl: null as unknown as string });
+    await this.itemRepo.update(id, { imageUrl });
+    return this.toDto({ ...item, imageUrl });
   }
 
   private toDto(item: Item): ItemResponseDto {
@@ -262,11 +171,6 @@ export class ItemsService {
       imageUrl: item.imageUrl
         ? this.storageService.getPublicUrl(`items/${item.id}/${item.imageUrl}`)
         : item.imageUrl,
-      pendingImageUrl: item.pendingImageUrl
-        ? this.storageService.getPublicUrl(
-            `items/${item.id}/${item.pendingImageUrl}`,
-          )
-        : null,
       status: item.status,
       createdAt: item.createdAt,
     };

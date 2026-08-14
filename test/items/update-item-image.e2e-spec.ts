@@ -151,7 +151,7 @@ describe('PUT /api/v1/items/:id/image', () => {
   });
 
   describe('Success cases', () => {
-    it('should upload image as pending for own VENDOR without touching the live imageUrl', async () => {
+    it('should upload image for own VENDOR and return imageUrl', async () => {
       const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}/image`)
         .set('Authorization', `Bearer ${ownVendorToken}`)
@@ -161,21 +161,17 @@ describe('PUT /api/v1/items/:id/image', () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.data.pendingImageUrl).toBeDefined();
-      expect(res.body.data.pendingImageUrl).not.toBeNull();
-      expect(res.body.data.pendingImageUrl).toMatch(
-        /^http:\/\/localhost\/storage\//,
-      );
-      expect(res.body.data.imageUrl).toBeNull();
+      expect(res.body.data.imageUrl).toBeDefined();
+      expect(res.body.data.imageUrl).not.toBeNull();
+      expect(res.body.data.imageUrl).toMatch(/^http:\/\/localhost\/storage\//);
       expect(res.body.data.id).toBe(item.id);
 
       const dbItem = await itemRepo.findOne({ where: { id: item.id } });
-      expect(dbItem?.imageUrl).toBeNull();
-      expect(dbItem?.pendingImageUrl).not.toContain('/');
-      expect(dbItem?.pendingImageUrl).toMatch(/\.png$/);
+      expect(dbItem?.imageUrl).not.toContain('/');
+      expect(dbItem?.imageUrl).toMatch(/\.png$/);
     });
 
-    it('should upload image as pending for SUPER_ADMIN', async () => {
+    it('should upload image for SUPER_ADMIN', async () => {
       const res = await request(getServer(app))
         .put(`/api/v1/items/${item.id}/image`)
         .set('Authorization', `Bearer ${superAdminToken}`)
@@ -185,7 +181,7 @@ describe('PUT /api/v1/items/:id/image', () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.data.pendingImageUrl).toBeDefined();
+      expect(res.body.data.imageUrl).toBeDefined();
     });
   });
 

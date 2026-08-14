@@ -35,9 +35,6 @@ export class Item {
   @Column({ nullable: true })
   imageUrl: string;
 
-  @Column({ nullable: true })
-  pendingImageUrl: string;
-
   @Column({ type: 'enum', enum: ItemStatus, default: ItemStatus.ACTIVE })
   status: ItemStatus;
 
