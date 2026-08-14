@@ -12,7 +12,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Server, Socket } from 'socket.io';
 import { Vendor } from '../vendors/entities/vendor.entity';
-import { UserRole } from '../users/user.types';
+import { User } from '../users/entities/user.entity';
+import { UserRole, UserStatus } from '../users/user.types';
 import { OrderResponseDto } from '../orders/dto/order-response.dto';
 
 @Injectable()
@@ -29,6 +30,8 @@ export class NotificationsGateway
     private readonly configService: ConfigService,
     @InjectRepository(Vendor)
     private readonly vendorRepo: Repository<Vendor>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   afterInit(server: Server): void {
@@ -55,6 +58,14 @@ export class NotificationsGateway
         raw,
         { secret: this.configService.getOrThrow('ACCESS_TOKEN_SECRET') },
       );
+
+      const user = await this.userRepo.findOne({
+        where: { id: payload.sub },
+      });
+      if (!user || user.status !== UserStatus.VALIDATED) {
+        client.disconnect();
+        return;
+      }
 
       client.data.userId = payload.sub;
       client.data.role = payload.role;
@@ -87,5 +98,9 @@ export class NotificationsGateway
     for (const userId of userIds) {
       this.server.to(`user:${userId}`).emit('order.updated', order);
     }
+  }
+
+  disconnectUser(userId: string): void {
+    this.server.in(`user:${userId}`).disconnectSockets(true);
   }
 }

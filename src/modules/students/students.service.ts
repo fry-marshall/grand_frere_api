@@ -26,6 +26,7 @@ import { AssignCardDto } from './dto/assign-card.dto';
 import { StudentsSearchQueryDto } from './dto/students-search-query.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
 export class StudentsService {
@@ -46,6 +47,7 @@ export class StudentsService {
     private readonly walletRepo: Repository<Wallet>,
     @InjectRepository(Transaction)
     private readonly transactionRepo: Repository<Transaction>,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   async search(
@@ -330,6 +332,7 @@ export class StudentsService {
 
     await this.userRepo.update(student.userId, { status: UserStatus.BLOCKED });
     student.user.status = UserStatus.BLOCKED;
+    this.notificationsGateway.disconnectUser(student.userId);
     return this.toDto(student);
   }
 

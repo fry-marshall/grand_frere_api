@@ -24,6 +24,7 @@ import { UpdateParentProfileDto } from './dto/update-parent-profile.dto';
 import { AddBeneficiaryDto } from './dto/add-beneficiary.dto';
 import { ParentsSearchQueryDto } from './dto/parents-search-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
 export class ParentsService {
@@ -41,6 +42,7 @@ export class ParentsService {
     @InjectRepository(Wallet)
     private readonly walletRepo: Repository<Wallet>,
     private readonly dataSource: DataSource,
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   async search(
@@ -219,6 +221,7 @@ export class ParentsService {
 
     await this.userRepo.update(parent.userId, { status: UserStatus.BLOCKED });
     parent.user.status = UserStatus.BLOCKED;
+    this.notificationsGateway.disconnectUser(parent.userId);
     return this.toDto(parent);
   }
 

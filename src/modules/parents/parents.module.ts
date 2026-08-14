@@ -8,6 +8,7 @@ import { Student } from '../students/entities/student.entity';
 import { Card } from '../cards/entities/card.entity';
 import { StudentParent } from '../students/entities/student-parent.entity';
 import { Wallet } from '../wallets/entities/wallet.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { Wallet } from '../wallets/entities/wallet.entity';
       StudentParent,
       Wallet,
     ]),
+    NotificationsModule,
   ],
   controllers: [ParentsController],
   providers: [ParentsService],
