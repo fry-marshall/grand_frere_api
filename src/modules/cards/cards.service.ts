@@ -303,6 +303,22 @@ export class CardsService {
     const card = await this.cardRepo.findOne({ where: { code } });
     if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
 
+    await this.checkPinOrThrow(card, dto.pin);
+    return this.toDto({ ...card, pinAttempts: 0 });
+  }
+
+  /// Used by OrdersService before crediting a vendor for a cashin — the PIN
+  /// must belong to the card of the student the order is for, regardless of
+  /// whether the vendor found the order by scanning the card or by its
+  /// short code.
+  async verifyPinForStudent(studentId: string, pin: string): Promise<void> {
+    const card = await this.cardRepo.findOne({ where: { studentId } });
+    if (!card) throw new NotFoundException(ErrorMessages.CARDS.NOT_FOUND);
+
+    await this.checkPinOrThrow(card, pin);
+  }
+
+  private async checkPinOrThrow(card: Card, pin: string): Promise<void> {
     if (card.status === CardStatus.BLOCKED) {
       throw new ForbiddenException(ErrorMessages.CARDS.CARD_BLOCKED);
     }
@@ -313,7 +329,7 @@ export class CardsService {
       throw new ConflictException(ErrorMessages.CARDS.PIN_NOT_SET);
     }
 
-    const isValid = await bcrypt.compare(dto.pin, card.pinHash);
+    const isValid = await bcrypt.compare(pin, card.pinHash);
 
     if (!isValid) {
       const newAttempts = card.pinAttempts + 1;
@@ -329,7 +345,6 @@ export class CardsService {
     }
 
     await this.cardRepo.update(card.id, { pinAttempts: 0 });
-    return this.toDto({ ...card, pinAttempts: 0 });
   }
 
   async resetPin(

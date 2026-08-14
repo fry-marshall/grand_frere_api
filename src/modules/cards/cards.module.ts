@@ -24,5 +24,6 @@ import { StudentParent } from '../students/entities/student-parent.entity';
   ],
   controllers: [CardsController],
   providers: [CardsService],
+  exports: [CardsService],
 })
 export class CardsModule {}

@@ -36,6 +36,8 @@ import { ErrorMessages } from '../../common/swagger/error-messages';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/notification.types';
+import { CardsService } from '../cards/cards.service';
+import { CompleteOrderDto } from './dto/complete-order.dto';
 
 @Injectable()
 export class OrdersService {
@@ -67,6 +69,7 @@ export class OrdersService {
     private readonly dataSource: DataSource,
     private readonly gateway: NotificationsGateway,
     private readonly notificationsService: NotificationsService,
+    private readonly cardsService: CardsService,
     @Inject(STORAGE_SERVICE)
     private readonly storageService: IStorageService,
   ) {}
@@ -514,6 +517,7 @@ export class OrdersService {
 
   async complete(
     id: string,
+    dto: CompleteOrderDto,
     currentUser: { id: string; role: UserRole },
   ): Promise<OrderResponseDto> {
     const order = await this.orderRepo.findOne({ where: { id } });
@@ -530,6 +534,17 @@ export class OrdersService {
 
     if (order.status !== OrderStatus.VALIDATED) {
       throw new BadRequestException(ErrorMessages.ORDERS.NOT_VALIDATED);
+    }
+
+    if (currentUser.role === UserRole.VENDOR) {
+      // A vendor must have the student confirm the cashin with their card
+      // PIN in person before it's credited — a SUPER_ADMIN override doesn't
+      // need one. Checked only once the order is actually completable, so a
+      // stale/invalid request doesn't burn a PIN attempt for nothing.
+      if (!dto.pin) {
+        throw new BadRequestException(ErrorMessages.ORDERS.PIN_REQUIRED);
+      }
+      await this.cardsService.verifyPinForStudent(order.studentId, dto.pin);
     }
 
     let vendorWallet = await this.vendorWalletRepo.findOne({
@@ -553,12 +568,13 @@ export class OrdersService {
       }
     });
 
-    const dto = this.toDto({ ...order, status: OrderStatus.COMPLETED });
-    this.emitOrderUpdatedToAffectedUsers(order.studentId, dto).catch((err) =>
-      this.logger.error(`WS emit failed for order ${order.id}`, err.stack),
+    const response = this.toDto({ ...order, status: OrderStatus.COMPLETED });
+    this.emitOrderUpdatedToAffectedUsers(order.studentId, response).catch(
+      (err) =>
+        this.logger.error(`WS emit failed for order ${order.id}`, err.stack),
     );
 
-    return dto;
+    return response;
   }
 
   private async emitOrderUpdatedToAffectedUsers(

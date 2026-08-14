@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import request from 'supertest';
+import * as bcrypt from 'bcrypt';
 import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
@@ -11,10 +12,14 @@ import { Student } from '../../src/modules/students/entities/student.entity';
 import { Wallet } from '../../src/modules/wallets/entities/wallet.entity';
 import { Transaction } from '../../src/modules/wallets/entities/transaction.entity';
 import { Order } from '../../src/modules/orders/entities/order.entity';
+import { Card } from '../../src/modules/cards/entities/card.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
 import { UserRole } from '../../src/modules/users/user.types';
 import { VendorStatus } from '../../src/modules/vendors/vendor.types';
 import { OrderStatus } from '../../src/modules/orders/order.types';
+import { CardStatus } from '../../src/modules/cards/card.types';
+
+const PIN = '1234';
 
 describe('PUT /api/v1/orders/:id/complete', () => {
   let app: INestApplication;
@@ -26,6 +31,7 @@ describe('PUT /api/v1/orders/:id/complete', () => {
   let walletRepo: Repository<Wallet>;
   let transactionRepo: Repository<Transaction>;
   let orderRepo: Repository<Order>;
+  let cardRepo: Repository<Card>;
   let jwtService: JwtService;
 
   let school: School;
@@ -33,6 +39,7 @@ describe('PUT /api/v1/orders/:id/complete', () => {
   let otherVendor: Vendor;
   let student: Student;
   let wallet: Wallet;
+  let card: Card;
 
   let superAdminToken: string;
   let vendorToken: string;
@@ -62,6 +69,7 @@ describe('PUT /api/v1/orders/:id/complete', () => {
     walletRepo = ds.getRepository(Wallet);
     transactionRepo = ds.getRepository(Transaction);
     orderRepo = ds.getRepository(Order);
+    cardRepo = ds.getRepository(Card);
     jwtService = moduleRef.get(JwtService, { strict: false });
 
     for (const sigle of ['TS-CO']) {
@@ -77,6 +85,7 @@ describe('PUT /api/v1/orders/:id/complete', () => {
             await orderRepo.delete({ studentId: s.id });
             await walletRepo.delete({ id: lw.id });
           }
+          await cardRepo.delete({ studentId: s.id });
         }
         const leftVendors = await vendorRepo.find({
           where: { schoolId: leftover.id },
@@ -183,12 +192,20 @@ describe('PUT /api/v1/orders/:id/complete', () => {
       balance: 5000,
       reserved: 0,
     });
+    card = await cardRepo.save({
+      code: 'TS-CO-CARD-1',
+      studentId: student.id,
+      schoolId: school.id,
+      status: CardStatus.ACTIVE,
+      pinHash: await bcrypt.hash(PIN, 10),
+    });
   });
 
   afterAll(async () => {
     await transactionRepo.delete({ walletId: wallet.id });
     await orderRepo.delete({ studentId: student.id });
     await walletRepo.delete({ id: wallet.id });
+    await cardRepo.delete({ id: card.id });
     await vendorWalletRepo.delete({ vendorId: vendor.id });
     await vendorWalletRepo.delete({ vendorId: otherVendor.id });
     await vendorRepo.delete({ schoolId: school.id });
@@ -208,12 +225,13 @@ describe('PUT /api/v1/orders/:id/complete', () => {
   });
 
   describe('Success cases', () => {
-    it('should complete a validated order as VENDOR and credit vendor wallet', async () => {
+    it('should complete a validated order as VENDOR with the correct card PIN and credit vendor wallet', async () => {
       const order = await makeOrder(OrderStatus.VALIDATED);
 
       const res = await request(getServer(app))
         .put(`/api/v1/orders/${order.id}/complete`)
-        .set('Authorization', `Bearer ${vendorToken}`);
+        .set('Authorization', `Bearer ${vendorToken}`)
+        .send({ pin: PIN });
 
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe(OrderStatus.COMPLETED);
@@ -282,6 +300,29 @@ describe('PUT /api/v1/orders/:id/complete', () => {
         .put(`/api/v1/orders/${order.id}/complete`)
         .set('Authorization', `Bearer ${vendorToken}`);
       expect(res.status).toBe(400);
+    });
+
+    it('should return 400 when VENDOR omits the card PIN', async () => {
+      const order = await makeOrder(OrderStatus.VALIDATED);
+      const res = await request(getServer(app))
+        .put(`/api/v1/orders/${order.id}/complete`)
+        .set('Authorization', `Bearer ${vendorToken}`);
+      expect(res.status).toBe(400);
+
+      const dbOrder = await orderRepo.findOne({ where: { id: order.id } });
+      expect(dbOrder?.status).toBe(OrderStatus.VALIDATED);
+    });
+
+    it('should return 401 when VENDOR provides the wrong card PIN', async () => {
+      const order = await makeOrder(OrderStatus.VALIDATED);
+      const res = await request(getServer(app))
+        .put(`/api/v1/orders/${order.id}/complete`)
+        .set('Authorization', `Bearer ${vendorToken}`)
+        .send({ pin: '0000' });
+      expect(res.status).toBe(401);
+
+      const dbOrder = await orderRepo.findOne({ where: { id: order.id } });
+      expect(dbOrder?.status).toBe(OrderStatus.VALIDATED);
     });
   });
 });

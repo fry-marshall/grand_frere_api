@@ -12,14 +12,17 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { CompleteOrderDto } from './dto/complete-order.dto';
 import { OrderResponseDto } from './dto/order-response.dto';
 import { OrderDetailResponseDto } from './dto/order-detail-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
@@ -149,23 +152,37 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Role(UserRole.VENDOR, UserRole.SUPER_ADMIN)
   @ApiOperation({
-    summary: 'Complete a validated order (cashin / delivery confirmation)',
+    summary:
+      'Complete a validated order (cashin / delivery confirmation) — ' +
+      "requires the student's card PIN when completed by a VENDOR",
   })
   @ApiSuccessResponse(OrderResponseDto)
   @ApiNotFoundResponse({
-    description: ErrorMessages.ORDERS.NOT_FOUND,
+    description: `${ErrorMessages.ORDERS.NOT_FOUND} | ${ErrorMessages.CARDS.NOT_FOUND}`,
     type: ErrorResponse,
   })
   @ApiBadRequestResponse({
-    description: ErrorMessages.ORDERS.NOT_VALIDATED,
+    description: `${ErrorMessages.ORDERS.NOT_VALIDATED} | ${ErrorMessages.ORDERS.PIN_REQUIRED}`,
     type: ErrorResponse,
   })
-  @ApiForbiddenResponse({ description: 'Access denied', type: ErrorResponse })
+  @ApiUnauthorizedResponse({
+    description: ErrorMessages.CARDS.PIN_INVALID,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({
+    description: `Access denied | ${ErrorMessages.CARDS.CARD_BLOCKED}`,
+    type: ErrorResponse,
+  })
+  @ApiConflictResponse({
+    description: `${ErrorMessages.CARDS.NOT_ACTIVE} | ${ErrorMessages.CARDS.PIN_NOT_SET}`,
+    type: ErrorResponse,
+  })
   complete(
     @Param('id') id: string,
+    @Body() dto: CompleteOrderDto,
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
-    return this.ordersService.complete(id, currentUser);
+    return this.ordersService.complete(id, dto, currentUser);
   }
 
   @Put(':id/cancel')

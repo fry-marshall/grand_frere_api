@@ -77,6 +77,7 @@ export const ErrorMessages = {
     INVALID_ITEMS: 'One or more items are invalid or unavailable',
     NOT_PENDING: 'Order is not in pending status',
     NOT_VALIDATED: 'Order is not in validated status',
+    PIN_REQUIRED: 'Card PIN is required to complete this order',
     INVALID_SCHEDULED_DATE:
       'scheduledFor must be a weekday (Mon–Fri) and cannot be in the past',
   },

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CardsModule } from '../cards/cards.module';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { Item } from '../items/entities/item.entity';
@@ -18,6 +19,7 @@ import { OrdersController } from './orders.controller';
 @Module({
   imports: [
     NotificationsModule,
+    CardsModule,
     TypeOrmModule.forFeature([
       Order,
       OrderItem,
