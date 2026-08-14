@@ -42,6 +42,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message = 'Internal server error';
     } else if (isValidationError) {
       message = 'Invalid request';
+      this.logger.error(
+        `Invalid request: ${(exception.getResponse() as any)?.message.join()}`,
+      );
     } else {
       message =
         exception instanceof Error ? exception.message : 'An error occurred';
