@@ -20,6 +20,12 @@ export class School {
   @Column()
   address: string;
 
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
+  @Column({ nullable: true })
+  logoUrl: string;
+
   @Column({ type: 'enum', enum: SchoolStatus, default: SchoolStatus.ACTIVE })
   status: SchoolStatus;
 

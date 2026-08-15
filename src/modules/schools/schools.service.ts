@@ -138,19 +138,58 @@ export class SchoolsService {
     };
   }
 
-  async findOne(id: string): Promise<SchoolResponseDto> {
+  async findOne(
+    id: string,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<SchoolResponseDto> {
     const school = await this.schoolRepo.findOne({ where: { id } });
     if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
+
+    await this.assertSchoolAdminOwnsSchool(currentUser, id);
 
     return this.toDto(school);
   }
 
-  async update(id: string, dto: UpdateSchoolDto): Promise<SchoolResponseDto> {
+  async update(
+    id: string,
+    dto: UpdateSchoolDto,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<SchoolResponseDto> {
     const school = await this.schoolRepo.findOne({ where: { id } });
     if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
 
+    await this.assertSchoolAdminOwnsSchool(currentUser, id);
+
     await this.schoolRepo.update(id, dto);
     return this.toDto({ ...school, ...dto });
+  }
+
+  async updateLogo(
+    id: string,
+    file: Express.Multer.File,
+    currentUser: { id: string; role: UserRole },
+  ): Promise<SchoolResponseDto> {
+    const school = await this.schoolRepo.findOne({ where: { id } });
+    if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
+
+    await this.assertSchoolAdminOwnsSchool(currentUser, id);
+
+    if (school.logoUrl) {
+      await this.storageService
+        .deleteFile(`schools/${id}/${school.logoUrl}`)
+        .catch(() => undefined);
+    }
+
+    const ext = file.mimetype.split('/')[1];
+    const logoUrl = `${Date.now()}.${ext}`;
+    await this.storageService.uploadBuffer(
+      file.buffer,
+      `schools/${id}/${logoUrl}`,
+      file.mimetype,
+    );
+
+    await this.schoolRepo.update(id, { logoUrl });
+    return this.toDto({ ...school, logoUrl });
   }
 
   async suspend(id: string): Promise<SchoolResponseDto> {
@@ -442,12 +481,7 @@ export class SchoolsService {
     const school = await this.schoolRepo.findOne({ where: { id } });
     if (!school) throw new NotFoundException(ErrorMessages.SCHOOLS.NOT_FOUND);
 
-    if (currentUser.role === UserRole.SCHOOL_ADMIN) {
-      const admin = await this.userRepo.findOne({
-        where: { id: currentUser.id },
-      });
-      if (admin?.schoolId !== id) throw new ForbiddenException();
-    }
+    await this.assertSchoolAdminOwnsSchool(currentUser, id);
 
     const { from, to } = query;
 
@@ -706,9 +740,27 @@ export class SchoolsService {
       name: school.name,
       sigle: school.sigle,
       address: school.address,
+      description: school.description ?? null,
+      logoUrl: school.logoUrl
+        ? this.storageService.getPublicUrl(
+            `schools/${school.id}/${school.logoUrl}`,
+          )
+        : null,
       status: school.status,
       createdAt: school.createdAt,
     };
+  }
+
+  private async assertSchoolAdminOwnsSchool(
+    currentUser: { id: string; role: UserRole },
+    schoolId: string,
+  ): Promise<void> {
+    if (currentUser.role !== UserRole.SCHOOL_ADMIN) return;
+
+    const admin = await this.userRepo.findOne({
+      where: { id: currentUser.id },
+    });
+    if (admin?.schoolId !== schoolId) throw new ForbiddenException();
   }
 
   private toAdminDto(user: User): SchoolAdminResponseDto {

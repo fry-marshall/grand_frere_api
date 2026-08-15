@@ -147,17 +147,21 @@ describe('GET/PUT /api/v1/schools', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.data.id).toBe(school.id);
+        expect(res.body.data.description).toBeNull();
+        expect(res.body.data.logoUrl).toBeNull();
+      });
+
+      it('should allow SCHOOL_ADMIN to view their own school', async () => {
+        const res = await request(getServer(app))
+          .get(`/api/v1/schools/${school.id}`)
+          .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.id).toBe(school.id);
       });
     });
 
     describe('Failure cases', () => {
-      it('should return 403 when user is SCHOOL_ADMIN of the same school', async () => {
-        const res = await request(getServer(app))
-          .get(`/api/v1/schools/${school.id}`)
-          .set('Authorization', `Bearer ${ownSchoolAdminToken}`);
-        expect(res.status).toBe(403);
-      });
-
       it('should return 403 when SCHOOL_ADMIN accesses another school', async () => {
         const res = await request(getServer(app))
           .get(`/api/v1/schools/${school.id}`)
@@ -176,23 +180,38 @@ describe('GET/PUT /api/v1/schools', () => {
 
   describe('PUT /schools/:id', () => {
     describe('Success cases', () => {
-      it('should allow SUPER_ADMIN to update school name and address', async () => {
+      it('should allow SUPER_ADMIN to update school name, address and description', async () => {
         const res = await request(getServer(app))
           .put(`/api/v1/schools/${school.id}`)
           .set('Authorization', `Bearer ${superAdminToken}`)
-          .send({ name: 'Updated School Name', address: '99 Updated Street' });
+          .send({
+            name: 'Updated School Name',
+            address: '99 Updated Street',
+            description: 'A great school',
+          });
 
         expect(res.status).toBe(200);
         expect(res.body.data.name).toBe('Updated School Name');
         expect(res.body.data.sigle).toBe('TS-MS');
+        expect(res.body.data.description).toBe('A great school');
+      });
+
+      it('should allow SCHOOL_ADMIN to update their own school', async () => {
+        const res = await request(getServer(app))
+          .put(`/api/v1/schools/${school.id}`)
+          .set('Authorization', `Bearer ${ownSchoolAdminToken}`)
+          .send({ description: 'Updated by school admin' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.description).toBe('Updated by school admin');
       });
     });
 
     describe('Failure cases', () => {
-      it('should return 403 when user is SCHOOL_ADMIN', async () => {
+      it('should return 403 when SCHOOL_ADMIN updates another school', async () => {
         const res = await request(getServer(app))
           .put(`/api/v1/schools/${school.id}`)
-          .set('Authorization', `Bearer ${ownSchoolAdminToken}`)
+          .set('Authorization', `Bearer ${otherSchoolAdminToken}`)
           .send({ name: 'Hacked Name' });
         expect(res.status).toBe(403);
       });
@@ -202,6 +221,73 @@ describe('GET/PUT /api/v1/schools', () => {
           .put('/api/v1/schools/00000000-0000-0000-0000-000000000000')
           .set('Authorization', `Bearer ${superAdminToken}`)
           .send({ name: 'Ghost School' });
+        expect(res.status).toBe(404);
+      });
+    });
+  });
+
+  describe('PUT /schools/:id/logo', () => {
+    const pngBuffer = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64',
+    );
+
+    describe('Success cases', () => {
+      it('should allow SUPER_ADMIN to upload a school logo', async () => {
+        const res = await request(getServer(app))
+          .put(`/api/v1/schools/${school.id}/logo`)
+          .set('Authorization', `Bearer ${superAdminToken}`)
+          .attach('file', pngBuffer, {
+            filename: 'logo.png',
+            contentType: 'image/png',
+          });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.logoUrl).toBeDefined();
+        expect(res.body.data.logoUrl).toMatch(/^http:\/\/localhost\/storage\//);
+      });
+
+      it('should allow SCHOOL_ADMIN to upload their own school logo', async () => {
+        const res = await request(getServer(app))
+          .put(`/api/v1/schools/${school.id}/logo`)
+          .set('Authorization', `Bearer ${ownSchoolAdminToken}`)
+          .attach('file', pngBuffer, {
+            filename: 'logo.png',
+            contentType: 'image/png',
+          });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.logoUrl).toBeDefined();
+      });
+    });
+
+    describe('Failure cases', () => {
+      it('should return 403 when SCHOOL_ADMIN uploads to another school', async () => {
+        const res = await request(getServer(app))
+          .put(`/api/v1/schools/${school.id}/logo`)
+          .set('Authorization', `Bearer ${otherSchoolAdminToken}`)
+          .attach('file', pngBuffer, {
+            filename: 'logo.png',
+            contentType: 'image/png',
+          });
+        expect(res.status).toBe(403);
+      });
+
+      it('should return 400 when no file is attached', async () => {
+        const res = await request(getServer(app))
+          .put(`/api/v1/schools/${school.id}/logo`)
+          .set('Authorization', `Bearer ${superAdminToken}`);
+        expect(res.status).toBe(400);
+      });
+
+      it('should return 404 when school does not exist', async () => {
+        const res = await request(getServer(app))
+          .put('/api/v1/schools/00000000-0000-0000-0000-000000000000/logo')
+          .set('Authorization', `Bearer ${superAdminToken}`)
+          .attach('file', pngBuffer, {
+            filename: 'logo.png',
+            contentType: 'image/png',
+          });
         expect(res.status).toBe(404);
       });
     });

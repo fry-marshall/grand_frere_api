@@ -20,4 +20,12 @@ export class UpdateSchoolDto {
   @MinLength(5)
   @MaxLength(255)
   address?: string;
+
+  @ApiPropertyOptional({
+    example: 'Un établissement scolaire au cœur de Cocody...',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string;
 }

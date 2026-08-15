@@ -29,6 +29,11 @@ export const FILE_CONFIGS = {
     maxFileSizeBytes: 50 * 1024 * 1024, // 50 MB — up to 100 cards, recto+verso
     allowedMimeTypes: ['application/pdf'],
   },
+  SCHOOL_LOGO: {
+    maxFiles: 1,
+    maxFileSizeBytes: 5 * 1024 * 1024, // 5 MB
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  },
 } as const satisfies Record<string, FileUploadConfig>;
 
 export function createMulterOptions(config: FileUploadConfig): MulterOptions {

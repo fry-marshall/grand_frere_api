@@ -6,18 +6,30 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
+  UseFilters,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiBody,
   ApiConflictResponse,
+  ApiConsumes,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiSuccessResponse } from '../../common/swagger/api-responses.decorator';
+import {
+  FILE_CONFIGS,
+  createMulterOptions,
+} from '../../common/multer/multer.config';
+import { MulterExceptionFilter } from '../../common/multer/multer-exception.filter';
+import { FileValidationPipe } from '../../common/multer/file-validation.pipe';
 import { SchoolsService } from './schools.service';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { CreateSchoolAdminDto } from './dto/create-school-admin.dto';
@@ -145,22 +157,30 @@ export class SchoolsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Get school details' })
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @ApiOperation({
+    summary: 'Get school details. SCHOOL_ADMIN is scoped to their own school.',
+  })
   @ApiSuccessResponse(SchoolResponseDto)
   @ApiNotFoundResponse({
     description: ErrorMessages.SCHOOLS.NOT_FOUND,
     type: ErrorResponse,
   })
   @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
-  findOne(@Param('id') id: string) {
-    return this.schoolsService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.schoolsService.findOne(id, currentUser);
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Role(UserRole.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Update school name or address' })
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @ApiOperation({
+    summary:
+      'Update school name, address or description. SCHOOL_ADMIN is scoped to their own school.',
+  })
   @ApiSuccessResponse(SchoolResponseDto)
   @ApiBadRequestResponse({
     description: 'Validation failed',
@@ -170,8 +190,51 @@ export class SchoolsController {
     description: ErrorMessages.SCHOOLS.NOT_FOUND,
     type: ErrorResponse,
   })
-  update(@Param('id') id: string, @Body() dto: UpdateSchoolDto) {
-    return this.schoolsService.update(id, dto);
+  @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateSchoolDto,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.schoolsService.update(id, dto, currentUser);
+  }
+
+  @Put(':id/logo')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Role(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @UseInterceptors(
+    FileInterceptor('file', createMulterOptions(FILE_CONFIGS.SCHOOL_LOGO)),
+  )
+  @UseFilters(MulterExceptionFilter)
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary:
+      "Upload or replace a school's logo. SCHOOL_ADMIN is scoped to their own school.",
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
+  @ApiSuccessResponse(SchoolResponseDto)
+  @ApiNotFoundResponse({
+    description: ErrorMessages.SCHOOLS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  @ApiForbiddenResponse({ description: 'Not your school', type: ErrorResponse })
+  @ApiBadRequestResponse({
+    description: 'Validation failed',
+    type: ErrorResponse,
+  })
+  updateLogo(
+    @Param('id') id: string,
+    @UploadedFile(new FileValidationPipe({ required: true }))
+    file: Express.Multer.File,
+    @CurrentUser() currentUser: { id: string; role: UserRole },
+  ) {
+    return this.schoolsService.updateLogo(id, file, currentUser);
   }
 
   @Put(':id/suspend')
