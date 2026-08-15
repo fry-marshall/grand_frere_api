@@ -621,6 +621,23 @@ export class AuthService {
     return this.getMe(userId);
   }
 
+  /// Soft delete: the underlying vendor/parent/student row and its
+  /// transaction history (orders, withdrawals, wallet entries) are kept for
+  /// accounting — only the login is closed off. TypeORM's default queries
+  /// already exclude soft-deleted users, and the phone number's unique
+  /// index is scoped to non-deleted rows, so it becomes free to re-signup
+  /// with immediately.
+  async deleteMe(userId: string): Promise<void> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException(ErrorMessages.USERS.NOT_FOUND);
+
+    await this.refreshTokenRepo.update(
+      { userId, isRevoked: false },
+      { isRevoked: true, revokedAt: new Date() },
+    );
+    await this.userRepo.softDelete(userId);
+  }
+
   private buildRefreshTokenExpiry(): Date {
     const raw = this.configService.get<string>('REFRESH_TOKEN_EXPIRY') ?? '7d';
     const match = raw.match(/^(\d+)([dhms])$/);

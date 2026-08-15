@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Post,
@@ -10,6 +11,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -278,5 +280,23 @@ export class AuthController {
     @CurrentUser() currentUser: { id: string; role: UserRole },
   ) {
     return this.authService.updateMe(currentUser.id, dto);
+  }
+
+  @Delete('me')
+  @HttpCode(204)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary:
+      'Delete the current authenticated account (soft delete — closes the ' +
+      'login, keeps transaction history)',
+  })
+  @ApiNoContentResponse({ description: 'Account deleted' })
+  @ApiNotFoundResponse({
+    description: ErrorMessages.USERS.NOT_FOUND,
+    type: ErrorResponse,
+  })
+  deleteMe(@CurrentUser() currentUser: { id: string; role: UserRole }) {
+    return this.authService.deleteMe(currentUser.id);
   }
 }

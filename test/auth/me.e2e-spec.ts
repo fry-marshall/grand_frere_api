@@ -5,13 +5,15 @@ import request from 'supertest';
 import { createTestApp, getServer } from '../helpers/create-app';
 import { School } from '../../src/modules/schools/entities/school.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
+import { RefreshToken } from '../../src/modules/refresh-tokens/entities/refresh-token.entity';
 import { SchoolStatus } from '../../src/modules/schools/school.types';
 import { UserRole } from '../../src/modules/users/user.types';
 
-describe('GET/PUT /api/v1/auth/me', () => {
+describe('GET/PUT/DELETE /api/v1/auth/me', () => {
   let app: INestApplication;
   let schoolRepo: Repository<School>;
   let userRepo: Repository<User>;
+  let refreshTokenRepo: Repository<RefreshToken>;
   let jwtService: JwtService;
 
   let superAdmin: User;
@@ -21,6 +23,7 @@ describe('GET/PUT /api/v1/auth/me', () => {
   let otherUser: User;
 
   const PHONES = ['+2250100000790', '+2250100000791', '+2250100000792'];
+  const DELETE_PHONE = '+2250100000794';
 
   beforeAll(async () => {
     const { app: nestApp, moduleRef } = await createTestApp();
@@ -29,10 +32,18 @@ describe('GET/PUT /api/v1/auth/me', () => {
     const ds = moduleRef.get(DataSource);
     schoolRepo = ds.getRepository(School);
     userRepo = ds.getRepository(User);
+    refreshTokenRepo = ds.getRepository(RefreshToken);
     jwtService = moduleRef.get(JwtService, { strict: false });
 
-    for (const phone of PHONES) {
-      await userRepo.delete({ phone });
+    for (const phone of [...PHONES, DELETE_PHONE]) {
+      const leftover = await userRepo.findOne({
+        where: { phone },
+        withDeleted: true,
+      });
+      if (leftover) {
+        await refreshTokenRepo.delete({ userId: leftover.id });
+        await userRepo.delete({ id: leftover.id });
+      }
     }
 
     const school = await schoolRepo.save({
@@ -84,7 +95,12 @@ describe('GET/PUT /api/v1/auth/me', () => {
       await userRepo.delete({ schoolId: leftoverSchool.id });
       await schoolRepo.delete({ id: leftoverSchool.id });
     }
-    for (const phone of [...PHONES, '+2250100000793']) {
+    for (const phone of [...PHONES, '+2250100000793', DELETE_PHONE]) {
+      const leftover = await userRepo.findOne({
+        where: { phone },
+        withDeleted: true,
+      });
+      if (leftover) await refreshTokenRepo.delete({ userId: leftover.id });
       await userRepo.delete({ phone });
     }
     await app.close();
@@ -173,6 +189,58 @@ describe('GET/PUT /api/v1/auth/me', () => {
           phone: otherUser.phone,
         });
       expect(res.status).toBe(409);
+    });
+  });
+
+  describe('DELETE /api/v1/auth/me', () => {
+    it('should return 401 when no token', async () => {
+      const res = await request(getServer(app)).delete('/api/v1/auth/me');
+      expect(res.status).toBe(401);
+    });
+
+    it('should soft delete the account, revoke its refresh tokens, and close off the login', async () => {
+      const user = await userRepo.save({
+        firstName: 'ToDelete',
+        lastName: 'Me',
+        phone: DELETE_PHONE,
+        role: UserRole.SUPER_ADMIN,
+        isOnboarded: true,
+      });
+      const token = jwtService.sign({ sub: user.id, role: user.role });
+      const refreshToken = await refreshTokenRepo.save({
+        userId: user.id,
+        tokenHash: 'test-hash-for-delete-me',
+        expiresAt: new Date(Date.now() + 86400000),
+      });
+
+      const res = await request(getServer(app))
+        .delete('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(204);
+
+      const deleted = await userRepo.findOne({
+        where: { id: user.id },
+        withDeleted: true,
+      });
+      expect(deleted?.deletedAt).not.toBeNull();
+
+      const stillFindable = await userRepo.findOne({
+        where: { id: user.id },
+      });
+      expect(stillFindable).toBeNull();
+
+      const revokedToken = await refreshTokenRepo.findOne({
+        where: { id: refreshToken.id },
+      });
+      expect(revokedToken?.isRevoked).toBe(true);
+
+      // The login is closed off: the JWT strategy itself can't find the
+      // user anymore (soft-deleted), so an otherwise still-valid token is
+      // rejected outright.
+      const getRes = await request(getServer(app))
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+      expect(getRes.status).toBe(401);
     });
   });
 });

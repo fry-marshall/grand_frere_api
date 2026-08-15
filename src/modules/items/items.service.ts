@@ -16,6 +16,7 @@ import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { ErrorMessages } from '../../common/swagger/error-messages';
+import { assertVendorNotBlocked } from '../vendors/vendor-status.util';
 
 @Injectable()
 export class ItemsService {
@@ -81,11 +82,9 @@ export class ItemsService {
     const vendor = await this.vendorRepo.findOne({ where: { id: vendorId } });
     if (!vendor) throw new NotFoundException(ErrorMessages.VENDORS.NOT_FOUND);
 
-    if (
-      currentUser.role === UserRole.VENDOR &&
-      vendor.userId !== currentUser.id
-    ) {
-      throw new ForbiddenException();
+    if (currentUser.role === UserRole.VENDOR) {
+      if (vendor.userId !== currentUser.id) throw new ForbiddenException();
+      assertVendorNotBlocked(vendor);
     }
 
     const item = await this.itemRepo.save({ ...dto, vendorId });
@@ -105,6 +104,7 @@ export class ItemsService {
         where: { userId: currentUser.id },
       });
       if (vendor?.id !== item.vendorId) throw new ForbiddenException();
+      assertVendorNotBlocked(vendor);
     }
 
     await this.itemRepo.update(id, dto);
@@ -123,6 +123,7 @@ export class ItemsService {
         where: { userId: currentUser.id },
       });
       if (vendor?.id !== item.vendorId) throw new ForbiddenException();
+      assertVendorNotBlocked(vendor);
     }
 
     await this.itemRepo.delete(id);
@@ -141,6 +142,7 @@ export class ItemsService {
         where: { userId: currentUser.id },
       });
       if (vendor?.id !== item.vendorId) throw new ForbiddenException();
+      assertVendorNotBlocked(vendor);
     }
 
     if (item.imageUrl) {

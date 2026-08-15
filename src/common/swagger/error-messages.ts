@@ -98,6 +98,7 @@ export const ErrorMessages = {
     NOT_ACTIVATABLE: 'Vendor can only be reactivated when suspended',
     WALLET_NOT_FOUND: 'Vendor wallet not found',
     NOT_ACTIVE: 'Vendor account must be approved before accessing orders',
+    BLOCKED: 'Vendor account is rejected or suspended',
   },
   SCHOOL_JOIN_REQUESTS: {
     NOT_FOUND: 'School join request not found',
