@@ -228,5 +228,27 @@ describe('GET /api/v1/orders/by-code', () => {
 
       await orderRepo.delete({ id: order.id });
     });
+
+    it('should not match a same-code VALIDATED order scheduled for another day', async () => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const order = await orderRepo.save({
+        vendorId: vendor.id,
+        studentId: student.id,
+        status: OrderStatus.VALIDATED,
+        totalAmount: 700,
+        shortCode: '5555',
+        expiresAt: new Date(Date.now() + 3600000),
+        scheduledFor: tomorrow.toISOString().slice(0, 10),
+      });
+
+      const res = await request(getServer(app))
+        .get('/api/v1/orders/by-code')
+        .query({ code: '5555' })
+        .set('Authorization', `Bearer ${vendorToken}`);
+      expect(res.status).toBe(404);
+
+      await orderRepo.delete({ id: order.id });
+    });
   });
 });

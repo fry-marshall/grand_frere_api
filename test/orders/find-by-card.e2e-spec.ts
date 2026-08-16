@@ -231,5 +231,26 @@ describe('GET /api/v1/orders/by-card', () => {
         .set('Authorization', `Bearer ${otherVendorToken}`);
       expect(res.status).toBe(404);
     });
+
+    it("should return 404 when the student's only VALIDATED order is scheduled for another day", async () => {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const order = await orderRepo.save({
+        vendorId: vendor.id,
+        studentId: student.id,
+        status: OrderStatus.VALIDATED,
+        totalAmount: 1200,
+        expiresAt: new Date(Date.now() + 3600000),
+        scheduledFor: tomorrow.toISOString().slice(0, 10),
+      });
+
+      const res = await request(getServer(app))
+        .get('/api/v1/orders/by-card')
+        .query({ cardCode: 'BYCARD001' })
+        .set('Authorization', `Bearer ${vendorToken}`);
+      expect(res.status).toBe(404);
+
+      await orderRepo.delete({ id: order.id });
+    });
   });
 });
