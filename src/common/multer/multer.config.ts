@@ -26,7 +26,8 @@ export const FILE_CONFIGS = {
   },
   CARD_BATCH_PDF: {
     maxFiles: 1,
-    maxFileSizeBytes: 50 * 1024 * 1024, // 50 MB — up to 100 cards, recto+verso
+    // Measured worst case: 100 cards x heaviest template (Drogba) = ~151 MB. 200 MB leaves headroom.
+    maxFileSizeBytes: 200 * 1024 * 1024,
     allowedMimeTypes: ['application/pdf'],
   },
   SCHOOL_LOGO: {
