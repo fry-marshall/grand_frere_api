@@ -17,15 +17,25 @@ export class SignupStudentDto {
   @IsNotEmpty()
   cardCode: string;
 
-  @ApiProperty({ example: 'Kouassi' })
+  @ApiPropertyOptional({
+    example: 'Kouassi',
+    description:
+      'Required only when the card is unassigned. If a parent already ' +
+      'registered this student, their name is kept and this field is ignored.',
+  })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  firstName: string;
+  firstName?: string;
 
-  @ApiProperty({ example: 'Yao' })
+  @ApiPropertyOptional({
+    example: 'Yao',
+    description:
+      'Required only when the card is unassigned. If a parent already ' +
+      'registered this student, their name is kept and this field is ignored.',
+  })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  lastName: string;
+  lastName?: string;
 
   @ApiProperty({ example: '+22501000000' })
   @IsString()

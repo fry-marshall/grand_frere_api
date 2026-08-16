@@ -281,15 +281,15 @@ export class AuthService {
         }
       }
 
-      // Claim the shell student account created by the parent
+      // Claim the shell student account created by the parent — the parent
+      // already set the student's name, so it's kept as-is here rather than
+      // overwritten with whatever the student re-enters.
       return this.dataSource.transaction(async (manager) => {
         const passwordHash = await bcrypt.hash(dto.password, 10);
         const pinHash =
           dto.pin && !card.pinHash ? await bcrypt.hash(dto.pin, 10) : undefined;
 
         await manager.update(User, student.userId, {
-          firstName: dto.firstName,
-          lastName: dto.lastName,
           phone: dto.phone,
           passwordHash,
           isOnboarded: true,
@@ -324,6 +324,10 @@ export class AuthService {
     }
 
     // Card UNASSIGNED — student registers first
+    if (!dto.firstName || !dto.lastName) {
+      throw new BadRequestException(ErrorMessages.AUTH.STUDENT_FIELDS_REQUIRED);
+    }
+
     return this.dataSource.transaction(async (manager) => {
       const passwordHash = await bcrypt.hash(dto.password, 10);
 
