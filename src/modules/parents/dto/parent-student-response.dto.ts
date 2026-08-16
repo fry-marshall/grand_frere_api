@@ -10,6 +10,9 @@ export class ParentStudentResponseDto {
   @ApiProperty()
   schoolId: string;
 
+  @ApiProperty()
+  schoolName: string;
+
   @ApiProperty({
     description: 'Wallet balance, 0 if the student has no card yet',
   })

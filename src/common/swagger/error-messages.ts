@@ -80,6 +80,8 @@ export const ErrorMessages = {
     PIN_REQUIRED: 'Card PIN is required to complete this order',
     INVALID_SCHEDULED_DATE:
       'scheduledFor must be a weekday (Mon–Fri) and cannot be in the past',
+    VENDOR_SCHOOL_MISMATCH:
+      "This vendor does not belong to the student's school",
   },
   WITHDRAWALS: {
     NOT_FOUND: 'Withdrawal not found',

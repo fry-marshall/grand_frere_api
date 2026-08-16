@@ -86,6 +86,13 @@ export class OrdersService {
     }
   }
 
+  /// `scheduledFor` is a date-only column — a student or a vendor's short
+  /// codes can repeat across different days, so cashin lookups must be
+  /// scoped to today or they risk resolving to the wrong day's order.
+  private todayDateStr(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
   async findAll(
     currentUser: { id: string; role: UserRole },
     query: PaginationQueryDto,
@@ -255,6 +262,12 @@ export class OrdersService {
       where: { id: dto.studentId },
     });
     if (!student) throw new NotFoundException(ErrorMessages.STUDENTS.NOT_FOUND);
+
+    if (vendor.schoolId !== student.schoolId) {
+      throw new BadRequestException(
+        ErrorMessages.ORDERS.VENDOR_SCHOOL_MISMATCH,
+      );
+    }
 
     const wallet = await this.walletRepo.findOne({
       where: { studentId: dto.studentId },
@@ -666,6 +679,7 @@ export class OrdersService {
         studentId: student.id,
         vendorId: vendor.id,
         status: OrderStatus.VALIDATED,
+        scheduledFor: this.todayDateStr(),
       },
       relations: ['items', 'items.item', 'vendor', 'student', 'student.user'],
       order: { createdAt: 'DESC' },
@@ -727,6 +741,7 @@ export class OrdersService {
         shortCode: code,
         vendorId: vendor.id,
         status: OrderStatus.VALIDATED,
+        scheduledFor: this.todayDateStr(),
       },
       relations: ['items', 'items.item', 'vendor', 'student', 'student.user'],
     });
